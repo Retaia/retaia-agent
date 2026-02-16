@@ -24,6 +24,12 @@ L'agent est prévu comme une app de menu système (menu bar/tray) type Docker De
   - notifier `New job received` sur arrivée d'un nouveau job (événement/transition), sans répétition sur polls suivants
   - notifier `All jobs done` une seule fois lors de la transition `has_running_jobs=true -> false`
   - ne pas répéter la notification à chaque cycle de poll tant que l'état reste `no running jobs`
+  - notifier `Job failed` sur échec de job (avec code court + action suggérée)
+  - notifier `Agent disconnected / reconnecting` sur perte de connexion backend et début de reconnexion
+  - notifier `Auth expired / re-auth required` quand le token/session ne permet plus les appels runtime
+  - notifier `Settings saved` après sauvegarde valide de configuration
+  - notifier `Settings invalid` si configuration invalide ou endpoint injoignable (ex: URL Ollama)
+  - notifier `Updates available` quand une nouvelle version agent est détectée (optionnel)
 - acces au panneau de configuration depuis:
   - menu de l'app
   - menu système/tray

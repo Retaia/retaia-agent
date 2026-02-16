@@ -23,6 +23,13 @@ Ce dossier contient la documentation d'implémentation de l'agent.
 - Notifications système:
   - `New job received`: émission à l'arrivée d'un nouveau job, sans répétition pour le même job.
   - `All jobs done`: une seule émission sur transition vers zéro job actif, sans répétition sur poll.
+  - `Job failed`: émission à l'échec d'un job.
+  - `Agent disconnected / reconnecting`: émission sur perte de connexion et reprise.
+  - `Auth expired / re-auth required`: émission si auth runtime invalide.
+  - `Settings saved`: émission après sauvegarde config valide.
+  - `Settings invalid`: émission sur erreur de validation config.
+  - `Updates available`: émission optionnelle lors de détection de version.
+- Règle anti-spam: notifications uniquement sur événement/transition, jamais en boucle sur polling stable.
 - Un panneau de configuration doit être accessible depuis le menu app et le menu système.
 - Champs de config minimum: URL Core/Agent, URL Ollama, auth, paramètres runtime.
 - La GUI utilise strictement le meme moteur que la CLI (pas de logique parallèle).

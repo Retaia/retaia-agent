@@ -21,6 +21,16 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 - Notification système `New job received` obligatoire:
   - émise à l'arrivée d'un nouveau job (file vide -> non vide, ou nouveau `job_id`)
   - interdiction de répétition sur les polls suivants pour le même job
+- Notifications système utiles obligatoires:
+  - `Job failed` (émission à l'échec d'un job)
+  - `Agent disconnected / reconnecting` (émission sur perte de connexion + démarrage reconnexion)
+  - `Auth expired / re-auth required` (émission sur expiration auth bloquante)
+  - `Settings saved` (émission après sauvegarde valide)
+  - `Settings invalid` (émission sur validation config en erreur)
+  - `Updates available` (émission optionnelle à détection de version)
+- Règle anti-spam notification:
+  - émission sur événement/transition uniquement
+  - aucune répétition à chaque poll si l'état ne change pas
 - Panneau de config accessible depuis menu app + menu système
 - Config minimale exposée: URL Core/Agent, URL Ollama, auth, paramètres runtime
 - Bearer-only
