@@ -46,5 +46,7 @@ pub use infrastructure::config_store::{
 pub use infrastructure::notification_sink::{
     StdoutNotificationSink, SystemNotificationSink, dispatch_system_notification,
 };
+#[cfg(feature = "core-api-client")]
+pub use infrastructure::openapi_client::{build_core_api_client, with_bearer_token};
 #[cfg(feature = "tauri-notifications")]
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;

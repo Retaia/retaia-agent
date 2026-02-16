@@ -32,6 +32,7 @@ Rust agent client for the Retaia platform.
 - `cargo-commitlint` (for local `commit-msg` hook)
 - Git
 - Optional GUI notification adapter: `tauri` + `tauri-plugin-notification` via feature `tauri-notifications`
+- Optional generated Core API client: feature `core-api-client` (`crates/retaia-core-client`)
 
 ## Quick start
 
@@ -69,6 +70,20 @@ Rules:
 - No push on `master` (blocked by `cargo-husky` `pre-push`)
 - Rebase on latest `master` before merge
 - Keep linear history (no merge commits in feature branch)
+
+## OpenAPI client
+
+The Rust HTTP client for Core v1 is generated from `specs/api/openapi/v1.yaml`:
+
+```bash
+./scripts/generate_core_api_client.sh
+```
+
+To compile agent integration helpers with this generated client:
+
+```bash
+cargo test --features core-api-client
+```
 
 ## CI checks
 
