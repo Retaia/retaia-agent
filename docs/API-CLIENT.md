@@ -4,6 +4,7 @@ Client HTTP Rust généré depuis l'OpenAPI v1:
 
 - Spec source: `../specs/api/openapi/v1.yaml`
 - Crate généré: `../crates/retaia-core-client`
+- Docs API générées: `./api/openapi-client/`
 - Générateur: `openapi-generator` (Rust, `reqwest-trait`)
 
 ## Regenerate

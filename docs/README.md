@@ -19,3 +19,7 @@ Hub documentaire local, organisé par sujet.
 - `../specs/workflows/AGENT-PROTOCOL.md`
 - `../specs/tests/TEST-PLAN.md`
 - `../specs/policies/AUTHZ-MATRIX.md`
+
+## Docs API Generated
+
+- Les docs générées depuis l'OpenAPI sont isolées dans `api/openapi-client/`.
