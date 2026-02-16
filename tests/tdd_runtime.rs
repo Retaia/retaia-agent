@@ -1,5 +1,7 @@
 #[path = "tdd_runtime/application.rs"]
 mod application;
+#[path = "tdd_runtime/capabilities.rs"]
+mod capabilities;
 #[path = "tdd_runtime/config_repository.rs"]
 mod config_repository;
 #[path = "tdd_runtime/config_store.rs"]

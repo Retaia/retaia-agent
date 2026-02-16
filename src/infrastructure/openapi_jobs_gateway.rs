@@ -47,6 +47,7 @@ impl CoreApiGateway for OpenApiJobsGateway {
                 job_id: job.job_id,
                 asset_uuid: job.asset_uuid,
                 state: map_job_state(job.status),
+                required_capabilities: job.required_capabilities,
             })
             .collect())
     }

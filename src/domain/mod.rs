@@ -1,3 +1,4 @@
+pub mod capabilities;
 pub mod configuration;
 pub mod feature_flags;
 pub mod runtime_control;
