@@ -15,6 +15,9 @@ La source de vérité contrat/runtime est le submodule `specs/`.
   - progression `%` du job actif
   - étape active (`claim`, `processing`, `upload`, `submit`)
   - job/asset courant + message court
+- Notification système `All jobs done` obligatoire:
+  - émise une seule fois sur transition vers aucun job actif
+  - interdiction de répétition sur les polls suivants tant que l'état reste inchangé
 - Panneau de config accessible depuis menu app + menu système
 - Config minimale exposée: URL Core/Agent, URL Ollama, auth, paramètres runtime
 - Bearer-only
