@@ -21,6 +21,10 @@ Le crate généré est branché en dépendance optionnelle via feature:
 - helpers d'infra:
   - `build_core_api_client(...)`
   - `with_bearer_token(...)`
+  - `OpenApiJobsGateway` (`GET /jobs` via OpenAPI client)
+- port applicatif DDD:
+  - `CoreApiGateway`
+  - `poll_runtime_snapshot(...)`
 
 Activation:
 

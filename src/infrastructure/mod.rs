@@ -3,5 +3,7 @@ pub mod config_store;
 pub mod notification_sink;
 #[cfg(feature = "core-api-client")]
 pub mod openapi_client;
+#[cfg(feature = "core-api-client")]
+pub mod openapi_jobs_gateway;
 #[cfg(feature = "tauri-notifications")]
 pub mod tauri_notification_sink;

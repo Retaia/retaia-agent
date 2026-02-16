@@ -1,5 +1,6 @@
 pub mod agent_runtime_app;
 pub mod config_repository;
+pub mod core_api_gateway;
 pub mod notification_bridge;
 pub mod runtime_loop_engine;
 pub mod runtime_session;

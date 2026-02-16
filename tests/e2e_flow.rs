@@ -12,6 +12,8 @@ mod config_persistence;
 mod config_repository_flow;
 #[path = "e2e_flow/config_runtime_flow.rs"]
 mod config_runtime_flow;
+#[path = "e2e_flow/core_api_gateway_flow.rs"]
+mod core_api_gateway_flow;
 #[path = "e2e_flow/notification_bridge_flow.rs"]
 mod notification_bridge_flow;
 #[path = "e2e_flow/notification_sink_flow.rs"]

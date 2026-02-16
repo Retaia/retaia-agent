@@ -6,6 +6,10 @@ pub use application::agent_runtime_app::{
     AgentRuntimeApp, RuntimeStatusView, SettingsSaveError, TrayMenuModel,
 };
 pub use application::config_repository::{ConfigRepository, ConfigRepositoryError};
+pub use application::core_api_gateway::{
+    CoreApiGateway, CoreApiGatewayError, CoreJobState, CoreJobView, poll_runtime_snapshot,
+    runtime_snapshot_from_polled_jobs,
+};
 pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
     dispatch_notifications, notification_message,
@@ -48,5 +52,7 @@ pub use infrastructure::notification_sink::{
 };
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::openapi_client::{build_core_api_client, with_bearer_token};
+#[cfg(feature = "core-api-client")]
+pub use infrastructure::openapi_jobs_gateway::OpenApiJobsGateway;
 #[cfg(feature = "tauri-notifications")]
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;

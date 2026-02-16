@@ -8,6 +8,8 @@ mod config_store;
 mod configuration;
 #[path = "tdd_runtime/configuration_interfaces.rs"]
 mod configuration_interfaces;
+#[path = "tdd_runtime/core_api_gateway.rs"]
+mod core_api_gateway;
 #[path = "tdd_runtime/feature_flags.rs"]
 mod feature_flags;
 #[path = "tdd_runtime/menu.rs"]
