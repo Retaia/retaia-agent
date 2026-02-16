@@ -9,7 +9,9 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
 ## Branch rules and hooks
 
 - CI gate: `branch-up-to-date` (branch must include latest `master` and keep linear history)
-- Local hook: Husky `pre-push` runs `npm run check:branch-up-to-date`
+- Local hooks:
+  - `pre-commit`: blocks commits on `master`
+  - `pre-push`: blocks pushes on `master` and runs `npm run check:branch-up-to-date`
 
 Setup:
 
