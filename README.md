@@ -16,7 +16,7 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
   - `coverage-gate`: coverage minimale 80%
 - Local hooks:
   - `pre-commit`: blocks commits on `master`
-  - `commit-msg`: enforces Conventional Commits
+  - `commit-msg`: enforces Conventional Commits via `cargo-commitlint`
   - `pre-push`: blocks pushes on `master` and runs `cargo run --bin check_branch_up_to_date`
   - managed by `cargo-husky` from `.cargo-husky/hooks/`
 
@@ -31,5 +31,6 @@ Cargo commands used by CI checks:
 Setup:
 
 ```bash
+cargo install cargo-commitlint
 cargo test
 ```
