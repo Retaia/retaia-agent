@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigValidationError, LogLevel, TechnicalAuthConfig,
@@ -14,12 +15,17 @@ use crate::domain::configuration::{
 pub const CONFIG_FILE_ENV: &str = "RETAIA_AGENT_CONFIG_PATH";
 pub const CONFIG_FILE_NAME: &str = "config.toml";
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ConfigStoreError {
+    #[error("system config directory unavailable")]
     SystemConfigDirectoryUnavailable,
+    #[error("io error: {0}")]
     Io(io::Error),
+    #[error("toml decode error: {0}")]
     TomlDecode(toml::de::Error),
+    #[error("toml encode error: {0}")]
     TomlEncode(toml::ser::Error),
+    #[error("config validation failed")]
     Validation(Vec<ConfigValidationError>),
 }
 

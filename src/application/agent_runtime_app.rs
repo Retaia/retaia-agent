@@ -10,6 +10,7 @@ use crate::domain::runtime_ui::{
     AgentRunState, AgentUiRuntime, JobStatus, MenuAction, MenuVisibility, RuntimeSnapshot,
     SystemNotification, base_menu_actions, menu_visibility,
 };
+use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TrayMenuModel {
@@ -32,9 +33,11 @@ pub struct AgentRuntimeApp {
     latest_snapshot: RuntimeSnapshot,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum SettingsSaveError {
+    #[error("settings validation failed")]
     Validation(SystemNotification),
+    #[error("settings repository error: {0}")]
     Repository(ConfigRepositoryError),
 }
 

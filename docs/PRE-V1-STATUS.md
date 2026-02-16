@@ -40,9 +40,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - `Settings saved`,
   - `Settings invalid` (dédupliqué),
   - `Updates available` (version unique).
-  - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateur `StdoutNotificationSink`.
+  - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateurs `StdoutNotificationSink` et `TauriNotificationSink` (feature `tauri-notifications`).
 - Pending:
-  - Adaptateur notification OS natif (GUI).
+  - Brancher `TauriNotificationSink` dans le shell GUI final.
 
 ### Configuration (GUI/CLI parity + headless)
 
@@ -56,6 +56,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `config validate`
     - `config init`
     - `config set`
+  - Parsing CLI migré vers `clap`.
 - Pending:
   - Écran/panneau GUI branché sur les mêmes services en production app.
 
@@ -70,6 +71,11 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Coverage mesurée: 89.90% (dernier run local).
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
+
+### Engineering Baseline
+
+- Done:
+  - Stratégie lib-first sur ce repo: `clap` (CLI parsing) + `thiserror` (types d’erreurs).
 
 ## Remaining Pre-v1 Work (Priority)
 

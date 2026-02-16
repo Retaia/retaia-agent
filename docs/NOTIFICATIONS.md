@@ -35,4 +35,5 @@
 - Port application: `NotificationSink`
 - Service application: `dispatch_notifications(...)`
 - Adapter infra de base: `StdoutNotificationSink`
+- Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
 - Règle: la déduplication reste dans le domaine (`AgentUiRuntime`), le bridge ne doit pas réintroduire de logique métier.

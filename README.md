@@ -31,6 +31,7 @@ Rust agent client for the Retaia platform.
 - Rust (stable toolchain)
 - `cargo-commitlint` (for local `commit-msg` hook)
 - Git
+- Optional GUI notification adapter: `tauri` + `tauri-plugin-notification` via feature `tauri-notifications`
 
 ## Quick start
 
@@ -48,6 +49,8 @@ cargo run --bin agentctl -- config init \
   --ollama-url http://127.0.0.1:11434
 cargo run --bin agentctl -- config validate
 ```
+
+`agentctl` is powered by `clap` and uses the same validation contract as GUI/runtime services.
 
 ## Development workflow
 
