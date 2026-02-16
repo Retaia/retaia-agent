@@ -9,7 +9,7 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
 ## Branch rules and hooks
 
 - CI gate: `branch-up-to-date` (branch must include latest `master` and keep linear history)
-- CI gate: `commitlint` (PR commit range must follow Conventional Commits)
+- CI gate: `commitlint` (PR commit range must follow Conventional Commits, fast regex check)
 - CI test gates (blocking for PR merge):
   - `rust-build-cache`: pre-build des tests pour reduire les recompilations
   - `test-tdd`: tests bases sur le fonctionnement du code
