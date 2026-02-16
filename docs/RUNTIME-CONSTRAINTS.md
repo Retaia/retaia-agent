@@ -13,8 +13,8 @@
 - Respect strict de `effective_feature_enabled`.
 - L'agent n'est pas décideur métier.
 - Aucun traitement MCP dans ce repo.
-- Pilotage runtime `pull-only` (polling HTTP contractuel).
-- Aucune dépendance à un canal push serveur-vers-client (WebSocket/SSE/webhook) pour la cohérence runtime.
+- Pilotage runtime status-driven par polling HTTP contractuel (source de vérité).
+- Les canaux push serveur-vers-client peuvent exister comme hints (WebSocket/SSE/webhook/push mobile), mais ne sont jamais autoritatifs métier.
 
 ## Auth
 
@@ -39,7 +39,15 @@
 
 - Les boucles de polling jobs/policy/device-flow respectent les intervalles contractuels renvoyés par Core.
 - Sur `429` (`SLOW_DOWN` / `TOO_MANY_ATTEMPTS`), appliquer backoff + jitter avant nouvelle tentative.
-- Les changements policy/feature-flags sont pris en compte au prochain polling, sans attente d'un signal push.
+- Les changements policy/feature-flags sont pris en compte au prochain polling; un push peut déclencher un poll mais ne valide jamais l'état final.
+
+## Push Hints (v1.2)
+
+- `PUSH_NOT_AUTHORITATIVE`: aucun push ne vaut décision métier finale.
+- `PUSH_TRIGGERS_POLL`: un push valide déclenche un polling des endpoints contractuels.
+- `PUSH_DEDUP_REQUIRED` + `PUSH_REPLAY_PROTECTION`: déduplication + TTL obligatoires.
+- `NO_SENSITIVE_PUSH_PAYLOAD`: aucun token/secret/PII/transcription dans le payload push.
+- Scope mobile: `FCM/APNs/EPNS` réservé au client UI mobile (Android/iOS), hors agent/MCP mobile.
 
 ## Normative References
 
