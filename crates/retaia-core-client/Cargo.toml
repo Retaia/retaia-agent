@@ -1,0 +1,20 @@
+[package]
+name = "retaia_core_client"
+version = "0.1.0"
+authors = ["OpenAPI Generator team and contributors"]
+description = "Normative OpenAPI v1 for Retaia Core (minor features up to v1.1).  This API coordinates assets, processing jobs and agents. Agents are non-reliable by design. Jobs may remain pending indefinitely if no compatible agent is available. AI-powered features are planned for v1.1+ and are out of v1 conformance scope. "
+# Override this license by providing a License Object in the OpenAPI.
+license = "Unlicense"
+edition = "2021"
+
+[dependencies]
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+serde_repr = "^0.1"
+url = "^2.5"
+async-trait = "^0.1"
+reqwest = { version = "^0.13", default-features = false, features = ["json", "multipart", "stream", "query", "form"] }
+[features]
+default = ["native-tls"]
+native-tls = ["reqwest/native-tls"]
+rustls = ["reqwest/rustls"]

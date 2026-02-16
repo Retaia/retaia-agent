@@ -6,6 +6,7 @@ Hub documentaire local, organisé par sujet.
 
 - Statut d'implémentation pré-v1: `PRE-V1-STATUS.md`
 - Runtime et contraintes: `RUNTIME-CONSTRAINTS.md`
+- Client HTTP API (OpenAPI v1): `API-CLIENT.md`
 - UX menu système (tray): `UX-SYSTEM-TRAY.md`
 - Notifications: `NOTIFICATIONS.md`
 - Panneau de configuration (parité GUI/CLI, y compris headless): `CONFIGURATION-PANEL.md`
