@@ -6,6 +6,8 @@ mod notification_bridge;
 mod notification_sink;
 #[path = "bdd_specs/notifications.rs"]
 mod notifications;
+#[path = "bdd_specs/runtime_cli_shell.rs"]
+mod runtime_cli_shell;
 #[path = "bdd_specs/runtime_control.rs"]
 mod runtime_control;
 #[path = "bdd_specs/runtime_loop_engine.rs"]

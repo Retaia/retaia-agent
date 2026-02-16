@@ -20,6 +20,10 @@ pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
     dispatch_notifications, notification_message,
 };
+pub use application::runtime_cli_shell::{
+    ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,
+    format_status, help_text, parse_shell_command,
+};
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
 pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};

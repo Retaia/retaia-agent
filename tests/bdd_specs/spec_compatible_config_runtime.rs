@@ -5,8 +5,8 @@ use std::sync::{Mutex, MutexGuard};
 use tempfile::tempdir;
 
 use retaia_agent::{
-    AgentRunState, AgentRuntimeApp, AgentRuntimeConfig, AuthMode, ClientRuntimeTarget,
-    ConfigRepository, ConfigRepositoryError, CONFIG_FILE_ENV, ConnectivityState, JobStage,
+    AgentRunState, AgentRuntimeApp, AgentRuntimeConfig, AuthMode, CONFIG_FILE_ENV,
+    ClientRuntimeTarget, ConfigRepository, ConfigRepositoryError, ConnectivityState, JobStage,
     JobStatus, LogLevel, MenuAction, PollEndpoint, PollSignal, RuntimeSession, RuntimeSnapshot,
     RuntimeSyncPlan, SystemConfigRepository, SystemNotification, SystemNotificationSink,
 };
@@ -158,7 +158,8 @@ fn bdd_given_runtime_session_snapshot_when_updated_then_status_view_exposes_curr
 }
 
 #[test]
-fn bdd_given_system_config_repository_when_path_overridden_then_save_load_and_path_are_consistent() {
+fn bdd_given_system_config_repository_when_path_overridden_then_save_load_and_path_are_consistent()
+{
     let dir = tempdir().expect("tempdir");
     let config_path = dir.path().join("state").join("agent-config.toml");
     let _override = ConfigEnvOverride::set(&config_path);
@@ -179,7 +180,8 @@ fn bdd_given_system_config_repository_when_path_overridden_then_save_load_and_pa
 }
 
 #[test]
-fn bdd_given_system_notification_sink_constructors_when_initialized_then_runtime_sink_is_available() {
+fn bdd_given_system_notification_sink_constructors_when_initialized_then_runtime_sink_is_available()
+{
     let _sink = SystemNotificationSink::new();
     let _default_sink = SystemNotificationSink::default();
 }

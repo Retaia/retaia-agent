@@ -1,4 +1,6 @@
-use retaia_agent::{NotificationMessage, NotificationSink, SystemNotification, SystemNotificationSink};
+use retaia_agent::{
+    NotificationMessage, NotificationSink, SystemNotification, SystemNotificationSink,
+};
 
 use crate::system_dispatcher_mock::{MockDispatcherScope, dispatch};
 

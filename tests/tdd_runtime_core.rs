@@ -10,6 +10,8 @@ mod notification_bridge;
 mod notification_sink;
 #[path = "tdd_runtime/notifications.rs"]
 mod notifications;
+#[path = "tdd_runtime/runtime_cli_shell.rs"]
+mod runtime_cli_shell;
 #[path = "tdd_runtime/runtime_control.rs"]
 mod runtime_control;
 #[path = "tdd_runtime/runtime_loop_engine.rs"]

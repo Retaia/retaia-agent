@@ -57,6 +57,14 @@ cargo run --bin agentctl -- config validate --check-respond
 
 `agentctl` is powered by `clap` and uses the same validation contract as GUI/runtime services.
 
+Interactive runtime shell (CLI-only environments):
+
+```bash
+cargo run --bin agent-runtime
+```
+
+Supported commands: `menu`, `status`, `settings`, `play`, `pause`, `stop`, `quit`.
+
 ## Development workflow
 
 ```bash
