@@ -39,7 +39,7 @@ Normalisation URL Core:
 - `agentctl config validate`: valide la config active.
 - `agentctl config validate --check-respond`: valide la compatibilité API côté Core/Ollama.
   - Core: probe `GET /jobs` (statuts compatibles attendus + payload JSON).
-  - Ollama: probe `GET /api/tags` (JSON avec `models[]`).
+  - Ollama: probe `POST /v1/chat/completions` via `genai` (endpoint OpenAI-compatible).
 - `agentctl config init ...`: initialise la config (première installation).
 - `agentctl config set ...`: met à jour la config existante.
 

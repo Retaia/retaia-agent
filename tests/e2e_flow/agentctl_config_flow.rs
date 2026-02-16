@@ -102,14 +102,21 @@ fn e2e_agentctl_validate_check_respond_succeeds_when_core_and_ollama_endpoints_r
             let size = stream.read(&mut buffer).expect("read request");
             let request = String::from_utf8_lossy(&buffer[..size]);
             let response = if request.starts_with("GET /api/v1/jobs ") {
-                b"HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 23\r\nConnection: close\r\n\r\n{\"code\":\"UNAUTHORIZED\"}".as_slice()
-            } else if request.starts_with("GET /api/tags ") {
-                b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 13\r\nConnection: close\r\n\r\n{\"models\":[]}".as_slice()
+                "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 23\r\nConnection: close\r\n\r\n{\"code\":\"UNAUTHORIZED\"}".to_string()
+            } else if request.starts_with("POST /v1/chat/completions ") {
+                let body = "{\"error\":{\"message\":\"model not found\"}}";
+                format!(
+                    "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
             } else {
-                b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-                    .as_slice()
+                "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    .to_string()
             };
-            stream.write_all(response).expect("write response");
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
         }
     });
 
