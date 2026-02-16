@@ -6,6 +6,19 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
 - Specs normatives: submodule `specs/`
 - Docs: `docs/`
 
+## UX Agent (menu système)
+
+L'agent est prévu comme une app de menu système (menu bar/tray) type Docker Desktop ou Ollama:
+
+- état visible (`running`, `paused`, `stopped`)
+- actions directes: `Play/Resume`, `Pause`, `Stop`, `Quit`
+- accès rapide aux logs/statut
+
+Contraintes:
+
+- la CLI reste obligatoire et doit piloter le même moteur runtime
+- la GUI/menu système est optionnelle mais, si présente, ne doit pas diverger de la CLI
+
 ## Branch rules and hooks
 
 - CI gate: `branch-up-to-date` (branch must include latest `master` and keep linear history)

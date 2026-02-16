@@ -7,6 +7,7 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 ## Normes obligatoires
 - CLI obligatoire (Linux headless supporté)
 - GUI optionnelle, même moteur que la CLI
+- Si GUI présente: menu système type Docker Desktop/Ollama (play/resume, pause, stop, quit + statut)
 - Bearer-only
 - Respect strict de `effective_feature_enabled`
 - Aucun traitement MCP dans ce repo

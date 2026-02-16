@@ -14,6 +14,12 @@ Ce dossier contient la documentation d'implémentation de l'agent.
 - `E2E` : tests de parcours complets fondes sur les workflows/specs.
 - `Coverage` : minimum `80%` (ligne) sur le repo.
 
+## UX cible de l'agent (GUI optionnelle)
+- Application de menu système (menu bar/tray), style Docker Desktop/Ollama.
+- Actions minimales: `Play/Resume`, `Pause`, `Stop`, `Quit`.
+- L'état runtime doit rester visible en permanence (`running`, `paused`, `stopped`).
+- La GUI utilise strictement le meme moteur que la CLI (pas de logique parallèle).
+
 En CI, ces checks sont bloquants pour merge PR :
 - `test-tdd`
 - `test-bdd`
