@@ -14,6 +14,8 @@ mod notifications;
 mod runtime_cli_shell;
 #[path = "tdd_runtime/runtime_control.rs"]
 mod runtime_control;
+#[path = "tdd_runtime/runtime_gui_shell.rs"]
+mod runtime_gui_shell;
 #[path = "tdd_runtime/runtime_loop_engine.rs"]
 mod runtime_loop_engine;
 #[path = "tdd_runtime/runtime_orchestration.rs"]

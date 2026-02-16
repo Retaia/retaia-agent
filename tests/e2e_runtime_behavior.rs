@@ -6,6 +6,8 @@ mod notification_bridge_flow;
 mod notification_sink_flow;
 #[path = "e2e_flow/runtime_cli_shell_flow.rs"]
 mod runtime_cli_shell_flow;
+#[path = "e2e_flow/runtime_gui_shell_flow.rs"]
+mod runtime_gui_shell_flow;
 #[path = "e2e_flow/runtime_loop_engine_flow.rs"]
 mod runtime_loop_engine_flow;
 #[path = "e2e_flow/runtime_orchestration_flow.rs"]
