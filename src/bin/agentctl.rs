@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::process::exit;
+use std::str::FromStr;
 use std::time::Duration;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -9,9 +10,14 @@ use genai::resolver::{Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget, WebConfig};
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigInterface, ConfigRepository, ConfigRepositoryError,
-    ConfigValidationError, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
+    ConfigValidationError, DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager,
+    DaemonManagerError, DaemonStatus, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
     SystemConfigRepository, TechnicalAuthConfig, apply_config_update, compact_validation_reason,
     normalize_core_api_url, validate_config,
+};
+use service_manager::{
+    ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx,
+    ServiceStopCtx, ServiceUninstallCtx,
 };
 use thiserror::Error;
 
@@ -28,6 +34,10 @@ enum RootCommand {
         #[command(subcommand)]
         command: ConfigCommand,
     },
+    Daemon {
+        #[command(subcommand)]
+        command: DaemonCommand,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -37,6 +47,15 @@ enum ConfigCommand {
     Validate(ConfigValidateArgs),
     Init(ConfigInitArgs),
     Set(ConfigSetArgs),
+}
+
+#[derive(Debug, Subcommand)]
+enum DaemonCommand {
+    Install(DaemonInstallArgs),
+    Uninstall(DaemonLabelArgs),
+    Start(DaemonLabelArgs),
+    Stop(DaemonLabelArgs),
+    Status(DaemonLabelArgs),
 }
 
 impl ConfigCommand {
@@ -142,6 +161,51 @@ struct ConfigSetArgs {
     log_level: Option<LogLevelArg>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum DaemonTargetArg {
+    Agent,
+    Mcp,
+    UiWeb,
+    UiMobile,
+}
+
+impl DaemonTargetArg {
+    fn as_cli_value(self) -> &'static str {
+        match self {
+            Self::Agent => "agent",
+            Self::Mcp => "mcp",
+            Self::UiWeb => "ui-web",
+            Self::UiMobile => "ui-mobile",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Args)]
+struct DaemonInstallArgs {
+    #[arg(long = "label", default_value = "io.retaia.agent")]
+    label: String,
+    #[arg(long = "program")]
+    program: Option<PathBuf>,
+    #[arg(long = "config")]
+    config: Option<PathBuf>,
+    #[arg(long = "target", value_enum, default_value_t = DaemonTargetArg::Agent)]
+    target: DaemonTargetArg,
+    #[arg(long = "no-autostart", default_value_t = false)]
+    no_autostart: bool,
+    #[arg(long = "system", default_value_t = false)]
+    system: bool,
+    #[arg(long = "working-directory")]
+    working_directory: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Args)]
+struct DaemonLabelArgs {
+    #[arg(long = "label", default_value = "io.retaia.agent")]
+    label: String,
+    #[arg(long = "system", default_value_t = false)]
+    system: bool,
+}
+
 #[derive(Debug, Error)]
 enum AgentCtlError {
     #[error("unable to resolve config path: {0}")]
@@ -160,6 +224,101 @@ enum AgentCtlError {
     EndpointUnreachable { url: String, reason: String },
     #[error("config endpoint incompatible ({url}): {reason}")]
     EndpointIncompatible { url: String, reason: String },
+    #[error("unable to resolve daemon program path: {0}")]
+    DaemonProgramResolve(String),
+    #[error("daemon operation failed: {0}")]
+    Daemon(DaemonManagerError),
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct NativeDaemonManager;
+
+impl NativeDaemonManager {
+    fn with_manager<T>(
+        level: DaemonLevel,
+        f: impl FnOnce(&dyn service_manager::ServiceManager) -> Result<T, DaemonManagerError>,
+    ) -> Result<T, DaemonManagerError> {
+        let mut manager = <dyn service_manager::ServiceManager>::native()
+            .map_err(|error| DaemonManagerError::Unavailable(error.to_string()))?;
+        manager
+            .set_level(match level {
+                DaemonLevel::User => ServiceLevel::User,
+                DaemonLevel::System => ServiceLevel::System,
+            })
+            .map_err(|error| DaemonManagerError::OperationFailed(error.to_string()))?;
+        f(manager.as_ref())
+    }
+}
+
+impl DaemonManager for NativeDaemonManager {
+    fn install(&self, request: DaemonInstallRequest) -> Result<(), DaemonManagerError> {
+        let label = ServiceLabel::from_str(&request.label)
+            .map_err(|error| DaemonManagerError::InvalidLabel(error.to_string()))?;
+        let args = request.args.into_iter().map(Into::into).collect::<Vec<_>>();
+
+        Self::with_manager(request.level, |manager| {
+            manager
+                .install(ServiceInstallCtx {
+                    label,
+                    program: request.program,
+                    args,
+                    contents: None,
+                    username: request.username,
+                    working_directory: request.working_directory,
+                    environment: request.environment,
+                    autostart: request.autostart,
+                    restart_policy: Default::default(),
+                })
+                .map_err(|error| DaemonManagerError::OperationFailed(error.to_string()))
+        })
+    }
+
+    fn uninstall(&self, request: DaemonLabelRequest) -> Result<(), DaemonManagerError> {
+        let label = ServiceLabel::from_str(&request.label)
+            .map_err(|error| DaemonManagerError::InvalidLabel(error.to_string()))?;
+        Self::with_manager(request.level, |manager| {
+            manager
+                .uninstall(ServiceUninstallCtx { label })
+                .map_err(|error| DaemonManagerError::OperationFailed(error.to_string()))
+        })
+    }
+
+    fn start(&self, request: DaemonLabelRequest) -> Result<(), DaemonManagerError> {
+        let label = ServiceLabel::from_str(&request.label)
+            .map_err(|error| DaemonManagerError::InvalidLabel(error.to_string()))?;
+        Self::with_manager(request.level, |manager| {
+            manager
+                .start(ServiceStartCtx { label })
+                .map_err(|error| DaemonManagerError::OperationFailed(error.to_string()))
+        })
+    }
+
+    fn stop(&self, request: DaemonLabelRequest) -> Result<(), DaemonManagerError> {
+        let label = ServiceLabel::from_str(&request.label)
+            .map_err(|error| DaemonManagerError::InvalidLabel(error.to_string()))?;
+        Self::with_manager(request.level, |manager| {
+            manager
+                .stop(ServiceStopCtx { label })
+                .map_err(|error| DaemonManagerError::OperationFailed(error.to_string()))
+        })
+    }
+
+    fn status(&self, request: DaemonLabelRequest) -> Result<DaemonStatus, DaemonManagerError> {
+        let label = ServiceLabel::from_str(&request.label)
+            .map_err(|error| DaemonManagerError::InvalidLabel(error.to_string()))?;
+        Self::with_manager(request.level, |manager| {
+            manager
+                .status(ServiceStatusCtx { label })
+                .map(|status| match status {
+                    service_manager::ServiceStatus::NotInstalled => DaemonStatus::NotInstalled,
+                    service_manager::ServiceStatus::Running => DaemonStatus::Running,
+                    service_manager::ServiceStatus::Stopped(reason) => {
+                        DaemonStatus::Stopped(reason)
+                    }
+                })
+                .map_err(|error| DaemonManagerError::OperationFailed(error.to_string()))
+        })
+    }
 }
 
 fn print_config(config: &AgentRuntimeConfig) {
@@ -391,6 +550,121 @@ fn update_from_args(args: &ConfigSetArgs) -> RuntimeConfigUpdate {
     }
 }
 
+fn resolve_agent_runtime_program_path(
+    override_path: Option<&PathBuf>,
+) -> Result<PathBuf, AgentCtlError> {
+    if let Some(path) = override_path {
+        return Ok(path.clone());
+    }
+
+    let current_exe = std::env::current_exe()
+        .map_err(|error| AgentCtlError::DaemonProgramResolve(error.to_string()))?;
+    let parent = current_exe.parent().ok_or_else(|| {
+        AgentCtlError::DaemonProgramResolve("binary parent directory not found".to_string())
+    })?;
+    let binary_name = if cfg!(windows) {
+        "agent-runtime.exe"
+    } else {
+        "agent-runtime"
+    };
+    Ok(parent.join(binary_name))
+}
+
+fn daemon_level(is_system: bool) -> DaemonLevel {
+    if is_system {
+        DaemonLevel::System
+    } else {
+        DaemonLevel::User
+    }
+}
+
+fn daemon_label_request(args: &DaemonLabelArgs) -> DaemonLabelRequest {
+    DaemonLabelRequest {
+        label: args.label.clone(),
+        level: daemon_level(args.system),
+    }
+}
+
+fn daemon_install_request(args: &DaemonInstallArgs) -> Result<DaemonInstallRequest, AgentCtlError> {
+    let mut command_args = vec![
+        "--target".to_string(),
+        args.target.as_cli_value().to_string(),
+    ];
+
+    if let Some(config) = args.config.as_ref() {
+        command_args.push("--config".to_string());
+        command_args.push(config.display().to_string());
+    }
+    command_args.push("daemon".to_string());
+
+    Ok(DaemonInstallRequest {
+        label: args.label.clone(),
+        program: resolve_agent_runtime_program_path(args.program.as_ref())?,
+        args: command_args,
+        level: daemon_level(args.system),
+        autostart: !args.no_autostart,
+        username: None,
+        working_directory: args.working_directory.clone(),
+        environment: None,
+    })
+}
+
+fn print_daemon_status(status: DaemonStatus) {
+    match status {
+        DaemonStatus::NotInstalled => println!("daemon_status=not_installed"),
+        DaemonStatus::Running => println!("daemon_status=running"),
+        DaemonStatus::Stopped(reason) => {
+            println!("daemon_status=stopped");
+            if let Some(reason) = reason {
+                println!("reason={reason}");
+            }
+        }
+    }
+}
+
+fn run_daemon_command<M: DaemonManager>(
+    manager: &M,
+    command: DaemonCommand,
+) -> Result<(), AgentCtlError> {
+    match command {
+        DaemonCommand::Install(args) => {
+            manager
+                .install(daemon_install_request(&args)?)
+                .map_err(AgentCtlError::Daemon)?;
+            println!("Daemon installed.");
+            Ok(())
+        }
+        DaemonCommand::Uninstall(args) => {
+            manager
+                .uninstall(daemon_label_request(&args))
+                .map_err(AgentCtlError::Daemon)?;
+            println!("Daemon uninstalled.");
+            Ok(())
+        }
+        DaemonCommand::Start(args) => {
+            manager
+                .start(daemon_label_request(&args))
+                .map_err(AgentCtlError::Daemon)?;
+            println!("Daemon started.");
+            Ok(())
+        }
+        DaemonCommand::Stop(args) => {
+            manager
+                .stop(daemon_label_request(&args))
+                .map_err(AgentCtlError::Daemon)?;
+            println!("Daemon stopped.");
+            Ok(())
+        }
+        DaemonCommand::Status(args) => {
+            let status = manager
+                .status(daemon_label_request(&args))
+                .map_err(AgentCtlError::Daemon)?;
+            print_daemon_status(status);
+            Ok(())
+        }
+    }
+}
+
 fn run_with_repository<R: ConfigRepository>(
     repository: &R,
     command: ConfigCommand,
@@ -446,6 +720,7 @@ fn run(cli: Cli) -> Result<(), AgentCtlError> {
             Some(path) => run_with_repository(&FileConfigRepository::new(path), command),
             None => run_with_repository(&SystemConfigRepository, command),
         },
+        RootCommand::Daemon { command } => run_daemon_command(&NativeDaemonManager, command),
     }
 }
 
@@ -461,7 +736,15 @@ fn main() {
 mod tests {
     use clap::Parser;
 
-    use super::{Cli, ConfigCommand, LogLevelArg, RootCommand};
+    use retaia_agent::{
+        DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager, DaemonManagerError,
+        DaemonStatus,
+    };
+
+    use super::{
+        Cli, ConfigCommand, DaemonCommand, LogLevelArg, RootCommand, daemon_install_request,
+        run_daemon_command,
+    };
 
     #[test]
     fn tdd_clap_parses_set_with_partial_update() {
@@ -493,5 +776,138 @@ mod tests {
             .expect_err("unknown command must fail");
         let message = err.to_string();
         assert!(message.contains("unrecognized subcommand"));
+    }
+
+    #[test]
+    fn tdd_clap_parses_daemon_install_flags() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "daemon",
+            "install",
+            "--label",
+            "io.retaia.agent",
+            "--target",
+            "ui-mobile",
+            "--system",
+            "--no-autostart",
+        ])
+        .expect("daemon install args should parse");
+
+        match cli.command {
+            RootCommand::Daemon {
+                command: DaemonCommand::Install(args),
+            } => {
+                assert_eq!(args.label, "io.retaia.agent");
+                assert_eq!(args.target.as_cli_value(), "ui-mobile");
+                assert!(args.system);
+                assert!(args.no_autostart);
+            }
+            _ => panic!("unexpected parse result"),
+        }
+    }
+
+    #[test]
+    fn tdd_daemon_install_request_contains_daemon_mode_and_target_args() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "daemon",
+            "install",
+            "--program",
+            "/tmp/agent-runtime",
+            "--target",
+            "mcp",
+            "--config",
+            "/tmp/config.toml",
+        ])
+        .expect("daemon install parse should succeed");
+
+        let args = match cli.command {
+            RootCommand::Daemon {
+                command: DaemonCommand::Install(args),
+            } => args,
+            _ => panic!("unexpected parse result"),
+        };
+
+        let request = daemon_install_request(&args).expect("request should build");
+        assert_eq!(
+            request.program,
+            std::path::PathBuf::from("/tmp/agent-runtime")
+        );
+        assert_eq!(
+            request.args,
+            vec![
+                "--target".to_string(),
+                "mcp".to_string(),
+                "--config".to_string(),
+                "/tmp/config.toml".to_string(),
+                "daemon".to_string(),
+            ]
+        );
+    }
+
+    #[derive(Default)]
+    struct MockDaemonManager {
+        fail: bool,
+    }
+
+    impl DaemonManager for MockDaemonManager {
+        fn install(&self, _request: DaemonInstallRequest) -> Result<(), DaemonManagerError> {
+            if self.fail {
+                return Err(DaemonManagerError::OperationFailed("boom".to_string()));
+            }
+            Ok(())
+        }
+
+        fn uninstall(&self, _request: DaemonLabelRequest) -> Result<(), DaemonManagerError> {
+            if self.fail {
+                return Err(DaemonManagerError::OperationFailed("boom".to_string()));
+            }
+            Ok(())
+        }
+
+        fn start(&self, _request: DaemonLabelRequest) -> Result<(), DaemonManagerError> {
+            if self.fail {
+                return Err(DaemonManagerError::OperationFailed("boom".to_string()));
+            }
+            Ok(())
+        }
+
+        fn stop(&self, _request: DaemonLabelRequest) -> Result<(), DaemonManagerError> {
+            if self.fail {
+                return Err(DaemonManagerError::OperationFailed("boom".to_string()));
+            }
+            Ok(())
+        }
+
+        fn status(&self, _request: DaemonLabelRequest) -> Result<DaemonStatus, DaemonManagerError> {
+            if self.fail {
+                return Err(DaemonManagerError::OperationFailed("boom".to_string()));
+            }
+            Ok(DaemonStatus::Running)
+        }
+    }
+
+    #[test]
+    fn tdd_daemon_command_executes_with_shared_manager_port() {
+        let manager = MockDaemonManager::default();
+        let command = DaemonCommand::Status(super::DaemonLabelArgs {
+            label: "io.retaia.agent".to_string(),
+            system: false,
+        });
+
+        run_daemon_command(&manager, command).expect("daemon command should succeed");
+    }
+
+    #[test]
+    fn tdd_daemon_command_maps_manager_errors() {
+        let manager = MockDaemonManager { fail: true };
+        let command = DaemonCommand::Stop(super::DaemonLabelArgs {
+            label: "io.retaia.agent".to_string(),
+            system: false,
+        });
+
+        let err = run_daemon_command(&manager, command).expect_err("daemon command must fail");
+        assert!(err.to_string().contains("daemon operation failed"));
+        assert_eq!(DaemonLevel::User, super::daemon_level(false));
     }
 }

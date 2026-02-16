@@ -16,9 +16,17 @@ pub use application::core_api_gateway::{
     filter_jobs_for_declared_capabilities, poll_runtime_snapshot,
     runtime_snapshot_from_polled_jobs,
 };
+pub use application::daemon_manager::{
+    DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager, DaemonManagerError,
+    DaemonStatus,
+};
 pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
     dispatch_notifications, notification_message,
+};
+pub use application::runtime_cli_shell::{
+    ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,
+    format_status, help_text, parse_shell_command,
 };
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
 pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};

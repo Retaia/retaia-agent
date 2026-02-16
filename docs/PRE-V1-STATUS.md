@@ -29,6 +29,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Use-case d'enregistrement agent (`register_agent`) + port DDD `AgentRegistrationGateway` + adapter OpenAPI `POST /agents/register` publiant explicitement les capabilities déclarées.
 - In progress:
   - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut).
+  - Shell runtime CLI interactif (`agent-runtime`) ajouté comme miroir headless du menu système; UI desktop finale encore pending.
 - Pending:
   - Implémentation UI desktop concrète (au-delà du modèle de domaine/app).
 
@@ -60,6 +61,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `config validate`
     - `config init`
     - `config set`
+    - `daemon install/start/stop/status/uninstall` (service manager natif via port partagé)
   - Parsing CLI migré vers `clap`.
 - Pending:
   - Écran/panneau GUI branché sur les mêmes services en production app.

@@ -57,6 +57,29 @@ cargo run --bin agentctl -- config validate --check-respond
 
 `agentctl` is powered by `clap` and uses the same validation contract as GUI/runtime services.
 
+Interactive runtime shell (CLI-only environments):
+
+```bash
+cargo run --bin agent-runtime
+```
+
+Supported commands: `menu`, `status`, `settings`, `play`, `pause`, `stop`, `quit`.
+
+Daemon management (shared service for CLI/GUI):
+
+```bash
+# install user-level daemon with autostart at boot
+cargo run --bin agentctl -- daemon install
+
+# control lifecycle
+cargo run --bin agentctl -- daemon start
+cargo run --bin agentctl -- daemon status
+cargo run --bin agentctl -- daemon stop
+cargo run --bin agentctl -- daemon uninstall
+```
+
+Disable autostart at boot with `--no-autostart`.
+
 ## Development workflow
 
 ```bash

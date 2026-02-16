@@ -5,8 +5,8 @@ use std::sync::{Mutex, MutexGuard};
 use tempfile::tempdir;
 
 use retaia_agent::{
-    AgentRunState, AgentRuntimeApp, AgentRuntimeConfig, AuthMode, ClientRuntimeTarget,
-    ConfigRepository, ConfigRepositoryError, CONFIG_FILE_ENV, FileConfigRepository, LogLevel,
+    AgentRunState, AgentRuntimeApp, AgentRuntimeConfig, AuthMode, CONFIG_FILE_ENV,
+    ClientRuntimeTarget, ConfigRepository, ConfigRepositoryError, FileConfigRepository, LogLevel,
     MenuAction, NotificationMessage, NotificationSink, PollEndpoint, PollSignal, RuntimeSession,
     RuntimeSyncPlan, SettingsSaveError, StdoutNotificationSink, SystemConfigRepository,
     SystemNotification, dispatch_notifications, notification_message,
@@ -223,10 +223,7 @@ fn e2e_system_config_repository_overridden_path_roundtrip_matches_cli_gui_contra
     let _override = ConfigEnvOverride::set(&path);
 
     let repository = SystemConfigRepository;
-    assert_eq!(
-        repository.config_path().expect("path should resolve"),
-        path
-    );
+    assert_eq!(repository.config_path().expect("path should resolve"), path);
 
     repository.save(&settings()).expect("save should succeed");
     let loaded = repository.load().expect("load should succeed");
