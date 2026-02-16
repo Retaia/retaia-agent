@@ -12,6 +12,8 @@ mod configuration_interfaces;
 mod feature_flags;
 #[path = "tdd_runtime/menu.rs"]
 mod menu;
+#[path = "tdd_runtime/notification_bridge.rs"]
+mod notification_bridge;
 #[path = "tdd_runtime/notifications.rs"]
 mod notifications;
 #[path = "tdd_runtime/runtime_control.rs"]

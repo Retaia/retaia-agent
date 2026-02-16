@@ -29,3 +29,10 @@
 
 - `Updates available`
   - émission lors de la détection d'une nouvelle version agent
+
+## Bridge DDD
+
+- Port application: `NotificationSink`
+- Service application: `dispatch_notifications(...)`
+- Adapter infra de base: `StdoutNotificationSink`
+- Règle: la déduplication reste dans le domaine (`AgentUiRuntime`), le bridge ne doit pas réintroduire de logique métier.

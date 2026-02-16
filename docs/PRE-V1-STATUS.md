@@ -40,8 +40,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - `Settings saved`,
   - `Settings invalid` (dédupliqué),
   - `Updates available` (version unique).
+  - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateur `StdoutNotificationSink`.
 - Pending:
-  - Bridge effectif vers système de notifications OS (si GUI active).
+  - Adaptateur notification OS natif (GUI).
 
 ### Configuration (GUI/CLI parity + headless)
 
