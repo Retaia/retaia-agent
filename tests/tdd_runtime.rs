@@ -22,6 +22,8 @@ mod runtime_loop_engine;
 mod runtime_orchestration;
 #[path = "tdd_runtime/runtime_session.rs"]
 mod runtime_session;
+#[path = "tdd_runtime/runtime_status_tracker.rs"]
+mod runtime_status_tracker;
 #[path = "tdd_runtime/runtime_sync.rs"]
 mod runtime_sync;
 #[path = "tdd_runtime/runtime_sync_coordinator.rs"]

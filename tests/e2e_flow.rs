@@ -20,6 +20,8 @@ mod runtime_orchestration_flow;
 mod runtime_session_flow;
 #[path = "e2e_flow/runtime_specs_flow.rs"]
 mod runtime_specs_flow;
+#[path = "e2e_flow/runtime_status_flow.rs"]
+mod runtime_status_flow;
 #[path = "e2e_flow/runtime_sync_flow.rs"]
 mod runtime_sync_flow;
 #[path = "e2e_flow/status_notifications.rs"]

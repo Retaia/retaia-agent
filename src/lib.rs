@@ -28,6 +28,7 @@ pub use domain::runtime_orchestration::{
     next_poll_decision, push_channels_allowed, push_is_authoritative, runtime_orchestration_mode,
     should_trigger_poll_from_push, throttled_backoff_with_jitter,
 };
+pub use domain::runtime_status_tracker::{RuntimeStatusEvent, RuntimeStatusTracker};
 pub use domain::runtime_sync::{PushProcessResult, RuntimeSyncState};
 pub use domain::runtime_ui::{
     AgentRunState, AgentUiRuntime, ConnectivityState, JobFailure, JobStage, JobStatus, MenuAction,
