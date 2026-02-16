@@ -1,41 +1,33 @@
 use retaia_agent::{
-    ClientRuntimeTarget, PollDecisionReason, PollEndpoint, PollSignal, PushChannel, PushHint,
-    PushHintDecision, PushProcessResult, RuntimeSyncState, next_poll_decision,
+    PollDecisionReason, PollEndpoint, PollSignal, PushChannel, PushHint, PushHintDecision,
+    PushProcessResult, RuntimeSyncState, can_issue_mutation_after_poll, next_poll_decision,
     should_trigger_poll_from_push,
 };
 
 #[test]
-fn e2e_specs_v12_mobile_push_is_ui_mobile_only_and_agent_ignores_it() {
-    let hint = PushHint {
-        issued_at_ms: 1_000,
-        ttl_ms: 5_000,
-    };
-
-    let ui_mobile = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiMobile,
-        PushChannel::MobileApns,
-        hint,
+fn e2e_specs_v1_push_hint_triggers_poll_but_is_not_authoritative() {
+    let decision = should_trigger_poll_from_push(
+        retaia_agent::ClientRuntimeTarget::Agent,
+        PushChannel::WebSocket,
+        PushHint {
+            issued_at_ms: 1_000,
+            ttl_ms: 5_000,
+        },
         2_000,
         false,
     );
-    assert_eq!(ui_mobile, PushHintDecision::TriggerPoll);
+    assert_eq!(decision, PushHintDecision::TriggerPoll);
 
-    let agent = should_trigger_poll_from_push(
-        ClientRuntimeTarget::Agent,
-        PushChannel::MobileApns,
-        hint,
-        2_000,
-        false,
-    );
-    assert_eq!(agent, PushHintDecision::Ignore);
+    assert!(!can_issue_mutation_after_poll(false));
+    assert!(can_issue_mutation_after_poll(true));
 }
 
 #[test]
-fn e2e_specs_v12_expired_or_duplicate_push_hint_does_not_trigger_poll() {
-    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::UiRustDesktop);
+fn e2e_specs_v1_expired_or_duplicate_hint_is_ignored() {
+    let mut sync = RuntimeSyncState::new(retaia_agent::ClientRuntimeTarget::Agent);
 
     let expired = sync.process_push_hint(
-        PushChannel::WebSocket,
+        PushChannel::Sse,
         "hint-expired",
         PushHint {
             issued_at_ms: 1_000,
@@ -44,35 +36,32 @@ fn e2e_specs_v12_expired_or_duplicate_push_hint_does_not_trigger_poll() {
         2_000,
     );
     assert_eq!(expired, PushProcessResult::Ignored);
-    assert_eq!(sync.seen_hint_count(), 0);
 
     let fresh = sync.process_push_hint(
-        PushChannel::WebSocket,
+        PushChannel::Sse,
         "hint-dup",
         PushHint {
             issued_at_ms: 2_000,
             ttl_ms: 5_000,
         },
-        2_500,
+        2_100,
     );
     assert_eq!(fresh, PushProcessResult::PollTriggered);
-    assert_eq!(sync.seen_hint_count(), 1);
 
     let duplicate = sync.process_push_hint(
-        PushChannel::WebSocket,
+        PushChannel::Sse,
         "hint-dup",
         PushHint {
             issued_at_ms: 2_000,
             ttl_ms: 5_000,
         },
-        2_700,
+        2_200,
     );
     assert_eq!(duplicate, PushProcessResult::Ignored);
-    assert_eq!(sync.seen_hint_count(), 1);
 }
 
 #[test]
-fn e2e_specs_v12_too_many_attempts_429_uses_backoff_and_regular_polling_remains_available() {
+fn e2e_specs_v1_too_many_attempts_429_backoff_and_contract_polling() {
     let throttled = next_poll_decision(
         PollEndpoint::DeviceFlow,
         PollSignal::TooManyAttempts429,
