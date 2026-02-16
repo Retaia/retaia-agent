@@ -18,6 +18,9 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 - Notification système `All jobs done` obligatoire:
   - émise une seule fois sur transition vers aucun job actif
   - interdiction de répétition sur les polls suivants tant que l'état reste inchangé
+- Notification système `New job received` obligatoire:
+  - émise à l'arrivée d'un nouveau job (file vide -> non vide, ou nouveau `job_id`)
+  - interdiction de répétition sur les polls suivants pour le même job
 - Panneau de config accessible depuis menu app + menu système
 - Config minimale exposée: URL Core/Agent, URL Ollama, auth, paramètres runtime
 - Bearer-only

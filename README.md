@@ -21,6 +21,7 @@ L'agent est prévu comme une app de menu système (menu bar/tray) type Docker De
   - action en cours (ex: `claim`, `transcode`, `upload`, `submit`)
   - identifiant job/asset et message de statut court
 - notifications système:
+  - notifier `New job received` sur arrivée d'un nouveau job (événement/transition), sans répétition sur polls suivants
   - notifier `All jobs done` une seule fois lors de la transition `has_running_jobs=true -> false`
   - ne pas répéter la notification à chaque cycle de poll tant que l'état reste `no running jobs`
 - acces au panneau de configuration depuis:
