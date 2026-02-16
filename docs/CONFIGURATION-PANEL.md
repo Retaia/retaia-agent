@@ -37,7 +37,9 @@ Normalisation URL Core:
 - `agentctl config path`: affiche le chemin de config résolu.
 - `agentctl config show`: affiche la config active (secret masqué).
 - `agentctl config validate`: valide la config active.
-- `agentctl config validate --check-respond`: valide aussi que Core/Ollama répondent en HTTP.
+- `agentctl config validate --check-respond`: valide la compatibilité API côté Core/Ollama.
+  - Core: probe `GET /jobs` (statuts compatibles attendus + payload JSON).
+  - Ollama: probe `GET /api/tags` (JSON avec `models[]`).
 - `agentctl config init ...`: initialise la config (première installation).
 - `agentctl config set ...`: met à jour la config existante.
 
