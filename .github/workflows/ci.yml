@@ -14,8 +14,32 @@ env:
   CARGO_HUSKY_DONT_INSTALL_HOOKS: "1"
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run_tests: ${{ steps.filter.outputs.run_tests }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect relevant changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            run_tests:
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - "src/**"
+              - "tests/**"
+              - ".cargo-husky/hooks/**"
+              - ".github/workflows/ci.yml"
+
   branch-up-to-date:
     runs-on: ubuntu-latest
+    needs: changes
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,8 +72,11 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Install cargo-commitlint
-        run: cargo install cargo-commitlint --locked
+        uses: taiki-e/install-action@cargo-commitlint
 
       - name: Validate commit messages (PR range)
         env:
@@ -64,41 +91,12 @@ jobs:
           git fetch origin "$GITHUB_BASE_REF" --depth=1
           cargo commitlint check --from "origin/$GITHUB_BASE_REF" --to "$GITHUB_SHA" --verbose --strict
 
-  test-gates:
-    name: test-${{ matrix.suite }}
+  test-and-coverage:
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true'
     needs:
-      - branch-up-to-date
+      - changes
       - commitlint
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - suite: tdd
-            target: tdd_runtime
-          - suite: bdd
-            target: bdd_specs
-          - suite: e2e
-            target: e2e_flow
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Restore Rust cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run required ${{ matrix.suite }} gate
-        run: cargo test --test ${{ matrix.target }}
-
-  coverage-gate:
-    runs-on: ubuntu-latest
-    needs: test-gates
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -115,19 +113,37 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Run coverage gate (min 80%)
+      - name: Run tests and coverage gate (min 80%)
         run: |
           mkdir -p coverage
-          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary.json
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary.json --test tdd_runtime --test bdd_specs --test e2e_flow
           cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary.json --min 80
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          retention-days: 14
+          path: |
+            coverage/**
 
   ci-required:
     runs-on: ubuntu-latest
+    if: always()
     needs:
+      - changes
       - branch-up-to-date
       - commitlint
-      - test-gates
-      - coverage-gate
+      - test-and-coverage
     steps:
       - name: Required CI gate
-        run: echo "All required CI jobs passed."
+        run: |
+          [ "${{ needs.branch-up-to-date.result }}" = "success" ] || exit 1
+          [ "${{ needs.commitlint.result }}" = "success" ] || exit 1
+          if [ "${{ needs.changes.outputs.run_tests }}" = "true" ]; then
+            [ "${{ needs.test-and-coverage.result }}" = "success" ] || exit 1
+          else
+            [ "${{ needs.test-and-coverage.result }}" = "skipped" ] || exit 1
+          fi
+          echo "All required CI jobs passed."
