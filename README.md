@@ -16,6 +16,7 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
   - `coverage-gate`: coverage minimale 80%
 - Local hooks:
   - `pre-commit`: blocks commits on `master`
+  - `commit-msg`: enforces Conventional Commits
   - `pre-push`: blocks pushes on `master` and runs `cargo run --bin check_branch_up_to_date`
   - managed by `cargo-husky` from `.cargo-husky/hooks/`
 
