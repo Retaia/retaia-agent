@@ -1,5 +1,5 @@
 use retaia_agent::{
-    BestEffortNotificationSink, NotificationBridgeError, NotificationMessage, SystemNotification,
+    NotificationBridgeError, NotificationMessage, SystemNotification, SystemNotificationSink,
     dispatch_notifications,
 };
 
@@ -10,9 +10,9 @@ fn dispatcher_err(_message: &NotificationMessage) -> Result<(), NotificationBrid
 }
 
 #[test]
-fn bdd_given_system_notification_dispatch_not_available_when_runtime_dispatches_then_delivery_continues_with_no_bridge_failure()
+fn bdd_given_system_notification_dispatch_not_available_when_runtime_dispatches_then_delivery_is_reported_failed()
  {
-    let sink = BestEffortNotificationSink::with_dispatcher(dispatcher_err);
+    let sink = SystemNotificationSink::with_dispatcher(dispatcher_err);
     let notifications = vec![
         SystemNotification::NewJobReceived {
             job_id: "job-1".to_string(),
@@ -22,6 +22,6 @@ fn bdd_given_system_notification_dispatch_not_available_when_runtime_dispatches_
 
     let report = dispatch_notifications(&sink, &notifications);
 
-    assert_eq!(report.delivered, 2);
-    assert!(report.failed.is_empty());
+    assert_eq!(report.delivered, 0);
+    assert_eq!(report.failed.len(), 2);
 }

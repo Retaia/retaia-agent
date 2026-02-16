@@ -40,10 +40,10 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - `Settings saved`,
   - `Settings invalid` (dédupliqué),
   - `Updates available` (version unique).
-  - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateurs `BestEffortNotificationSink` (OS si supporté, fallback stdout), `StdoutNotificationSink` et `TauriNotificationSink` (feature `tauri-notifications`).
+  - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateurs `SystemNotificationSink` (OS si supporté, résultat strict OK/NOK), `StdoutNotificationSink` et `TauriNotificationSink` (feature `tauri-notifications`).
   - Intégration façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)`.
 - Pending:
-  - Brancher `BestEffortNotificationSink`/`TauriNotificationSink` dans le shell GUI final selon cible d'exécution.
+  - Brancher `SystemNotificationSink`/`TauriNotificationSink` dans le shell GUI final selon cible d'exécution.
 
 ### Configuration (GUI/CLI parity + headless)
 

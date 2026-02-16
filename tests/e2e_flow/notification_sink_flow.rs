@@ -1,6 +1,6 @@
 use retaia_agent::{
-    AgentUiRuntime, BestEffortNotificationSink, NotificationBridgeError, NotificationMessage,
-    RuntimeSnapshot, dispatch_notifications,
+    AgentUiRuntime, NotificationBridgeError, NotificationMessage, RuntimeSnapshot,
+    SystemNotificationSink, dispatch_notifications,
 };
 
 fn dispatcher_err(_message: &NotificationMessage) -> Result<(), NotificationBridgeError> {
@@ -10,17 +10,17 @@ fn dispatcher_err(_message: &NotificationMessage) -> Result<(), NotificationBrid
 }
 
 #[test]
-fn e2e_runtime_notifications_are_dispatched_once_with_system_fallback_sink() {
+fn e2e_runtime_notifications_are_dispatched_once_and_fail_when_system_sink_unavailable() {
     let mut runtime = AgentUiRuntime::new();
-    let sink = BestEffortNotificationSink::with_dispatcher(dispatcher_err);
+    let sink = SystemNotificationSink::with_dispatcher(dispatcher_err);
 
     let mut started = RuntimeSnapshot::default();
     started.known_job_ids.insert("job-42".to_string());
     started.running_job_ids.insert("job-42".to_string());
     let start_notifications = runtime.update_snapshot(started);
     let start_report = dispatch_notifications(&sink, &start_notifications);
-    assert_eq!(start_report.delivered, 1);
-    assert!(start_report.failed.is_empty());
+    assert_eq!(start_report.delivered, 0);
+    assert_eq!(start_report.failed.len(), 1);
 
     let stable = RuntimeSnapshot {
         known_job_ids: ["job-42".to_string()].into_iter().collect(),
@@ -35,6 +35,6 @@ fn e2e_runtime_notifications_are_dispatched_once_with_system_fallback_sink() {
     let finished = RuntimeSnapshot::default();
     let done_notifications = runtime.update_snapshot(finished);
     let done_report = dispatch_notifications(&sink, &done_notifications);
-    assert_eq!(done_report.delivered, 1);
-    assert!(done_report.failed.is_empty());
+    assert_eq!(done_report.delivered, 0);
+    assert_eq!(done_report.failed.len(), 1);
 }

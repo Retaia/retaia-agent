@@ -1,6 +1,6 @@
 use retaia_agent::{
-    BestEffortNotificationSink, NotificationBridgeError, NotificationMessage, NotificationSink,
-    SystemNotification,
+    NotificationBridgeError, NotificationMessage, NotificationSink, SystemNotification,
+    SystemNotificationSink,
 };
 
 fn message() -> NotificationMessage {
@@ -28,7 +28,7 @@ fn dispatcher_err(_message: &NotificationMessage) -> Result<(), NotificationBrid
 
 #[test]
 fn tdd_given_system_dispatcher_ok_when_sending_then_notification_is_delivered() {
-    let sink = BestEffortNotificationSink::with_dispatcher(dispatcher_ok);
+    let sink = SystemNotificationSink::with_dispatcher(dispatcher_ok);
 
     let result = sink.send(&message(), &source());
 
@@ -36,10 +36,10 @@ fn tdd_given_system_dispatcher_ok_when_sending_then_notification_is_delivered() 
 }
 
 #[test]
-fn tdd_given_system_dispatcher_failure_when_sending_then_stdout_fallback_preserves_delivery() {
-    let sink = BestEffortNotificationSink::with_dispatcher(dispatcher_err);
+fn tdd_given_system_dispatcher_failure_when_sending_then_notification_fails() {
+    let sink = SystemNotificationSink::with_dispatcher(dispatcher_err);
 
     let result = sink.send(&message(), &source());
 
-    assert!(result.is_ok());
+    assert!(result.is_err());
 }

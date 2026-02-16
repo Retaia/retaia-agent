@@ -21,43 +21,35 @@ impl NotificationSink for StdoutNotificationSink {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct BestEffortNotificationSink {
+pub struct SystemNotificationSink {
     dispatcher: SystemNotificationDispatcher,
-    fallback: StdoutNotificationSink,
 }
 
-impl Default for BestEffortNotificationSink {
+impl Default for SystemNotificationSink {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl BestEffortNotificationSink {
+impl SystemNotificationSink {
     pub fn new() -> Self {
         Self {
             dispatcher: dispatch_system_notification,
-            fallback: StdoutNotificationSink,
         }
     }
 
     pub fn with_dispatcher(dispatcher: SystemNotificationDispatcher) -> Self {
-        Self {
-            dispatcher,
-            fallback: StdoutNotificationSink,
-        }
+        Self { dispatcher }
     }
 }
 
-impl NotificationSink for BestEffortNotificationSink {
+impl NotificationSink for SystemNotificationSink {
     fn send(
         &self,
         message: &NotificationMessage,
-        source: &SystemNotification,
+        _source: &SystemNotification,
     ) -> Result<(), NotificationBridgeError> {
-        match (self.dispatcher)(message) {
-            Ok(()) => Ok(()),
-            Err(_) => self.fallback.send(message, source),
-        }
+        (self.dispatcher)(message)
     }
 }
 
