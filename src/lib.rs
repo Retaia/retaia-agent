@@ -19,9 +19,11 @@ pub use domain::runtime_control::{
     runtime_control_availability,
 };
 pub use domain::runtime_orchestration::{
-    PollDecision, PollDecisionReason, PollEndpoint, PollSignal, RuntimeOrchestrationMode,
-    can_issue_mutation_after_poll, next_poll_decision, push_channels_allowed,
-    runtime_orchestration_mode, throttled_backoff_with_jitter,
+    ClientRuntimeTarget, PollDecision, PollDecisionReason, PollEndpoint, PollSignal, PushChannel,
+    PushHint, PushHintDecision, RuntimeOrchestrationMode, can_issue_mutation_after_poll,
+    is_push_channel_supported_for_target, is_push_hint_fresh, mobile_push_allowed_for_target,
+    next_poll_decision, push_channels_allowed, push_is_authoritative, runtime_orchestration_mode,
+    should_trigger_poll_from_push, throttled_backoff_with_jitter,
 };
 pub use domain::runtime_ui::{
     AgentRunState, AgentUiRuntime, ConnectivityState, JobFailure, JobStage, JobStatus, MenuAction,

@@ -1,11 +1,25 @@
 use retaia_agent::{
-    PollDecisionReason, PollEndpoint, PollSignal, can_issue_mutation_after_poll,
-    next_poll_decision, push_channels_allowed,
+    ClientRuntimeTarget, PollDecisionReason, PollEndpoint, PollSignal, PushChannel, PushHint,
+    PushHintDecision, can_issue_mutation_after_poll, next_poll_decision, push_channels_allowed,
+    push_is_authoritative, should_trigger_poll_from_push,
 };
 
 #[test]
-fn e2e_runtime_is_pull_only_with_contract_interval_then_429_backoff_flow() {
-    assert!(!push_channels_allowed());
+fn e2e_runtime_status_driven_polling_with_push_hint_then_poll_confirmation_flow() {
+    assert!(push_channels_allowed());
+    assert!(!push_is_authoritative());
+
+    let push_decision = should_trigger_poll_from_push(
+        ClientRuntimeTarget::UiRustDesktop,
+        PushChannel::WebSocket,
+        PushHint {
+            issued_at_ms: 100,
+            ttl_ms: 2_000,
+        },
+        500,
+        false,
+    );
+    assert_eq!(push_decision, PushHintDecision::TriggerPoll);
 
     let jobs_poll = next_poll_decision(
         PollEndpoint::Jobs,
