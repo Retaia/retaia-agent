@@ -9,6 +9,7 @@ Point d'entrée pour les agents IA.
 
 ## Lecture minimale obligatoire (ordre)
 
+- `docs/PRE-V1-STATUS.md`
 - `docs/RUNTIME-CONSTRAINTS.md`
 - `docs/UX-SYSTEM-TRAY.md`
 - `docs/NOTIFICATIONS.md`
