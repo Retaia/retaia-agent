@@ -3,8 +3,9 @@ pub mod domain;
 
 pub use application::agent_runtime_app::{AgentRuntimeApp, RuntimeStatusView, TrayMenuModel};
 pub use domain::configuration::{
-    AgentRuntimeConfig, AuthMode, ConfigValidationError, LogLevel, TechnicalAuthConfig,
-    compact_validation_reason, validate_config,
+    AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
+    RuntimeConfigUpdate, TechnicalAuthConfig, apply_config_update, compact_validation_reason,
+    supported_config_fields, validate_config,
 };
 pub use domain::feature_flags::{
     ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,

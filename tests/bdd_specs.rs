@@ -4,6 +4,8 @@ mod application_runtime;
 mod authz;
 #[path = "bdd_specs/configuration.rs"]
 mod configuration;
+#[path = "bdd_specs/configuration_cli.rs"]
+mod configuration_cli;
 #[path = "bdd_specs/feature_flags.rs"]
 mod feature_flags;
 #[path = "bdd_specs/notifications.rs"]
