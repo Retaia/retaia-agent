@@ -6,6 +6,10 @@ pub use application::agent_runtime_app::{
     AgentRuntimeApp, RuntimeStatusView, SettingsSaveError, TrayMenuModel,
 };
 pub use application::config_repository::{ConfigRepository, ConfigRepositoryError};
+pub use application::notification_bridge::{
+    NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
+    dispatch_notifications, notification_message,
+};
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
 pub use application::runtime_session::RuntimeSession;
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
@@ -39,3 +43,4 @@ pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
     save_config_to_path, save_system_config, system_config_file_path,
 };
+pub use infrastructure::notification_sink::StdoutNotificationSink;
