@@ -16,6 +16,8 @@ mod feature_flags;
 mod notifications;
 #[path = "bdd_specs/runtime_control.rs"]
 mod runtime_control;
+#[path = "bdd_specs/runtime_loop_engine.rs"]
+mod runtime_loop_engine;
 #[path = "bdd_specs/runtime_orchestration.rs"]
 mod runtime_orchestration;
 #[path = "bdd_specs/runtime_sync.rs"]

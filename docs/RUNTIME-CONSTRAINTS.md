@@ -57,6 +57,10 @@
   - validation TTL/fraîcheur des hints,
   - décision de déclenchement de poll,
   - gate des mutations seulement après état compatible lu par polling.
+- Service application: `RuntimeSyncCoordinator` + `RuntimeLoopEngine`.
+- Responsabilités application:
+  - transformer les événements runtime (push/poll/429) en plans d'action exécutables,
+  - imposer le gating par état runtime (`running/paused/stopped`) sans dupliquer les règles domaine.
 
 ## Normative References
 

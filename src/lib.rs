@@ -6,6 +6,7 @@ pub use application::agent_runtime_app::{
     AgentRuntimeApp, RuntimeStatusView, SettingsSaveError, TrayMenuModel,
 };
 pub use application::config_repository::{ConfigRepository, ConfigRepositoryError};
+pub use application::runtime_loop_engine::RuntimeLoopEngine;
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
