@@ -1,21 +1,18 @@
 # Agent Docs
 
-Ce dossier contient la documentation d'implémentation de l'agent.
+Hub documentaire local, organisé par sujet.
 
-## Références
-- `../AGENT.md`
+## Sujets
+
+- Runtime et contraintes: `RUNTIME-CONSTRAINTS.md`
+- UX menu système (tray): `UX-SYSTEM-TRAY.md`
+- Notifications: `NOTIFICATIONS.md`
+- Panneau de configuration: `CONFIGURATION-PANEL.md`
+- Qualité/CI/Hooks: `CI-QUALITY-GATES.md`
+
+## Références normatives
+
 - `../specs/api/API-CONTRACTS.md`
 - `../specs/workflows/AGENT-PROTOCOL.md`
 - `../specs/tests/TEST-PLAN.md`
-
-## Politique tests locale (gates PR)
-- `TDD` : tests fondes sur le comportement du code (unitaires/integration selon le besoin technique).
-- `BDD` : tests fondes sur les scenarios derives de `../specs/tests/TEST-PLAN.md`.
-- `E2E` : tests de parcours complets fondes sur les workflows/specs.
-- `Coverage` : minimum `80%` (ligne) sur le repo.
-
-En CI, ces checks sont bloquants pour merge PR :
-- `test-tdd`
-- `test-bdd`
-- `test-e2e`
-- `coverage-gate`
+- `../specs/policies/AUTHZ-MATRIX.md`

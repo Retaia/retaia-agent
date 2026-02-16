@@ -1,38 +1,24 @@
-# AGENT Rules (v1)
+# AGENT Rules (Entry Point)
 
-## Scope
-Ce repo implémente le client agent Retaia.
-La source de vérité contrat/runtime est le submodule `specs/`.
+Point d'entrée pour les agents IA.
 
-## Normes obligatoires
-- CLI obligatoire (Linux headless supporté)
-- GUI optionnelle, même moteur que la CLI
-- Bearer-only
-- Respect strict de `effective_feature_enabled`
-- Aucun traitement MCP dans ce repo
+## Source de vérité
 
-## Auth
-- Mode interactif: login utilisateur
-- Mode technique: client credentials (`client_id` + `secret_key`)
-- 1 token actif par `client_id`
+- Specs normatives: `specs/`
+- Hub doc local par sujets: `docs/README.md`
 
-## Sécurité
-- Aucun token/secret en clair dans logs, traces, crash reports
-- Secret storage OS-native (Linux/macOS/Windows)
-- Rotation de secret supportée sans réinstallation
+## Lecture minimale obligatoire (ordre)
 
-## Delivery
-- PR atomiques
-- Rebase sur `master`
-- Pas de merge commits de synchronisation
-- Historique linéaire obligatoire (branche à jour + aucun merge commit)
-- Check CI bloquant `commitlint`: tous les commits PR en Conventional Commits
-- Tests obligatoires en PR:
-  - `TDD` base sur le fonctionnement du code
-  - `BDD` base sur les scenarios des specs
-  - `E2E` base sur les parcours specs/workflows
-- Coverage minimale obligatoire en PR: `80%` (line coverage)
-- Hook git `pre-commit` (via `cargo-husky`): interdit les commits sur `master`
-- Hook git `commit-msg` (via `cargo-husky`): impose Conventional Commits via `cargo-commitlint`
-- Hook git `pre-push` (via `cargo-husky`): interdit les pushes sur `master` + vérifie la fraîcheur/linéarité de branche
-- Guard local: `core.hooksPath` ne DOIT PAS surcharger les hooks du repo (`git config --unset core.hooksPath`)
+- `docs/RUNTIME-CONSTRAINTS.md`
+- `docs/UX-SYSTEM-TRAY.md`
+- `docs/NOTIFICATIONS.md`
+- `docs/CONFIGURATION-PANEL.md`
+- `docs/CI-QUALITY-GATES.md`
+
+## Règles d'exécution
+
+- Ne jamais implémenter une logique qui contredit `specs/`.
+- Garder CLI obligatoire; GUI optionnelle et même moteur runtime.
+- Respect strict de `effective_feature_enabled`.
+- Aucun traitement MCP dans ce repo.
+- Aucun commit/push direct sur `master`.

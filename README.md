@@ -1,44 +1,81 @@
 # retaia-agent
 
-Client agent Rust (CLI obligatoire, GUI optionnelle).
+Rust agent client for the Retaia platform.
 
-- Règles: `AGENT.md`
-- Specs normatives: submodule `specs/`
-- Docs: `docs/`
+## Why this project
 
-## Branch rules and hooks
+`retaia-agent` is the execution client responsible for processing workloads defined by Retaia Core contracts.
 
-- CI gate: `branch-up-to-date` (branch must include latest `master` and keep linear history)
-- CI gate: `commitlint` (PR commit range must follow Conventional Commits, fast regex check)
-- CI test gates (blocking for PR merge):
-  - `rust-build-cache`: pre-build des tests pour reduire les recompilations
-  - `test-tdd`: tests bases sur le fonctionnement du code
-  - `test-bdd`: scenarios bases sur la spec
-  - `test-e2e`: parcours end-to-end bases sur la spec
-  - `coverage-gate`: coverage minimale 80%
-  - `ci-required`: aggregate required status
-  - path filters: les jobs de tests lourds sont skips si aucun fichier applicatif pertinent n'a change
-- Local hooks:
-  - `pre-commit`: blocks commits on `master`
-  - `commit-msg`: enforces Conventional Commits via `cargo-commitlint`
-  - `pre-push`: blocks pushes on `master` and runs `cargo run --bin check_branch_up_to_date`
-  - managed by `cargo-husky` from `.cargo-husky/hooks/`
+- CLI-first design for Linux headless environments.
+- Optional GUI mode using the same runtime engine as CLI.
+- Strict contract alignment with `specs/` (submodule to `retaia-docs`).
 
-Cargo commands used by CI checks:
+## Features
 
-- `cargo test --test tdd_runtime`
-- `cargo test --test bdd_specs`
-- `cargo test --test e2e_flow`
-- `cargo llvm-cov --workspace --summary-only --json --output-path coverage/llvm-cov-summary.json`
-- `cargo run --bin check_coverage -- --file coverage/llvm-cov-summary.json --min 80`
+- Contract-driven runtime behavior.
+- CLI mandatory, GUI optional.
+- Branch protection workflow with linear-history enforcement.
+- Husky local guards (`pre-commit`, `pre-push`) to block direct work on `master`.
 
-Setup:
+## Project structure
+
+- `src/`: runtime code
+- `tests/`: automated test suite
+- `docs/`: implementation and operations docs
+- `AGENT.md`: normative rules for agent implementation
+- `specs/`: contract source of truth (git submodule)
+
+## Requirements
+
+- Rust (stable toolchain)
+- Node.js 22+ (for CI/husky tooling)
+- Git
+
+## Quick start
 
 ```bash
-cargo install cargo-commitlint
-# Ensure git uses repository hooks from .git/hooks.
-git config --unset core.hooksPath || true
-# Force hook refresh after hook file updates.
-cargo clean -p cargo-husky
+git submodule update --init --recursive
+npm ci
 cargo test
 ```
+
+## Development workflow
+
+```bash
+# create a feature branch
+git checkout -b codex/my-feature
+
+# run checks
+npm run check:branch-up-to-date
+cargo test
+```
+
+Rules:
+
+- No commit on `master` (blocked by husky `pre-commit`)
+- No push on `master` (blocked by husky `pre-push`)
+- Rebase on latest `master` before merge
+- Keep linear history (no merge commits in feature branch)
+
+## CI checks
+
+- `branch-up-to-date`
+
+## Contributing
+
+See:
+
+- `CONTRIBUTING.md`
+- `AGENT.md`
+- `docs/README.md`
+
+## Security
+
+- Do not log tokens/secrets in clear text.
+- Keep runtime behavior aligned with policies in `specs/policies/`.
+
+## Roadmap
+
+- Rust CLI baseline (v1)
+- Optional GUI shell on top of the same engine
+- Extended observability and operational hardening
