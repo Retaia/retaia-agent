@@ -1,5 +1,7 @@
+pub mod application;
 pub mod domain;
 
+pub use application::agent_runtime_app::{AgentRuntimeApp, RuntimeStatusView, TrayMenuModel};
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigValidationError, LogLevel, TechnicalAuthConfig,
     compact_validation_reason, validate_config,
