@@ -4,16 +4,7 @@
   "version": "0.1.0",
   "description": "Retaia agent bootstrap tooling",
   "scripts": {
-    "prepare": "husky",
-    "check:branch-up-to-date": "node scripts/ci/check-branch-up-to-date.mjs",
-    "check:test:tdd": "node scripts/ci/run-npm-script.mjs test:tdd",
-    "check:test:bdd": "node scripts/ci/run-npm-script.mjs test:bdd",
-    "check:test:e2e": "node scripts/ci/run-npm-script.mjs test:e2e",
-    "check:coverage": "node scripts/ci/run-npm-script.mjs test:coverage && node scripts/ci/check-coverage-summary.mjs --file coverage/llvm-cov-summary.json --min 80",
-    "test:tdd": "cargo test --test tdd_runtime",
-    "test:bdd": "cargo test --test bdd_specs",
-    "test:e2e": "cargo test --test e2e_flow",
-    "test:coverage": "mkdir -p coverage && cargo llvm-cov --workspace --summary-only --json --output-path coverage/llvm-cov-summary.json"
+    "prepare": "husky"
   },
   "devDependencies": {
     "husky": "^9.1.7"

@@ -17,11 +17,7 @@ pub fn resolve_effective_features(
     keys.extend(app_feature_enabled.keys().cloned());
     keys.extend(user_feature_enabled.keys().cloned());
     keys.extend(dependencies.keys().cloned());
-    keys.extend(
-        dependencies
-            .values()
-            .flat_map(|deps| deps.iter().cloned()),
-    );
+    keys.extend(dependencies.values().flat_map(|deps| deps.iter().cloned()));
     keys.extend(disable_escalation.keys().cloned());
     keys.extend(
         disable_escalation
@@ -44,9 +40,7 @@ pub fn resolve_effective_features(
             let all_dependencies_enabled = deps
                 .iter()
                 .all(|dep| effective.get(dep).copied().unwrap_or(true));
-            if !all_dependencies_enabled
-                && effective.get(feature).copied().unwrap_or(true)
-            {
+            if !all_dependencies_enabled && effective.get(feature).copied().unwrap_or(true) {
                 effective.insert(feature.clone(), false);
                 changed = true;
             }

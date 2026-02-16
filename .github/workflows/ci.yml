@@ -16,27 +16,18 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Ensure branch is up to date and linear
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_BASE_REF: ${{ github.base_ref }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
-        run: npm run check:branch-up-to-date
+        run: cargo run --quiet --bin check_branch_up_to_date
 
   test-gates:
     name: test-${{ matrix.suite }}
@@ -44,7 +35,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [tdd, bdd, e2e]
+        include:
+          - suite: tdd
+            target: tdd_runtime
+          - suite: bdd
+            target: bdd_specs
+          - suite: e2e
+            target: e2e_flow
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,26 +49,14 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Run required ${{ matrix.suite }} gate
-        run: npm run check:test:${{ matrix.suite }}
+        run: cargo test --test ${{ matrix.target }}
 
   coverage-gate:
     runs-on: ubuntu-latest
@@ -82,14 +67,17 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Run coverage gate (min 80%)
-        run: npm run check:coverage
+        run: |
+          mkdir -p coverage
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary.json
+          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary.json --min 80

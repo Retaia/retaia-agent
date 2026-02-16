@@ -1,10 +1,7 @@
 use std::collections::BTreeMap;
 
 use retaia_agent::{
-    ClientKind,
-    can_issue_client_token,
-    can_process_jobs,
-    resolve_effective_features,
+    ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,
 };
 
 #[test]
