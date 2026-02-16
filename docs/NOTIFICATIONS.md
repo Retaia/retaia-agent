@@ -34,6 +34,10 @@
 
 - Port application: `NotificationSink`
 - Service application: `dispatch_notifications(...)`
+- Adapter infra OS: `SystemNotificationSink`
+  - utilise `notify-rust` sur OS supportés (`macOS`, `Linux`, `Windows`)
+  - comportement strict: succès si dispatch OS réussi, erreur sinon (`OK/NOK`)
 - Adapter infra de base: `StdoutNotificationSink`
 - Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
+- Façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)` pour enchaîner projection + dispatch dans le flux agent.
 - Règle: la déduplication reste dans le domaine (`AgentUiRuntime`), le bridge ne doit pas réintroduire de logique métier.

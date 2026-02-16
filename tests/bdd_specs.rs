@@ -14,6 +14,8 @@ mod configuration_cli;
 mod feature_flags;
 #[path = "bdd_specs/notification_bridge.rs"]
 mod notification_bridge;
+#[path = "bdd_specs/notification_sink.rs"]
+mod notification_sink;
 #[path = "bdd_specs/notifications.rs"]
 mod notifications;
 #[path = "bdd_specs/runtime_control.rs"]

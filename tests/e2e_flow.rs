@@ -14,6 +14,8 @@ mod config_repository_flow;
 mod config_runtime_flow;
 #[path = "e2e_flow/notification_bridge_flow.rs"]
 mod notification_bridge_flow;
+#[path = "e2e_flow/notification_sink_flow.rs"]
+mod notification_sink_flow;
 #[path = "e2e_flow/runtime_loop_engine_flow.rs"]
 mod runtime_loop_engine_flow;
 #[path = "e2e_flow/runtime_orchestration_flow.rs"]

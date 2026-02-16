@@ -1,7 +1,9 @@
 use retaia_agent::{
     AgentRunState, AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, LogLevel, MenuAction,
-    PollEndpoint, PushChannel, PushHint, RuntimeSession, RuntimeSyncPlan,
+    NotificationBridgeError, NotificationMessage, NotificationSink, PollEndpoint, PushChannel,
+    PushHint, RuntimeSession, RuntimeSnapshot, RuntimeSyncPlan, SystemNotification,
 };
+use std::cell::RefCell;
 
 fn config() -> AgentRuntimeConfig {
     AgentRuntimeConfig {
@@ -40,4 +42,38 @@ fn bdd_given_runtime_session_when_push_hint_arrives_then_immediate_poll_plan_is_
             endpoint: PollEndpoint::Jobs
         }
     );
+}
+
+struct FailAllSink {
+    calls: RefCell<u32>,
+}
+
+impl NotificationSink for FailAllSink {
+    fn send(
+        &self,
+        _message: &NotificationMessage,
+        _source: &SystemNotification,
+    ) -> Result<(), NotificationBridgeError> {
+        *self.calls.borrow_mut() += 1;
+        Err(NotificationBridgeError::SinkFailed(
+            "unavailable".to_string(),
+        ))
+    }
+}
+
+#[test]
+fn bdd_given_runtime_session_dispatch_when_sink_fails_then_notification_is_reported_failed() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, config()).expect("session");
+    let sink = FailAllSink {
+        calls: RefCell::new(0),
+    };
+
+    let mut snapshot = RuntimeSnapshot::default();
+    snapshot.known_job_ids.insert("job-bdd".to_string());
+    snapshot.running_job_ids.insert("job-bdd".to_string());
+    let report = session.update_snapshot_and_dispatch(snapshot, &sink);
+
+    assert_eq!(report.dispatch.delivered, 0);
+    assert_eq!(report.dispatch.failed.len(), 1);
+    assert_eq!(*sink.calls.borrow(), 1);
 }

@@ -1,4 +1,7 @@
 use crate::application::agent_runtime_app::{AgentRuntimeApp, RuntimeStatusView, TrayMenuModel};
+use crate::application::notification_bridge::{
+    NotificationDispatchReport, NotificationSink, dispatch_notifications,
+};
 use crate::application::runtime_loop_engine::RuntimeLoopEngine;
 use crate::application::runtime_sync_coordinator::RuntimeSyncPlan;
 use crate::domain::configuration::{AgentRuntimeConfig, ConfigValidationError};
@@ -12,6 +15,12 @@ use crate::domain::runtime_ui::{AgentRunState, MenuAction, RuntimeSnapshot, Syst
 pub struct RuntimeSession {
     app: AgentRuntimeApp,
     loop_engine: RuntimeLoopEngine,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeNotificationReport {
+    pub notifications: Vec<SystemNotification>,
+    pub dispatch: NotificationDispatchReport,
 }
 
 impl RuntimeSession {
@@ -89,6 +98,19 @@ impl RuntimeSession {
 
     pub fn update_snapshot(&mut self, snapshot: RuntimeSnapshot) -> Vec<SystemNotification> {
         self.app.update_snapshot(snapshot)
+    }
+
+    pub fn update_snapshot_and_dispatch<S: NotificationSink>(
+        &mut self,
+        snapshot: RuntimeSnapshot,
+        sink: &S,
+    ) -> RuntimeNotificationReport {
+        let notifications = self.app.update_snapshot(snapshot);
+        let dispatch = dispatch_notifications(sink, &notifications);
+        RuntimeNotificationReport {
+            notifications,
+            dispatch,
+        }
     }
 
     pub fn can_issue_mutation(&self) -> bool {

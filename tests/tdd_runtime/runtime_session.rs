@@ -1,8 +1,10 @@
 use retaia_agent::{
     AgentRunState, AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, LogLevel, MenuAction,
-    PollDecisionReason, PollEndpoint, PollSignal, PushChannel, PushHint, RuntimeSession,
-    RuntimeSyncPlan,
+    NotificationBridgeError, NotificationMessage, NotificationSink, PollDecisionReason,
+    PollEndpoint, PollSignal, PushChannel, PushHint, RuntimeSession, RuntimeSnapshot,
+    RuntimeSyncPlan, SystemNotification,
 };
+use std::cell::RefCell;
 
 fn settings() -> AgentRuntimeConfig {
     AgentRuntimeConfig {
@@ -67,4 +69,41 @@ fn tdd_runtime_session_mutation_gate_depends_on_poll_compatibility() {
 
     let _ = session.on_menu_action(MenuAction::Pause);
     assert!(!session.can_issue_mutation());
+}
+
+#[derive(Default)]
+struct CaptureSink {
+    delivered: RefCell<Vec<String>>,
+}
+
+impl NotificationSink for CaptureSink {
+    fn send(
+        &self,
+        message: &NotificationMessage,
+        _source: &SystemNotification,
+    ) -> Result<(), NotificationBridgeError> {
+        self.delivered.borrow_mut().push(message.title.clone());
+        Ok(())
+    }
+}
+
+#[test]
+fn tdd_runtime_session_update_snapshot_and_dispatch_returns_report() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let sink = CaptureSink::default();
+
+    let mut snapshot = RuntimeSnapshot::default();
+    snapshot.known_job_ids.insert("job-1".to_string());
+    snapshot.running_job_ids.insert("job-1".to_string());
+
+    let report = session.update_snapshot_and_dispatch(snapshot, &sink);
+    assert_eq!(
+        report.notifications,
+        vec![SystemNotification::NewJobReceived {
+            job_id: "job-1".to_string()
+        }]
+    );
+    assert_eq!(report.dispatch.delivered, 1);
+    assert!(report.dispatch.failed.is_empty());
+    assert_eq!(sink.delivered.borrow().as_slice(), &["New job received"]);
 }

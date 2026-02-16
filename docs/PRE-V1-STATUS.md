@@ -40,9 +40,10 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - `Settings saved`,
   - `Settings invalid` (dédupliqué),
   - `Updates available` (version unique).
-  - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateurs `StdoutNotificationSink` et `TauriNotificationSink` (feature `tauri-notifications`).
+  - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateurs `SystemNotificationSink` (OS si supporté, résultat strict OK/NOK), `StdoutNotificationSink` et `TauriNotificationSink` (feature `tauri-notifications`).
+  - Intégration façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)`.
 - Pending:
-  - Brancher `TauriNotificationSink` dans le shell GUI final.
+  - Brancher `SystemNotificationSink`/`TauriNotificationSink` dans le shell GUI final selon cible d'exécution.
 
 ### Configuration (GUI/CLI parity + headless)
 
@@ -83,7 +84,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
    - menu système,
    - fenêtre statut job en cours (%, stage, job_id/asset_uuid, message),
    - accès settings.
-2. Bridge notifications OS (émission unique par transition déjà gérée côté domaine).
+2. Intégration shell GUI finale des adapters de notification selon cible (desktop/headless).
 3. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
 4. Revue finale de conformité v1 contre `specs/` avant freeze.
 

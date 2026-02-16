@@ -11,7 +11,7 @@ pub use application::notification_bridge::{
     dispatch_notifications, notification_message,
 };
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
-pub use application::runtime_session::RuntimeSession;
+pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
@@ -43,6 +43,8 @@ pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
     save_config_to_path, save_system_config, system_config_file_path,
 };
-pub use infrastructure::notification_sink::StdoutNotificationSink;
+pub use infrastructure::notification_sink::{
+    StdoutNotificationSink, SystemNotificationSink, dispatch_system_notification,
+};
 #[cfg(feature = "tauri-notifications")]
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;
