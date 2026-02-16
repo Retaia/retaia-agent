@@ -35,7 +35,7 @@ fn tdd_runtime_sync_ignores_mobile_push_for_non_mobile_target() {
 
 #[test]
 fn tdd_runtime_sync_exposes_contract_and_429_poll_decisions() {
-    let sync = RuntimeSyncState::new(ClientRuntimeTarget::UiRustDesktop);
+    let sync = RuntimeSyncState::new(ClientRuntimeTarget::UiWeb);
 
     let contract = sync.poll_by_contract(PollEndpoint::Policy, 1_500);
     assert_eq!(contract.reason, PollDecisionReason::ContractInterval);
