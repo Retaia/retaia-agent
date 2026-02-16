@@ -25,3 +25,5 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 - PR atomiques
 - Rebase sur `master`
 - Pas de merge commits de synchronisation
+- Historique linéaire obligatoire (branche à jour + aucun merge commit)
+- Hook Husky `pre-push` obligatoire pour vérifier les règles de branche localement

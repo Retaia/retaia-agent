@@ -1,0 +1,13 @@
+{
+  "name": "retaia-agent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Retaia agent bootstrap tooling",
+  "scripts": {
+    "prepare": "husky",
+    "check:branch-up-to-date": "node scripts/ci/check-branch-up-to-date.mjs"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
