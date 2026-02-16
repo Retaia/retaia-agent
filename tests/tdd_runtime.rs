@@ -20,3 +20,5 @@ mod runtime_control;
 mod runtime_orchestration;
 #[path = "tdd_runtime/runtime_sync.rs"]
 mod runtime_sync;
+#[path = "tdd_runtime/runtime_sync_coordinator.rs"]
+mod runtime_sync_coordinator;
