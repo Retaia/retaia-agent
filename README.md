@@ -40,6 +40,15 @@ cargo install cargo-commitlint
 cargo test
 ```
 
+Headless config (CLI):
+
+```bash
+cargo run --bin agentctl -- config init \
+  --core-api-url https://core.retaia.local \
+  --ollama-url http://127.0.0.1:11434
+cargo run --bin agentctl -- config validate
+```
+
 ## Development workflow
 
 ```bash

@@ -1,3 +1,5 @@
+#[path = "e2e_flow/agentctl_config_flow.rs"]
+mod agentctl_config_flow;
 #[path = "e2e_flow/app_runtime_flow.rs"]
 mod app_runtime_flow;
 #[path = "e2e_flow/authz_flow.rs"]
@@ -14,6 +16,8 @@ mod config_runtime_flow;
 mod runtime_loop_engine_flow;
 #[path = "e2e_flow/runtime_orchestration_flow.rs"]
 mod runtime_orchestration_flow;
+#[path = "e2e_flow/runtime_session_flow.rs"]
+mod runtime_session_flow;
 #[path = "e2e_flow/runtime_specs_flow.rs"]
 mod runtime_specs_flow;
 #[path = "e2e_flow/runtime_sync_flow.rs"]

@@ -61,6 +61,7 @@
 - Responsabilités application:
   - transformer les événements runtime (push/poll/429) en plans d'action exécutables,
   - imposer le gating par état runtime (`running/paused/stopped`) sans dupliquer les règles domaine.
+- Façade application: `RuntimeSession` pour composer menu UI, sync runtime, et plans de polling dans un seul point d'entrée.
 
 ## Normative References
 
