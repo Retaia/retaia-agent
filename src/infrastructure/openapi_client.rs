@@ -9,7 +9,10 @@ pub fn build_core_api_client(config: &AgentRuntimeConfig) -> Configuration {
 }
 
 pub fn with_bearer_token(mut client: Configuration, token: impl Into<String>) -> Configuration {
-    client.bearer_access_token = Some(token.into());
+    let token = token.into();
+    client.bearer_access_token = Some(token.clone());
+    // Generated jobs/auth APIs use oauth_access_token for bearer auth.
+    client.oauth_access_token = Some(token);
     client
 }
 

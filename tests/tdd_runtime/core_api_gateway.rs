@@ -1,0 +1,42 @@
+use retaia_agent::{CoreJobState, CoreJobView, runtime_snapshot_from_polled_jobs};
+
+#[test]
+fn tdd_runtime_snapshot_from_polled_jobs_maps_known_running_and_current_job() {
+    let jobs = vec![
+        CoreJobView {
+            job_id: "job-1".to_string(),
+            asset_uuid: "asset-1".to_string(),
+            state: CoreJobState::Pending,
+        },
+        CoreJobView {
+            job_id: "job-2".to_string(),
+            asset_uuid: "asset-2".to_string(),
+            state: CoreJobState::Claimed,
+        },
+    ];
+
+    let snapshot = runtime_snapshot_from_polled_jobs(&jobs);
+    assert_eq!(snapshot.known_job_ids.len(), 2);
+    assert!(snapshot.known_job_ids.contains("job-1"));
+    assert!(snapshot.known_job_ids.contains("job-2"));
+    assert_eq!(snapshot.running_job_ids.len(), 1);
+    assert!(snapshot.running_job_ids.contains("job-2"));
+    assert_eq!(
+        snapshot.current_job.as_ref().map(|job| job.job_id.as_str()),
+        Some("job-2")
+    );
+}
+
+#[test]
+fn tdd_runtime_snapshot_from_polled_jobs_maps_failed_jobs_to_notification_input() {
+    let jobs = vec![CoreJobView {
+        job_id: "job-fail".to_string(),
+        asset_uuid: "asset-fail".to_string(),
+        state: CoreJobState::Failed,
+    }];
+
+    let snapshot = runtime_snapshot_from_polled_jobs(&jobs);
+    assert_eq!(snapshot.failed_jobs.len(), 1);
+    assert_eq!(snapshot.failed_jobs[0].job_id, "job-fail");
+    assert_eq!(snapshot.failed_jobs[0].error_code, "JOB_FAILED_REMOTE");
+}
