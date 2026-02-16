@@ -16,3 +16,5 @@ mod menu;
 mod notifications;
 #[path = "tdd_runtime/runtime_control.rs"]
 mod runtime_control;
+#[path = "tdd_runtime/runtime_orchestration.rs"]
+mod runtime_orchestration;
