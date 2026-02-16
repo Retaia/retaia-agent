@@ -6,7 +6,7 @@ use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigInterface, ConfigRepository, ConfigRepositoryError,
     ConfigValidationError, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
     SystemConfigRepository, TechnicalAuthConfig, apply_config_update, compact_validation_reason,
-    validate_config,
+    normalize_core_api_url, validate_config,
 };
 use thiserror::Error;
 
@@ -190,7 +190,7 @@ fn init_config(args: &ConfigInitArgs) -> Result<AgentRuntimeConfig, AgentCtlErro
     };
 
     let config = AgentRuntimeConfig {
-        core_api_url: args.core_api_url.clone(),
+        core_api_url: normalize_core_api_url(&args.core_api_url),
         ollama_url: args.ollama_url.clone(),
         auth_mode,
         technical_auth,

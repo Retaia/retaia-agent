@@ -74,6 +74,17 @@ fn is_http_url(value: &str) -> bool {
     value.starts_with("http://") || value.starts_with("https://")
 }
 
+pub fn normalize_core_api_url(value: &str) -> String {
+    let trimmed = value.trim().trim_end_matches('/').to_string();
+    if !is_http_url(&trimmed) {
+        return trimmed;
+    }
+    if trimmed.ends_with("/api/v1") {
+        return trimmed;
+    }
+    format!("{trimmed}/api/v1")
+}
+
 pub fn validate_config(config: &AgentRuntimeConfig) -> Result<(), Vec<ConfigValidationError>> {
     let mut errors = Vec::new();
 
@@ -145,7 +156,7 @@ pub fn apply_config_update(
     let mut next = current.clone();
 
     if let Some(core_api_url) = &update.core_api_url {
-        next.core_api_url = core_api_url.clone();
+        next.core_api_url = normalize_core_api_url(core_api_url);
     }
     if let Some(ollama_url) = &update.ollama_url {
         next.ollama_url = ollama_url.clone();

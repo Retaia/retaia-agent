@@ -20,7 +20,7 @@ pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeS
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
     RuntimeConfigUpdate, TechnicalAuthConfig, apply_config_update, compact_validation_reason,
-    supported_config_fields, validate_config,
+    normalize_core_api_url, supported_config_fields, validate_config,
 };
 pub use domain::feature_flags::{
     ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,

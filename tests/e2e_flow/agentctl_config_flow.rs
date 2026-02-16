@@ -42,7 +42,7 @@ fn e2e_agentctl_init_show_validate_set_flow() {
     let show = run_agentctl(&["config", "show", "--config", &config_path_str]);
     assert!(show.status.success(), "show failed: {show:?}");
     let show_stdout = String::from_utf8_lossy(&show.stdout);
-    assert!(show_stdout.contains("core_api_url=https://core.retaia.local"));
+    assert!(show_stdout.contains("core_api_url=https://core.retaia.local/api/v1"));
     assert!(show_stdout.contains("technical_client_id=agent-e2e"));
     assert!(show_stdout.contains("technical_secret_key_set=true"));
     assert!(!show_stdout.contains("super-secret"));

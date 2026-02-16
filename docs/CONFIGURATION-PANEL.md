@@ -14,6 +14,11 @@
 - Identifiants techniques (si mode technique)
 - Paramètres runtime (ex: concurrence/max jobs, niveau de log)
 
+Normalisation URL Core:
+
+- `https://host` est normalisé en `https://host/api/v1`.
+- `https://host/api/v1/` est normalisé en `https://host/api/v1`.
+
 ## UX Rules
 
 - Validation explicite des champs.

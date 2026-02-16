@@ -42,3 +42,15 @@ fn bdd_given_cli_switch_to_technical_without_credentials_when_validating_then_re
         .expect_err("technical mode without credentials must fail");
     assert!(errors.contains(&ConfigValidationError::MissingTechnicalAuth));
 }
+
+#[test]
+fn bdd_given_cli_core_api_host_when_updating_then_runtime_config_is_normalized_to_api_v1() {
+    let base = base_config();
+    let update = RuntimeConfigUpdate {
+        core_api_url: Some("https://core.ops.local/".to_string()),
+        ..RuntimeConfigUpdate::default()
+    };
+
+    let cli = apply_config_update(&base, &update, ConfigInterface::Cli).expect("cli should pass");
+    assert_eq!(cli.core_api_url, "https://core.ops.local/api/v1");
+}
