@@ -22,3 +22,4 @@ Point d'entrée pour les agents IA.
 - Respect strict de `effective_feature_enabled`.
 - Aucun traitement MCP dans ce repo.
 - Aucun commit/push direct sur `master`.
+- Quand une PR est demandée: la créer directement (jamais proposer un lien d'ouverture).
