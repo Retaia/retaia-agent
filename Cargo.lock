@@ -3011,6 +3011,7 @@ dependencies = [
  "cargo-husky",
  "clap",
  "directories",
+ "notify-rust",
  "serde",
  "serde_json",
  "tauri",
