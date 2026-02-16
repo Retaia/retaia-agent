@@ -14,6 +14,7 @@ Rust agent client for the Retaia platform.
 
 - Contract-driven runtime behavior.
 - CLI mandatory, GUI optional.
+- Same runtime configuration contract in GUI and CLI-only environments (Linux/macOS/Windows, including SSH/headless).
 - Branch protection workflow with linear-history enforcement.
 - `cargo-husky` local guards (`pre-commit`, `pre-push`) to block direct work on `master`.
 
@@ -68,6 +69,7 @@ See:
 - `CONTRIBUTING.md`
 - `AGENT.md`
 - `docs/README.md`
+- `docs/CONFIG-STORAGE.md`
 
 ## Security
 

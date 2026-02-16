@@ -1,6 +1,10 @@
+use std::cell::RefCell;
+use std::path::PathBuf;
+
 use retaia_agent::{
-    AgentRuntimeApp, AgentRuntimeConfig, AuthMode, ConfigValidationError, JobStage, JobStatus,
-    LogLevel, MenuAction, RuntimeSnapshot, SystemNotification,
+    AgentRuntimeApp, AgentRuntimeConfig, AuthMode, ConfigRepository, ConfigRepositoryError,
+    ConfigValidationError, JobStage, JobStatus, LogLevel, MenuAction, RuntimeSnapshot,
+    SettingsSaveError, SystemNotification,
 };
 
 fn valid_settings() -> AgentRuntimeConfig {
@@ -11,6 +15,43 @@ fn valid_settings() -> AgentRuntimeConfig {
         technical_auth: None,
         max_parallel_jobs: 2,
         log_level: LogLevel::Info,
+    }
+}
+
+#[derive(Default)]
+struct FakeConfigRepository {
+    load_result: RefCell<Option<Result<AgentRuntimeConfig, ConfigRepositoryError>>>,
+    save_calls: RefCell<usize>,
+}
+
+impl FakeConfigRepository {
+    fn with_load(result: Result<AgentRuntimeConfig, ConfigRepositoryError>) -> Self {
+        Self {
+            load_result: RefCell::new(Some(result)),
+            save_calls: RefCell::new(0),
+        }
+    }
+
+    fn save_calls(&self) -> usize {
+        *self.save_calls.borrow()
+    }
+}
+
+impl ConfigRepository for FakeConfigRepository {
+    fn load(&self) -> Result<AgentRuntimeConfig, ConfigRepositoryError> {
+        self.load_result
+            .borrow_mut()
+            .take()
+            .expect("load_result should be preconfigured")
+    }
+
+    fn save(&self, _config: &AgentRuntimeConfig) -> Result<(), ConfigRepositoryError> {
+        *self.save_calls.borrow_mut() += 1;
+        Ok(())
+    }
+
+    fn config_path(&self) -> Result<PathBuf, ConfigRepositoryError> {
+        Ok(PathBuf::from("/tmp/retaia-agent/config.toml"))
     }
 }
 
@@ -79,4 +120,35 @@ fn tdd_application_save_settings_returns_saved_or_invalid_notification() {
             reason: "invalid ollama url".to_string()
         }
     );
+}
+
+#[test]
+fn tdd_application_can_bootstrap_from_config_repository_port() {
+    let repository = FakeConfigRepository::with_load(Ok(valid_settings()));
+    let app = AgentRuntimeApp::load_from_repository(&repository).expect("repository should load");
+    assert_eq!(app.settings().core_api_url, "https://core.retaia.local");
+}
+
+#[test]
+fn tdd_application_save_with_repository_persists_only_on_valid_data() {
+    let mut app = AgentRuntimeApp::new(valid_settings()).expect("valid app");
+    let repository = FakeConfigRepository::default();
+
+    let notification = app
+        .save_settings_with_repository(valid_settings(), &repository)
+        .expect("valid config should persist");
+    assert_eq!(notification, SystemNotification::SettingsSaved);
+    assert_eq!(repository.save_calls(), 1);
+
+    let mut invalid = valid_settings();
+    invalid.core_api_url = "invalid".to_string();
+    let error = app
+        .save_settings_with_repository(invalid, &repository)
+        .expect_err("invalid config should fail before repository save");
+
+    match error {
+        SettingsSaveError::Validation(SystemNotification::SettingsInvalid { .. }) => {}
+        other => panic!("unexpected error: {other:?}"),
+    }
+    assert_eq!(repository.save_calls(), 1);
 }

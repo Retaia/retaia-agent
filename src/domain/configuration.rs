@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthMode {
     Interactive,
@@ -37,6 +39,35 @@ pub enum ConfigValidationError {
     EmptyClientId,
     EmptySecretKey,
     InvalidMaxParallelJobs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ConfigField {
+    CoreApiUrl,
+    OllamaUrl,
+    AuthMode,
+    TechnicalClientId,
+    TechnicalSecretKey,
+    MaxParallelJobs,
+    LogLevel,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConfigInterface {
+    Gui,
+    Cli,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RuntimeConfigUpdate {
+    pub core_api_url: Option<String>,
+    pub ollama_url: Option<String>,
+    pub auth_mode: Option<AuthMode>,
+    pub technical_client_id: Option<String>,
+    pub technical_secret_key: Option<String>,
+    pub clear_technical_auth: bool,
+    pub max_parallel_jobs: Option<u16>,
+    pub log_level: Option<LogLevel>,
 }
 
 fn is_http_url(value: &str) -> bool {
@@ -91,4 +122,65 @@ pub fn compact_validation_reason(errors: &[ConfigValidationError]) -> String {
         })
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+pub fn supported_config_fields(interface: ConfigInterface) -> BTreeSet<ConfigField> {
+    let _ = interface;
+    BTreeSet::from([
+        ConfigField::CoreApiUrl,
+        ConfigField::OllamaUrl,
+        ConfigField::AuthMode,
+        ConfigField::TechnicalClientId,
+        ConfigField::TechnicalSecretKey,
+        ConfigField::MaxParallelJobs,
+        ConfigField::LogLevel,
+    ])
+}
+
+pub fn apply_config_update(
+    current: &AgentRuntimeConfig,
+    update: &RuntimeConfigUpdate,
+    interface: ConfigInterface,
+) -> Result<AgentRuntimeConfig, Vec<ConfigValidationError>> {
+    let mut next = current.clone();
+
+    if let Some(core_api_url) = &update.core_api_url {
+        next.core_api_url = core_api_url.clone();
+    }
+    if let Some(ollama_url) = &update.ollama_url {
+        next.ollama_url = ollama_url.clone();
+    }
+    if let Some(auth_mode) = update.auth_mode {
+        next.auth_mode = auth_mode;
+    }
+
+    if update.clear_technical_auth {
+        next.technical_auth = None;
+    }
+
+    if update.technical_client_id.is_some() || update.technical_secret_key.is_some() {
+        let mut technical = next.technical_auth.unwrap_or(TechnicalAuthConfig {
+            client_id: String::new(),
+            secret_key: String::new(),
+        });
+
+        if let Some(client_id) = &update.technical_client_id {
+            technical.client_id = client_id.clone();
+        }
+        if let Some(secret_key) = &update.technical_secret_key {
+            technical.secret_key = secret_key.clone();
+        }
+        next.technical_auth = Some(technical);
+    }
+
+    if let Some(max_parallel_jobs) = update.max_parallel_jobs {
+        next.max_parallel_jobs = max_parallel_jobs;
+    }
+    if let Some(log_level) = update.log_level {
+        next.log_level = log_level;
+    }
+
+    let _ = interface;
+    validate_config(&next)?;
+    Ok(next)
 }
