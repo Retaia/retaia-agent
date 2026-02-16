@@ -1,3 +1,5 @@
+#[path = "e2e_flow/agent_registration_flow.rs"]
+mod agent_registration_flow;
 #[path = "e2e_flow/agentctl_config_flow.rs"]
 mod agentctl_config_flow;
 #[path = "e2e_flow/app_runtime_flow.rs"]

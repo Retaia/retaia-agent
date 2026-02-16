@@ -26,6 +26,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Projection domaine `RuntimeStatusTracker` pour alimenter la fenêtre statut (`job_id`, `asset_uuid`, `%`, `stage`, message) sans logique dupliquée.
   - Port applicatif `CoreApiGateway` + projection `poll_runtime_snapshot(...)` pour intégrer le polling jobs réel sans coupler le domaine au transport HTTP.
   - Socle capabilities v1 (phase 1): déclaration agent `media.facts@1` + garde défensive de compatibilité (`required_capabilities ⊆ capabilities déclarées`) avant projection runtime.
+  - Use-case d'enregistrement agent (`register_agent`) + port DDD `AgentRegistrationGateway` + adapter OpenAPI `POST /agents/register` publiant explicitement les capabilities déclarées.
 - In progress:
   - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut).
 - Pending:

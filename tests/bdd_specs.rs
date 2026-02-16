@@ -1,3 +1,5 @@
+#[path = "bdd_specs/agent_registration.rs"]
+mod agent_registration;
 #[path = "bdd_specs/application_runtime.rs"]
 mod application_runtime;
 #[path = "bdd_specs/authz.rs"]

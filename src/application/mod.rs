@@ -1,3 +1,4 @@
+pub mod agent_registration;
 pub mod agent_runtime_app;
 pub mod config_repository;
 pub mod core_api_gateway;
