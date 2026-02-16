@@ -1,73 +1,81 @@
 # retaia-agent
 
-Rust agent client for Retaia.
+Rust agent client for the Retaia platform.
 
-## Overview
+## Why this project
 
-`retaia-agent` is the processing client for the Retaia platform.
+`retaia-agent` is the execution client responsible for processing workloads defined by Retaia Core contracts.
 
-- CLI is mandatory (including Linux headless usage).
-- GUI is optional.
-- If GUI is present, it uses the exact same runtime engine as CLI.
-
-Normative behavior is defined by the `specs/` submodule.
+- CLI-first design for Linux headless environments.
+- Optional GUI mode using the same runtime engine as CLI.
+- Strict contract alignment with `specs/` (submodule to `retaia-docs`).
 
 ## Features
 
-- Agent runtime aligned with Retaia Core contracts.
-- System tray UX target (optional GUI).
-- CI quality gates: branch freshness, commit message policy, test suites, coverage.
-- Conventional Commits enforced via git hooks.
+- Contract-driven runtime behavior.
+- CLI mandatory, GUI optional.
+- Branch protection workflow with linear-history enforcement.
+- Husky local guards (`pre-commit`, `pre-push`) to block direct work on `master`.
+
+## Project structure
+
+- `src/`: runtime code
+- `tests/`: automated test suite
+- `docs/`: implementation and operations docs
+- `AGENT.md`: normative rules for agent implementation
+- `specs/`: contract source of truth (git submodule)
 
 ## Requirements
 
-- Rust toolchain (stable)
+- Rust (stable toolchain)
+- Node.js 22+ (for CI/husky tooling)
 - Git
 
-Optional local tooling:
-
-- `cargo-commitlint` (for local `commit-msg` hook)
-
-## Getting Started
+## Quick start
 
 ```bash
-cargo install cargo-commitlint
-git config --unset core.hooksPath || true
-cargo clean -p cargo-husky
+git submodule update --init --recursive
+npm ci
 cargo test
 ```
 
-## Quality Gates
+## Development workflow
 
-Main CI checks:
+```bash
+# create a feature branch
+git checkout -b codex/my-feature
+
+# run checks
+npm run check:branch-up-to-date
+cargo test
+```
+
+Rules:
+
+- No commit on `master` (blocked by husky `pre-commit`)
+- No push on `master` (blocked by husky `pre-push`)
+- Rebase on latest `master` before merge
+- Keep linear history (no merge commits in feature branch)
+
+## CI checks
 
 - `branch-up-to-date`
-- `commitlint`
-- `test-tdd`
-- `test-bdd`
-- `test-e2e`
-- `coverage-gate`
-- `ci-required`
-
-Coverage minimum: `80%`.
-
-## Documentation
-
-- Human docs hub: `docs/README.md`
-- AI entry point: `AGENT.md`
-- Normative specs: `specs/`
-
-Topic docs:
-
-- Runtime constraints: `docs/RUNTIME-CONSTRAINTS.md`
-- System tray UX: `docs/UX-SYSTEM-TRAY.md`
-- Notifications: `docs/NOTIFICATIONS.md`
-- Configuration panel: `docs/CONFIGURATION-PANEL.md`
-- CI and quality gates: `docs/CI-QUALITY-GATES.md`
 
 ## Contributing
 
-- Use a feature branch (never commit directly on `master`).
-- Keep history linear and branch up to date with `master`.
-- Follow Conventional Commits.
-- Keep implementation aligned with `specs/`.
+See:
+
+- `CONTRIBUTING.md`
+- `AGENT.md`
+- `docs/README.md`
+
+## Security
+
+- Do not log tokens/secrets in clear text.
+- Keep runtime behavior aligned with policies in `specs/policies/`.
+
+## Roadmap
+
+- Rust CLI baseline (v1)
+- Optional GUI shell on top of the same engine
+- Extended observability and operational hardening
