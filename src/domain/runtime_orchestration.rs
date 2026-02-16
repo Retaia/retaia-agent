@@ -1,3 +1,7 @@
+use std::time::Duration;
+
+use backon::{BackoffBuilder, ExponentialBuilder};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeOrchestrationMode {
     StatusDrivenPolling,
@@ -61,6 +65,7 @@ pub struct PollDecision {
 }
 
 const MIN_INTERVAL_MS: u64 = 100;
+const BASE_BACKOFF_MS: u64 = 500;
 const MAX_BACKOFF_MS: u64 = 60_000;
 
 pub fn runtime_orchestration_mode() -> RuntimeOrchestrationMode {
@@ -143,9 +148,19 @@ pub fn next_poll_decision(
 }
 
 pub fn throttled_backoff_with_jitter(attempt: u32, jitter_seed: u64) -> u64 {
-    let exp = attempt.min(10);
-    let base = 500_u64.saturating_mul(1_u64 << exp).min(MAX_BACKOFF_MS);
-    let jitter_cap = (base / 5).max(1);
-    let jitter = jitter_seed % (jitter_cap + 1);
-    (base + jitter).min(MAX_BACKOFF_MS)
+    let max_times = attempt.saturating_add(1) as usize;
+    let mut backoff = ExponentialBuilder::default()
+        .with_factor(2.0)
+        .with_min_delay(Duration::from_millis(BASE_BACKOFF_MS))
+        .with_max_delay(Duration::from_millis(MAX_BACKOFF_MS))
+        .with_max_times(max_times)
+        .with_jitter()
+        .with_jitter_seed(jitter_seed)
+        .build();
+
+    backoff
+        .nth(max_times.saturating_sub(1))
+        .map(|duration| duration.as_millis() as u64)
+        .unwrap_or(BASE_BACKOFF_MS)
+        .min(MAX_BACKOFF_MS)
 }
