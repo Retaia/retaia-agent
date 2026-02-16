@@ -16,7 +16,10 @@
 - `TDD`: basé sur le comportement du code.
 - `BDD`: basé sur les scénarios issus des specs.
 - `E2E`: basé sur les parcours complets.
-- Coverage minimal: `80%` (line coverage).
+- Coverage minimal: `80%` (line coverage) pour chaque suite:
+  - `tdd_runtime` >= 80%
+  - `bdd_specs` >= 80%
+  - `e2e_flow` >= 80%
 
 ## Local Hooks
 

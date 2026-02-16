@@ -229,11 +229,15 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
-      - name: Run coverage gate (min 80%)
+      - name: Run coverage gates per suite (min 80%)
         run: |
           mkdir -p coverage
-          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary.json --test tdd_runtime --test bdd_specs --test e2e_flow
-          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary.json --min 80
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-tdd.json --test tdd_runtime
+          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-tdd.json --min 80
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-bdd.json --test bdd_specs
+          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-bdd.json --min 80
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-e2e.json --test e2e_flow
+          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-e2e.json --min 80
 
       - name: Upload coverage artifacts
         if: always()
