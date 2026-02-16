@@ -12,5 +12,7 @@ mod config_repository_flow;
 mod config_runtime_flow;
 #[path = "e2e_flow/runtime_orchestration_flow.rs"]
 mod runtime_orchestration_flow;
+#[path = "e2e_flow/runtime_sync_flow.rs"]
+mod runtime_sync_flow;
 #[path = "e2e_flow/status_notifications.rs"]
 mod status_notifications;

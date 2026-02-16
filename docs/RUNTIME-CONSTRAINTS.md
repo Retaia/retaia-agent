@@ -49,6 +49,15 @@
 - `NO_SENSITIVE_PUSH_PAYLOAD`: aucun token/secret/PII/transcription dans le payload push.
 - Scope mobile: `FCM/APNs/EPNS` réservé au client UI mobile (Android/iOS), hors agent/MCP mobile.
 
+## DDD Runtime Sync
+
+- Agrégat domaine: `RuntimeSyncState`.
+- Responsabilités:
+  - déduplication des hints push (`hint_id`),
+  - validation TTL/fraîcheur des hints,
+  - décision de déclenchement de poll,
+  - gate des mutations seulement après état compatible lu par polling.
+
 ## Normative References
 
 - `../specs/workflows/AGENT-PROTOCOL.md`

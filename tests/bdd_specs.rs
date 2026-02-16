@@ -18,3 +18,5 @@ mod notifications;
 mod runtime_control;
 #[path = "bdd_specs/runtime_orchestration.rs"]
 mod runtime_orchestration;
+#[path = "bdd_specs/runtime_sync.rs"]
+mod runtime_sync;
