@@ -36,4 +36,5 @@
 - Service application: `dispatch_notifications(...)`
 - Adapter infra de base: `StdoutNotificationSink`
 - Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
+- Façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)` pour enchaîner projection + dispatch dans le flux agent.
 - Règle: la déduplication reste dans le domaine (`AgentUiRuntime`), le bridge ne doit pas réintroduire de logique métier.

@@ -11,7 +11,7 @@ pub use application::notification_bridge::{
     dispatch_notifications, notification_message,
 };
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
-pub use application::runtime_session::RuntimeSession;
+pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,

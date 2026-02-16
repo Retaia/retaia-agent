@@ -1,7 +1,10 @@
 use retaia_agent::{
-    AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, LogLevel, MenuAction, PollDecisionReason,
-    PollEndpoint, PollSignal, PushChannel, PushHint, RuntimeSession, RuntimeSyncPlan,
+    AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, LogLevel, MenuAction,
+    NotificationBridgeError, NotificationMessage, NotificationSink, PollDecisionReason,
+    PollEndpoint, PollSignal, PushChannel, PushHint, RuntimeSession, RuntimeSnapshot,
+    RuntimeSyncPlan, SystemNotification,
 };
+use std::cell::RefCell;
 
 fn config() -> AgentRuntimeConfig {
     AgentRuntimeConfig {
@@ -61,4 +64,47 @@ fn e2e_runtime_session_unifies_menu_sync_and_polling_flow() {
         2_100,
     );
     assert_eq!(stopped_push, RuntimeSyncPlan::None);
+}
+
+#[derive(Default)]
+struct CollectSink {
+    titles: RefCell<Vec<String>>,
+}
+
+impl NotificationSink for CollectSink {
+    fn send(
+        &self,
+        message: &NotificationMessage,
+        _source: &SystemNotification,
+    ) -> Result<(), NotificationBridgeError> {
+        self.titles.borrow_mut().push(message.title.clone());
+        Ok(())
+    }
+}
+
+#[test]
+fn e2e_runtime_session_dispatches_notifications_without_repeating_stable_poll_state() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, config()).expect("session");
+    let sink = CollectSink::default();
+
+    let mut first = RuntimeSnapshot::default();
+    first.known_job_ids.insert("job-900".to_string());
+    first.running_job_ids.insert("job-900".to_string());
+    let first_report = session.update_snapshot_and_dispatch(first, &sink);
+    assert_eq!(first_report.dispatch.delivered, 1);
+
+    let repeated = RuntimeSnapshot {
+        known_job_ids: ["job-900".to_string()].into_iter().collect(),
+        running_job_ids: ["job-900".to_string()].into_iter().collect(),
+        ..RuntimeSnapshot::default()
+    };
+    let repeated_report = session.update_snapshot_and_dispatch(repeated, &sink);
+    assert_eq!(repeated_report.dispatch.delivered, 0);
+
+    let done_report = session.update_snapshot_and_dispatch(RuntimeSnapshot::default(), &sink);
+    assert_eq!(done_report.dispatch.delivered, 1);
+    assert_eq!(
+        sink.titles.borrow().as_slice(),
+        &["New job received", "All jobs done"]
+    );
 }

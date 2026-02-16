@@ -41,6 +41,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - `Settings invalid` (dédupliqué),
   - `Updates available` (version unique).
   - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateurs `StdoutNotificationSink` et `TauriNotificationSink` (feature `tauri-notifications`).
+  - Intégration façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)`.
 - Pending:
   - Brancher `TauriNotificationSink` dans le shell GUI final.
 
