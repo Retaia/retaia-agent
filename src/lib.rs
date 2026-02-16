@@ -7,7 +7,8 @@ pub use application::agent_runtime_app::{
 };
 pub use application::config_repository::{ConfigRepository, ConfigRepositoryError};
 pub use application::core_api_gateway::{
-    CoreApiGateway, CoreApiGatewayError, CoreJobState, CoreJobView, poll_runtime_snapshot,
+    CoreApiGateway, CoreApiGatewayError, CoreJobState, CoreJobView,
+    filter_jobs_for_declared_capabilities, poll_runtime_snapshot,
     runtime_snapshot_from_polled_jobs,
 };
 pub use application::notification_bridge::{
@@ -17,6 +18,9 @@ pub use application::notification_bridge::{
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
 pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
+pub use domain::capabilities::{
+    AgentCapability, declared_agent_capabilities, has_required_capabilities,
+};
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
     RuntimeConfigUpdate, TechnicalAuthConfig, apply_config_update, compact_validation_reason,

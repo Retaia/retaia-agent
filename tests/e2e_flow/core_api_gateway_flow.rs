@@ -36,6 +36,7 @@ fn e2e_polled_jobs_gateway_projection_triggers_new_job_and_all_jobs_done_notific
             job_id: "job-10".to_string(),
             asset_uuid: "asset-10".to_string(),
             state: CoreJobState::Claimed,
+            required_capabilities: vec!["media.facts@1".to_string()],
         }],
     };
     let first_snapshot = poll_runtime_snapshot(&first_gateway).expect("poll should succeed");
@@ -48,6 +49,7 @@ fn e2e_polled_jobs_gateway_projection_triggers_new_job_and_all_jobs_done_notific
             job_id: "job-10".to_string(),
             asset_uuid: "asset-10".to_string(),
             state: CoreJobState::Claimed,
+            required_capabilities: vec!["media.facts@1".to_string()],
         }],
     };
     let second_snapshot = poll_runtime_snapshot(&second_gateway).expect("poll should succeed");
@@ -60,4 +62,20 @@ fn e2e_polled_jobs_gateway_projection_triggers_new_job_and_all_jobs_done_notific
     let done_notifications = runtime.update_snapshot(done_snapshot);
     let done_report = dispatch_notifications(&sink, &done_notifications);
     assert_eq!(done_report.delivered, 1);
+}
+
+#[test]
+fn e2e_polled_jobs_gateway_projection_ignores_claimed_job_without_declared_capability() {
+    let gateway = MemoryGateway {
+        jobs: vec![CoreJobView {
+            job_id: "job-unsupported".to_string(),
+            asset_uuid: "asset-unsupported".to_string(),
+            state: CoreJobState::Claimed,
+            required_capabilities: vec!["media.proxies.video@1".to_string()],
+        }],
+    };
+
+    let snapshot = poll_runtime_snapshot(&gateway).expect("poll should succeed");
+    assert!(!snapshot.running_job_ids.contains("job-unsupported"));
+    assert!(snapshot.current_job.is_none());
 }

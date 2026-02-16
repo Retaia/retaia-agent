@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use thiserror::Error;
 
+use crate::domain::capabilities::{declared_agent_capabilities, has_required_capabilities};
 use crate::domain::runtime_ui::{
     ConnectivityState, JobFailure, JobStage, JobStatus, RuntimeSnapshot,
 };
@@ -19,6 +20,7 @@ pub struct CoreJobView {
     pub job_id: String,
     pub asset_uuid: String,
     pub state: CoreJobState,
+    pub required_capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -77,9 +79,16 @@ pub fn runtime_snapshot_from_polled_jobs(jobs: &[CoreJobView]) -> RuntimeSnapsho
     }
 }
 
+pub fn filter_jobs_for_declared_capabilities(jobs: Vec<CoreJobView>) -> Vec<CoreJobView> {
+    let declared = declared_agent_capabilities();
+    jobs.into_iter()
+        .filter(|job| has_required_capabilities(&job.required_capabilities, &declared))
+        .collect()
+}
+
 pub fn poll_runtime_snapshot<G: CoreApiGateway>(
     gateway: &G,
 ) -> Result<RuntimeSnapshot, CoreApiGatewayError> {
-    let jobs = gateway.poll_jobs()?;
+    let jobs = filter_jobs_for_declared_capabilities(gateway.poll_jobs()?);
     Ok(runtime_snapshot_from_polled_jobs(&jobs))
 }
