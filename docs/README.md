@@ -10,6 +10,7 @@ Hub documentaire local, organisé par sujet.
 - UX menu système (tray): `UX-SYSTEM-TRAY.md`
 - Notifications: `NOTIFICATIONS.md`
 - Panneau de configuration (parité GUI/CLI, y compris headless): `CONFIGURATION-PANEL.md`
+- Mode daemon (boot + arrière-plan, pilotage CLI/GUI): `DAEMON-MODE.md`
 - Persistance configuration système (lib + chemins OS): `CONFIG-STORAGE.md`
 - Qualité/CI/Hooks: `CI-QUALITY-GATES.md`
 

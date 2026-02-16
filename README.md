@@ -69,7 +69,7 @@ Daemon management (shared service for CLI/GUI):
 
 ```bash
 # install user-level daemon with autostart at boot
-cargo run --bin agentctl -- daemon install --autostart true
+cargo run --bin agentctl -- daemon install
 
 # control lifecycle
 cargo run --bin agentctl -- daemon start
@@ -77,6 +77,8 @@ cargo run --bin agentctl -- daemon status
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
+
+Disable autostart at boot with `--no-autostart`.
 
 ## Development workflow
 
