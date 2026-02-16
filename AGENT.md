@@ -26,5 +26,10 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 - Rebase sur `master`
 - Pas de merge commits de synchronisation
 - Historique linéaire obligatoire (branche à jour + aucun merge commit)
+- Tests obligatoires en PR:
+  - `TDD` base sur le fonctionnement du code
+  - `BDD` base sur les scenarios des specs
+  - `E2E` base sur les parcours specs/workflows
+- Coverage minimale obligatoire en PR: `80%` (line coverage)
 - Hook Husky `pre-commit`: interdit les commits sur `master`
 - Hook Husky `pre-push`: interdit les pushes sur `master` + vérifie la fraîcheur/linéarité de branche
