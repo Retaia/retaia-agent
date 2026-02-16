@@ -1,41 +1,18 @@
 # Agent Docs
 
-Ce dossier contient la documentation d'implémentation de l'agent.
+Hub documentaire local, organisé par sujet.
 
-## Références
-- `../AGENT.md`
+## Sujets
+
+- Runtime et contraintes: `RUNTIME-CONSTRAINTS.md`
+- UX menu système (tray): `UX-SYSTEM-TRAY.md`
+- Notifications: `NOTIFICATIONS.md`
+- Panneau de configuration: `CONFIGURATION-PANEL.md`
+- Qualité/CI/Hooks: `CI-QUALITY-GATES.md`
+
+## Références normatives
+
 - `../specs/api/API-CONTRACTS.md`
 - `../specs/workflows/AGENT-PROTOCOL.md`
 - `../specs/tests/TEST-PLAN.md`
-
-## Politique tests locale (gates PR)
-- `TDD` : tests fondes sur le comportement du code (unitaires/integration selon le besoin technique).
-- `BDD` : tests fondes sur les scenarios derives de `../specs/tests/TEST-PLAN.md`.
-- `E2E` : tests de parcours complets fondes sur les workflows/specs.
-- `Coverage` : minimum `80%` (ligne) sur le repo.
-
-## UX cible de l'agent (GUI optionnelle)
-- Application de menu système (menu bar/tray), style Docker Desktop/Ollama.
-- Actions minimales: toggle `Play/Resume`/`Pause`, `Stop`, `Quit`.
-- Règle toggle: si `paused`, afficher `Play/Resume` et masquer `Pause`; si `running`, afficher `Pause` et masquer `Play/Resume`.
-- L'état runtime doit rester visible en permanence (`running`, `paused`, `stopped`).
-- Une fenêtre minimale doit afficher le job en cours (`%`, étape active, job/asset, statut court).
-- Notifications système:
-  - `New job received`: émission à l'arrivée d'un nouveau job, sans répétition pour le même job.
-  - `All jobs done`: une seule émission sur transition vers zéro job actif, sans répétition sur poll.
-  - `Job failed`: émission à l'échec d'un job.
-  - `Agent disconnected / reconnecting`: émission sur perte de connexion et reprise.
-  - `Auth expired / re-auth required`: émission si auth runtime invalide.
-  - `Settings saved`: émission après sauvegarde config valide.
-  - `Settings invalid`: émission sur erreur de validation config.
-  - `Updates available`: émission optionnelle lors de détection de version.
-- Règle anti-spam: notifications uniquement sur événement/transition, jamais en boucle sur polling stable.
-- Un panneau de configuration doit être accessible depuis le menu app et le menu système.
-- Champs de config minimum: URL Core/Agent, URL Ollama, auth, paramètres runtime.
-- La GUI utilise strictement le meme moteur que la CLI (pas de logique parallèle).
-
-En CI, ces checks sont bloquants pour merge PR :
-- `test-tdd`
-- `test-bdd`
-- `test-e2e`
-- `coverage-gate`
+- `../specs/policies/AUTHZ-MATRIX.md`
