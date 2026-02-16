@@ -41,13 +41,13 @@
 - Sur `429` (`SLOW_DOWN` / `TOO_MANY_ATTEMPTS`), appliquer backoff + jitter avant nouvelle tentative.
 - Les changements policy/feature-flags sont pris en compte au prochain polling; un push peut déclencher un poll mais ne valide jamais l'état final.
 
-## Push Hints (v1.2)
+## Push Hints (v1 Scope)
 
 - `PUSH_NOT_AUTHORITATIVE`: aucun push ne vaut décision métier finale.
 - `PUSH_TRIGGERS_POLL`: un push valide déclenche un polling des endpoints contractuels.
 - `PUSH_DEDUP_REQUIRED` + `PUSH_REPLAY_PROTECTION`: déduplication + TTL obligatoires.
 - `NO_SENSITIVE_PUSH_PAYLOAD`: aucun token/secret/PII/transcription dans le payload push.
-- Scope mobile: `FCM/APNs/EPNS` réservé au client UI mobile (Android/iOS), hors agent/MCP mobile.
+- Le périmètre v1 reste centré sur la cohérence status-driven/polling côté agent.
 
 ## DDD Runtime Sync
 
