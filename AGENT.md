@@ -35,3 +35,4 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 - Hook git `pre-commit` (via `cargo-husky`): interdit les commits sur `master`
 - Hook git `commit-msg` (via `cargo-husky`): impose Conventional Commits via `cargo-commitlint`
 - Hook git `pre-push` (via `cargo-husky`): interdit les pushes sur `master` + vérifie la fraîcheur/linéarité de branche
+- Migration guard: si ce repo a deja utilise Husky, `core.hooksPath` DOIT etre unset (`git config --unset core.hooksPath`)

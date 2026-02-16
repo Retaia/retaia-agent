@@ -34,5 +34,9 @@ Setup:
 
 ```bash
 cargo install cargo-commitlint
+# If this repo was previously using Husky, reset hooks path first.
+git config --unset core.hooksPath || true
+# Force hook refresh after hook file updates.
+cargo clean -p cargo-husky
 cargo test
 ```
