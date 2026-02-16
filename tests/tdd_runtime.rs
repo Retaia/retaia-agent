@@ -14,6 +14,8 @@ mod feature_flags;
 mod menu;
 #[path = "tdd_runtime/notification_bridge.rs"]
 mod notification_bridge;
+#[path = "tdd_runtime/notification_sink.rs"]
+mod notification_sink;
 #[path = "tdd_runtime/notifications.rs"]
 mod notifications;
 #[path = "tdd_runtime/runtime_control.rs"]

@@ -43,6 +43,8 @@ pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
     save_config_to_path, save_system_config, system_config_file_path,
 };
-pub use infrastructure::notification_sink::StdoutNotificationSink;
+pub use infrastructure::notification_sink::{
+    BestEffortNotificationSink, StdoutNotificationSink, dispatch_system_notification,
+};
 #[cfg(feature = "tauri-notifications")]
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;

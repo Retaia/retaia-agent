@@ -34,6 +34,9 @@
 
 - Port application: `NotificationSink`
 - Service application: `dispatch_notifications(...)`
+- Adapter infra best-effort: `BestEffortNotificationSink`
+  - utilise `notify-rust` sur OS supportés (`macOS`, `Linux`, `Windows`)
+  - fallback automatique vers `StdoutNotificationSink` si indisponible/erreur backend
 - Adapter infra de base: `StdoutNotificationSink`
 - Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
 - Façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)` pour enchaîner projection + dispatch dans le flux agent.
