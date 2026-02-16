@@ -1,3 +1,4 @@
+use crate::application::config_repository::{ConfigRepository, ConfigRepositoryError};
 use crate::domain::configuration::{
     AgentRuntimeConfig, ConfigValidationError, compact_validation_reason, validate_config,
 };
@@ -31,6 +32,12 @@ pub struct AgentRuntimeApp {
     latest_snapshot: RuntimeSnapshot,
 }
 
+#[derive(Debug)]
+pub enum SettingsSaveError {
+    Validation(SystemNotification),
+    Repository(ConfigRepositoryError),
+}
+
 impl AgentRuntimeApp {
     pub fn new(settings: AgentRuntimeConfig) -> Result<Self, Vec<ConfigValidationError>> {
         validate_config(&settings)?;
@@ -44,6 +51,13 @@ impl AgentRuntimeApp {
 
     pub fn run_state(&self) -> AgentRunState {
         self.run_state
+    }
+
+    pub fn load_from_repository<R: ConfigRepository>(
+        repository: &R,
+    ) -> Result<Self, ConfigRepositoryError> {
+        let settings = repository.load()?;
+        Self::new(settings).map_err(ConfigRepositoryError::Validation)
     }
 
     pub fn settings(&self) -> &AgentRuntimeConfig {
@@ -98,6 +112,30 @@ impl AgentRuntimeApp {
                     .ui_runtime
                     .notify_settings_invalid(&reason)
                     .unwrap_or(SystemNotification::SettingsInvalid { reason }))
+            }
+        }
+    }
+
+    pub fn save_settings_with_repository<R: ConfigRepository>(
+        &mut self,
+        new_settings: AgentRuntimeConfig,
+        repository: &R,
+    ) -> Result<SystemNotification, SettingsSaveError> {
+        match validate_config(&new_settings) {
+            Ok(()) => {
+                repository
+                    .save(&new_settings)
+                    .map_err(SettingsSaveError::Repository)?;
+                self.settings = new_settings;
+                Ok(self.ui_runtime.notify_settings_saved())
+            }
+            Err(errors) => {
+                let reason = compact_validation_reason(&errors);
+                Err(SettingsSaveError::Validation(
+                    self.ui_runtime
+                        .notify_settings_invalid(&reason)
+                        .unwrap_or(SystemNotification::SettingsInvalid { reason }),
+                ))
             }
         }
     }

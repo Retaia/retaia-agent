@@ -37,3 +37,11 @@ Default path is resolved with `ProjectDirs::from("io", "Retaia", "retaia-agent")
 - GUI and CLI use the same persisted contract.
 - No duplicated validation logic between channels.
 - Invalid config is never persisted.
+
+## DDD Boundary
+
+- Application port: `ConfigRepository`
+- Infrastructure adapters:
+  - `SystemConfigRepository` (system path)
+  - `FileConfigRepository` (explicit path, tests/ops tooling)
+- `AgentRuntimeApp` depends on the port, not on filesystem/TOML details.
