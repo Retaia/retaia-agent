@@ -52,7 +52,7 @@ cargo run --bin agentctl -- config validate
 cargo run --bin agentctl -- config validate --check-respond
 ```
 
-`--check-respond` validates API compatibility (`Core /jobs`, `Ollama /api/tags`), not just TCP reachability.
+`--check-respond` validates API compatibility (`Core /jobs`, `Ollama OpenAI-compatible /v1/chat/completions via genai`), not just TCP reachability.
 
 `agentctl` is powered by `clap` and uses the same validation contract as GUI/runtime services.
 

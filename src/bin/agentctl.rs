@@ -1,7 +1,12 @@
 use std::path::PathBuf;
 use std::process::exit;
+use std::time::Duration;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use genai::adapter::AdapterKind;
+use genai::chat::{ChatMessage, ChatRequest};
+use genai::resolver::{Endpoint, ServiceTargetResolver};
+use genai::{Client, ModelIden, ServiceTarget, WebConfig};
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigInterface, ConfigRepository, ConfigRepositoryError,
     ConfigValidationError, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
@@ -194,7 +199,7 @@ fn validation_error(errors: Vec<ConfigValidationError>) -> String {
 
 fn http_get(url: &str) -> Result<reqwest::blocking::Response, AgentCtlError> {
     let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(3))
+        .timeout(Duration::from_secs(3))
         .build()
         .map_err(|error| AgentCtlError::EndpointUnreachable {
             url: url.to_string(),
@@ -253,42 +258,93 @@ fn check_core_api_compatible(core_api_url: &str) -> Result<(), AgentCtlError> {
 }
 
 fn check_ollama_api_compatible(ollama_url: &str) -> Result<(), AgentCtlError> {
-    let base = ollama_url.trim_end_matches('/');
-    let url = if base.ends_with("/api") {
-        join_url(base, "/tags")
-    } else {
-        join_url(base, "/api/tags")
-    };
-
-    let response = http_get(&url)?;
-    let status = response.status().as_u16();
-    let body = response.text().unwrap_or_default();
-
-    if status != 200 {
-        return Err(AgentCtlError::EndpointIncompatible {
-            url,
-            reason: format!("unexpected status {status} on Ollama tags endpoint"),
-        });
-    }
-
-    let parsed = serde_json::from_str::<serde_json::Value>(&body).map_err(|error| {
-        AgentCtlError::EndpointIncompatible {
-            url: url.clone(),
-            reason: format!("non-JSON response on Ollama tags endpoint: {error}"),
-        }
-    })?;
-
-    if parsed
-        .get("models")
-        .and_then(|value| value.as_array())
-        .is_some()
-    {
-        Ok(())
-    } else {
-        Err(AgentCtlError::EndpointIncompatible {
-            url,
-            reason: "expected JSON object containing `models` array".to_string(),
+    let endpoint = normalize_ollama_openai_base_url(ollama_url);
+    let endpoint_for_resolver = endpoint.clone();
+    let endpoint_for_error = endpoint.clone();
+    let target_resolver = ServiceTargetResolver::from_resolver_fn(move |target: ServiceTarget| {
+        let ServiceTarget { auth, model, .. } = target;
+        Ok(ServiceTarget {
+            endpoint: Endpoint::from_owned(endpoint_for_resolver.clone()),
+            auth,
+            model: ModelIden::new(AdapterKind::Ollama, model.model_name),
         })
+    });
+
+    let client = Client::builder()
+        .with_web_config(WebConfig::default().with_timeout(Duration::from_secs(3)))
+        .with_service_target_resolver(target_resolver)
+        .build();
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| AgentCtlError::EndpointUnreachable {
+            url: endpoint.clone(),
+            reason: error.to_string(),
+        })?;
+
+    let request = ChatRequest::new(vec![ChatMessage::user("compatibility check")]);
+    match runtime.block_on(client.exec_chat("retaia-compat-check", request, None)) {
+        Ok(_) => Ok(()),
+        Err(genai::Error::WebModelCall { webc_error, .. }) => {
+            map_ollama_genai_error(&endpoint_for_error, webc_error)
+        }
+        Err(error) => Err(AgentCtlError::EndpointIncompatible {
+            url: endpoint_for_error,
+            reason: error.to_string(),
+        }),
+    }
+}
+
+fn normalize_ollama_openai_base_url(ollama_url: &str) -> String {
+    let trimmed = ollama_url.trim_end_matches('/');
+    if trimmed.ends_with("/v1") {
+        format!("{trimmed}/")
+    } else if trimmed.ends_with("/api") {
+        let root = trimmed.trim_end_matches("/api");
+        format!("{root}/v1/")
+    } else {
+        format!("{trimmed}/v1/")
+    }
+}
+
+fn map_ollama_genai_error(url: &str, error: genai::webc::Error) -> Result<(), AgentCtlError> {
+    match error {
+        genai::webc::Error::Reqwest(source) => Err(AgentCtlError::EndpointUnreachable {
+            url: url.to_string(),
+            reason: source.to_string(),
+        }),
+        genai::webc::Error::ResponseFailedStatus { status, body, .. } => {
+            if body.trim().is_empty() {
+                return Err(AgentCtlError::EndpointIncompatible {
+                    url: url.to_string(),
+                    reason: format!("unexpected HTTP {status} with empty body"),
+                });
+            }
+
+            let parsed =
+                serde_json::from_str::<serde_json::Value>(&body).map_err(|parse_error| {
+                    AgentCtlError::EndpointIncompatible {
+                        url: url.to_string(),
+                        reason: format!(
+                            "HTTP {status} returned non-JSON error body: {parse_error}"
+                        ),
+                    }
+                })?;
+
+            if parsed.is_object() {
+                Ok(())
+            } else {
+                Err(AgentCtlError::EndpointIncompatible {
+                    url: url.to_string(),
+                    reason: format!("HTTP {status} returned non-object JSON body"),
+                })
+            }
+        }
+        other => Err(AgentCtlError::EndpointIncompatible {
+            url: url.to_string(),
+            reason: other.to_string(),
+        }),
     }
 }
 
