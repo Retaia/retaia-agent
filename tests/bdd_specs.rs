@@ -42,3 +42,5 @@ mod runtime_sync_coordinator;
 mod spec_runtime_behavior_complement;
 #[path = "bdd_specs/spec_compatible_config_runtime.rs"]
 mod spec_compatible_config_runtime;
+#[path = "support/system_dispatcher_mock.rs"]
+mod system_dispatcher_mock;

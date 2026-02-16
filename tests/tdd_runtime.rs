@@ -38,3 +38,5 @@ mod runtime_status_tracker;
 mod runtime_sync;
 #[path = "tdd_runtime/runtime_sync_coordinator.rs"]
 mod runtime_sync_coordinator;
+#[path = "support/system_dispatcher_mock.rs"]
+mod system_dispatcher_mock;

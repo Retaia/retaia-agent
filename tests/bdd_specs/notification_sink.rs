@@ -1,18 +1,15 @@
 use retaia_agent::{
-    NotificationBridgeError, NotificationMessage, SystemNotification, SystemNotificationSink,
-    dispatch_notifications,
+    SystemNotification, SystemNotificationSink, dispatch_notifications,
 };
 
-fn dispatcher_err(_message: &NotificationMessage) -> Result<(), NotificationBridgeError> {
-    Err(NotificationBridgeError::SinkFailed(
-        "system notifications unsupported".to_string(),
-    ))
-}
+use crate::system_dispatcher_mock::{MockDispatcherScope, dispatch};
 
 #[test]
 fn bdd_given_system_notification_dispatch_not_available_when_runtime_dispatches_then_delivery_is_reported_failed()
  {
-    let sink = SystemNotificationSink::with_dispatcher(dispatcher_err);
+    let mock = MockDispatcherScope::new();
+    mock.set_error("system notifications unsupported");
+    let sink = SystemNotificationSink::with_dispatcher(dispatch);
     let notifications = vec![
         SystemNotification::NewJobReceived {
             job_id: "job-1".to_string(),
@@ -24,4 +21,5 @@ fn bdd_given_system_notification_dispatch_not_available_when_runtime_dispatches_
 
     assert_eq!(report.delivered, 0);
     assert_eq!(report.failed.len(), 2);
+    assert_eq!(mock.call_count(), 2);
 }

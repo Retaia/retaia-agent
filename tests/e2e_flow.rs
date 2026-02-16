@@ -40,3 +40,5 @@ mod spec_runtime_behavior_complement;
 mod status_notifications;
 #[path = "e2e_flow/sync_coordinator_flow.rs"]
 mod sync_coordinator_flow;
+#[path = "support/system_dispatcher_mock.rs"]
+mod system_dispatcher_mock;
