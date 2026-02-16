@@ -2,6 +2,8 @@ pub mod config_repository;
 pub mod config_store;
 pub mod notification_sink;
 #[cfg(feature = "core-api-client")]
+pub mod openapi_agent_registration_gateway;
+#[cfg(feature = "core-api-client")]
 pub mod openapi_client;
 #[cfg(feature = "core-api-client")]
 pub mod openapi_jobs_gateway;

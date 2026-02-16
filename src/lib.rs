@@ -2,6 +2,11 @@ pub mod application;
 pub mod domain;
 pub mod infrastructure;
 
+pub use application::agent_registration::{
+    AgentRegistrationCommand, AgentRegistrationError, AgentRegistrationGateway,
+    AgentRegistrationIntent, AgentRegistrationOutcome, build_agent_registration_command,
+    register_agent,
+};
 pub use application::agent_runtime_app::{
     AgentRuntimeApp, RuntimeStatusView, SettingsSaveError, TrayMenuModel,
 };
@@ -54,6 +59,8 @@ pub use infrastructure::config_store::{
 pub use infrastructure::notification_sink::{
     StdoutNotificationSink, SystemNotificationSink, dispatch_system_notification,
 };
+#[cfg(feature = "core-api-client")]
+pub use infrastructure::openapi_agent_registration_gateway::OpenApiAgentRegistrationGateway;
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::openapi_client::{build_core_api_client, with_bearer_token};
 #[cfg(feature = "core-api-client")]

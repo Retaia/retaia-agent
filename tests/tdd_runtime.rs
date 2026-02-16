@@ -1,3 +1,5 @@
+#[path = "tdd_runtime/agent_registration.rs"]
+mod agent_registration;
 #[path = "tdd_runtime/application.rs"]
 mod application;
 #[path = "tdd_runtime/capabilities.rs"]
