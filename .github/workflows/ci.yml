@@ -6,6 +6,10 @@ on:
       - master
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_HUSKY_DONT_INSTALL_HOOKS: "1"
 
@@ -32,9 +36,40 @@ jobs:
           GITHUB_HEAD_REF: ${{ github.head_ref }}
         run: cargo run --quiet --bin check_branch_up_to_date
 
+  commitlint:
+    runs-on: ubuntu-latest
+    needs: branch-up-to-date
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-commitlint
+        run: cargo install cargo-commitlint --locked
+
+      - name: Validate commit messages (PR range)
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "Skipping commitlint on non-PR event."
+            exit 0
+          fi
+          git fetch origin "$GITHUB_BASE_REF" --depth=1
+          cargo commitlint check --from "origin/$GITHUB_BASE_REF" --to "$GITHUB_SHA" --verbose --strict
+
   test-gates:
     name: test-${{ matrix.suite }}
     runs-on: ubuntu-latest
+    needs:
+      - branch-up-to-date
+      - commitlint
     strategy:
       fail-fast: false
       matrix:
@@ -63,6 +98,7 @@ jobs:
 
   coverage-gate:
     runs-on: ubuntu-latest
+    needs: test-gates
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,3 +120,14 @@ jobs:
           mkdir -p coverage
           cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary.json
           cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary.json --min 80
+
+  ci-required:
+    runs-on: ubuntu-latest
+    needs:
+      - branch-up-to-date
+      - commitlint
+      - test-gates
+      - coverage-gate
+    steps:
+      - name: Required CI gate
+        run: echo "All required CI jobs passed."

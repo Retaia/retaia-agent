@@ -26,6 +26,7 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 - Rebase sur `master`
 - Pas de merge commits de synchronisation
 - Historique linéaire obligatoire (branche à jour + aucun merge commit)
+- Check CI bloquant `commitlint`: tous les commits PR en Conventional Commits
 - Tests obligatoires en PR:
   - `TDD` base sur le fonctionnement du code
   - `BDD` base sur les scenarios des specs
