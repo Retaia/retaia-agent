@@ -4,7 +4,7 @@ use retaia_agent::{
 
 #[test]
 fn bdd_given_realtime_push_hint_when_fresh_then_runtime_sync_triggers_poll() {
-    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::UiRustDesktop);
+    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::UiWeb);
     let hint = PushHint {
         issued_at_ms: 10_000,
         ttl_ms: 2_000,

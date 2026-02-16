@@ -10,7 +10,7 @@ fn e2e_runtime_status_driven_polling_with_push_hint_then_poll_confirmation_flow(
     assert!(!push_is_authoritative());
 
     let push_decision = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiRustDesktop,
+        ClientRuntimeTarget::UiWeb,
         PushChannel::WebSocket,
         PushHint {
             issued_at_ms: 100,

@@ -7,7 +7,7 @@ pub enum RuntimeOrchestrationMode {
 pub enum ClientRuntimeTarget {
     Agent,
     Mcp,
-    UiRustDesktop,
+    UiWeb,
     UiMobile,
 }
 

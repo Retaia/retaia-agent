@@ -80,7 +80,7 @@ fn tdd_mobile_push_only_targets_mobile_ui() {
 #[test]
 fn tdd_push_hint_dedup_or_expired_is_ignored() {
     let expired = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiRustDesktop,
+        ClientRuntimeTarget::UiWeb,
         PushChannel::WebSocket,
         PushHint {
             issued_at_ms: 1_000,
@@ -92,7 +92,7 @@ fn tdd_push_hint_dedup_or_expired_is_ignored() {
     assert_eq!(expired, PushHintDecision::Ignore);
 
     let deduped = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiRustDesktop,
+        ClientRuntimeTarget::UiWeb,
         PushChannel::Sse,
         PushHint {
             issued_at_ms: 1_000,

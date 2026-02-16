@@ -58,7 +58,8 @@ fn tdd_disable_escalation_turns_children_off() {
 #[test]
 fn tdd_client_token_policy_matches_actor_rules() {
     assert!(can_issue_client_token(ClientKind::Agent, false));
-    assert!(!can_issue_client_token(ClientKind::UiRust, true));
+    assert!(!can_issue_client_token(ClientKind::UiWeb, true));
+    assert!(!can_issue_client_token(ClientKind::UiMobile, true));
     assert!(!can_issue_client_token(ClientKind::Mcp, false));
     assert!(can_issue_client_token(ClientKind::Mcp, true));
 }
@@ -67,5 +68,6 @@ fn tdd_client_token_policy_matches_actor_rules() {
 fn tdd_processing_is_agent_only() {
     assert!(can_process_jobs(ClientKind::Agent));
     assert!(!can_process_jobs(ClientKind::Mcp));
-    assert!(!can_process_jobs(ClientKind::UiRust));
+    assert!(!can_process_jobs(ClientKind::UiWeb));
+    assert!(!can_process_jobs(ClientKind::UiMobile));
 }
