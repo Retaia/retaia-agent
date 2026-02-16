@@ -18,6 +18,11 @@ pub use domain::runtime_control::{
     RuntimeControlAvailability, RuntimeControlCommand, apply_runtime_control,
     runtime_control_availability,
 };
+pub use domain::runtime_orchestration::{
+    PollDecision, PollDecisionReason, PollEndpoint, PollSignal, RuntimeOrchestrationMode,
+    can_issue_mutation_after_poll, next_poll_decision, push_channels_allowed,
+    runtime_orchestration_mode, throttled_backoff_with_jitter,
+};
 pub use domain::runtime_ui::{
     AgentRunState, AgentUiRuntime, ConnectivityState, JobFailure, JobStage, JobStatus, MenuAction,
     MenuVisibility, RuntimeSnapshot, SystemNotification, base_menu_actions, menu_visibility,
