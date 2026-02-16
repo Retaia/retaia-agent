@@ -68,9 +68,15 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 
 - Done:
   - Suites séparées et non monolithiques:
-    - `tests/tdd_runtime.rs`
-    - `tests/bdd_specs.rs`
-    - `tests/e2e_flow.rs`
+    - `tests/tdd_capabilities.rs`
+    - `tests/tdd_configuration.rs`
+    - `tests/tdd_runtime_core.rs`
+    - `tests/bdd_capabilities_authz.rs`
+    - `tests/bdd_configuration_and_infra.rs`
+    - `tests/bdd_runtime_behavior.rs`
+    - `tests/e2e_authz_capabilities.rs`
+    - `tests/e2e_configuration.rs`
+    - `tests/e2e_runtime_behavior.rs`
   - CI bloquante avec jobs dédiés + gate coverage >= 80%.
   - Coverage mesurée: 89.90% (dernier run local).
 - In progress:

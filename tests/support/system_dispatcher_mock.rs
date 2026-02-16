@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use retaia_agent::{NotificationBridgeError, NotificationMessage};

@@ -150,7 +150,11 @@ jobs:
           save-if: false
 
       - name: Run TDD suite
-        run: cargo test --test tdd_runtime
+        run: |
+          cargo test \
+            --test tdd_capabilities \
+            --test tdd_configuration \
+            --test tdd_runtime_core
 
   test-bdd:
     runs-on: ubuntu-latest
@@ -175,7 +179,11 @@ jobs:
           save-if: false
 
       - name: Run BDD suite
-        run: cargo test --test bdd_specs
+        run: |
+          cargo test \
+            --test bdd_capabilities_authz \
+            --test bdd_configuration_and_infra \
+            --test bdd_runtime_behavior
 
   test-e2e:
     runs-on: ubuntu-latest
@@ -200,7 +208,11 @@ jobs:
           save-if: false
 
       - name: Run E2E suite
-        run: cargo test --test e2e_flow
+        run: |
+          cargo test \
+            --test e2e_authz_capabilities \
+            --test e2e_configuration \
+            --test e2e_runtime_behavior
 
   coverage-gate:
     runs-on: ubuntu-latest
@@ -232,11 +244,11 @@ jobs:
       - name: Run coverage gates per suite (min 80%)
         run: |
           mkdir -p coverage
-          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-tdd.json --test tdd_runtime
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-tdd.json --test tdd_capabilities --test tdd_configuration --test tdd_runtime_core
           cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-tdd.json --min 80
-          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-bdd.json --test bdd_specs
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-bdd.json --test bdd_capabilities_authz --test bdd_configuration_and_infra --test bdd_runtime_behavior
           cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-bdd.json --min 80
-          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-e2e.json --test e2e_flow
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-e2e.json --test e2e_authz_capabilities --test e2e_configuration --test e2e_runtime_behavior
           cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-e2e.json --min 80
 
       - name: Upload coverage artifacts
