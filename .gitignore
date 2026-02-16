@@ -1,3 +1,12 @@
 node_modules/
 target/
 coverage/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local logs
+*.log

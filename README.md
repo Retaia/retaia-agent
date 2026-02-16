@@ -49,7 +49,10 @@ cargo run --bin agentctl -- config init \
   --core-api-url https://core.retaia.local \
   --ollama-url http://127.0.0.1:11434
 cargo run --bin agentctl -- config validate
+cargo run --bin agentctl -- config validate --check-respond
 ```
+
+`--check-respond` validates API compatibility (`Core /jobs`, `Ollama /api/tags`), not just TCP reachability.
 
 `agentctl` is powered by `clap` and uses the same validation contract as GUI/runtime services.
 

@@ -6,7 +6,7 @@ use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigInterface, ConfigRepository, ConfigRepositoryError,
     ConfigValidationError, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
     SystemConfigRepository, TechnicalAuthConfig, apply_config_update, compact_validation_reason,
-    validate_config,
+    normalize_core_api_url, validate_config,
 };
 use thiserror::Error;
 
@@ -29,7 +29,7 @@ enum RootCommand {
 enum ConfigCommand {
     Path(CommonConfigArgs),
     Show(CommonConfigArgs),
-    Validate(CommonConfigArgs),
+    Validate(ConfigValidateArgs),
     Init(ConfigInitArgs),
     Set(ConfigSetArgs),
 }
@@ -37,7 +37,8 @@ enum ConfigCommand {
 impl ConfigCommand {
     fn config_path(&self) -> Option<&PathBuf> {
         match self {
-            Self::Path(args) | Self::Show(args) | Self::Validate(args) => args.config.as_ref(),
+            Self::Path(args) | Self::Show(args) => args.config.as_ref(),
+            Self::Validate(args) => args.common.config.as_ref(),
             Self::Init(args) => args.common.config.as_ref(),
             Self::Set(args) => args.common.config.as_ref(),
         }
@@ -48,6 +49,14 @@ impl ConfigCommand {
 struct CommonConfigArgs {
     #[arg(long = "config")]
     config: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Args)]
+struct ConfigValidateArgs {
+    #[command(flatten)]
+    common: CommonConfigArgs,
+    #[arg(long = "check-respond", default_value_t = false)]
+    check_respond: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -142,6 +151,10 @@ enum AgentCtlError {
     InvalidConfig(String),
     #[error("invalid config update: {0}")]
     InvalidConfigUpdate(String),
+    #[error("config endpoint unreachable ({url}): {reason}")]
+    EndpointUnreachable { url: String, reason: String },
+    #[error("config endpoint incompatible ({url}): {reason}")]
+    EndpointIncompatible { url: String, reason: String },
 }
 
 fn print_config(config: &AgentRuntimeConfig) {
@@ -179,6 +192,111 @@ fn validation_error(errors: Vec<ConfigValidationError>) -> String {
     compact_validation_reason(&errors)
 }
 
+fn http_get(url: &str) -> Result<reqwest::blocking::Response, AgentCtlError> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|error| AgentCtlError::EndpointUnreachable {
+            url: url.to_string(),
+            reason: error.to_string(),
+        })?;
+
+    client
+        .get(url)
+        .send()
+        .map_err(|error| AgentCtlError::EndpointUnreachable {
+            url: url.to_string(),
+            reason: error.to_string(),
+        })
+}
+
+fn join_url(base: &str, path: &str) -> String {
+    format!(
+        "{}/{}",
+        base.trim_end_matches('/'),
+        path.trim_start_matches('/')
+    )
+}
+
+fn check_core_api_compatible(core_api_url: &str) -> Result<(), AgentCtlError> {
+    let url = join_url(core_api_url, "/jobs");
+    let response = http_get(&url)?;
+    let status = response.status().as_u16();
+    let body = response.text().unwrap_or_default();
+
+    if !matches!(status, 200 | 401 | 403 | 429) {
+        return Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: format!("unexpected status {status} on /jobs"),
+        });
+    }
+
+    let parsed = serde_json::from_str::<serde_json::Value>(&body).map_err(|error| {
+        AgentCtlError::EndpointIncompatible {
+            url: url.clone(),
+            reason: format!("non-JSON response on /jobs: {error}"),
+        }
+    })?;
+
+    match status {
+        200 if parsed.is_array() => Ok(()),
+        401 | 403 | 429 if parsed.is_object() => Ok(()),
+        200 => Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: "expected JSON array on /jobs (status 200)".to_string(),
+        }),
+        _ => Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: "expected JSON object error payload on /jobs".to_string(),
+        }),
+    }
+}
+
+fn check_ollama_api_compatible(ollama_url: &str) -> Result<(), AgentCtlError> {
+    let base = ollama_url.trim_end_matches('/');
+    let url = if base.ends_with("/api") {
+        join_url(base, "/tags")
+    } else {
+        join_url(base, "/api/tags")
+    };
+
+    let response = http_get(&url)?;
+    let status = response.status().as_u16();
+    let body = response.text().unwrap_or_default();
+
+    if status != 200 {
+        return Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: format!("unexpected status {status} on Ollama tags endpoint"),
+        });
+    }
+
+    let parsed = serde_json::from_str::<serde_json::Value>(&body).map_err(|error| {
+        AgentCtlError::EndpointIncompatible {
+            url: url.clone(),
+            reason: format!("non-JSON response on Ollama tags endpoint: {error}"),
+        }
+    })?;
+
+    if parsed
+        .get("models")
+        .and_then(|value| value.as_array())
+        .is_some()
+    {
+        Ok(())
+    } else {
+        Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: "expected JSON object containing `models` array".to_string(),
+        })
+    }
+}
+
+fn check_config_respond(config: &AgentRuntimeConfig) -> Result<(), AgentCtlError> {
+    check_core_api_compatible(&config.core_api_url)?;
+    check_ollama_api_compatible(&config.ollama_url)
+}
+
 fn init_config(args: &ConfigInitArgs) -> Result<AgentRuntimeConfig, AgentCtlError> {
     let auth_mode = args.auth_mode.unwrap_or(AuthModeArg::Interactive).into();
     let technical_auth = match auth_mode {
@@ -190,7 +308,7 @@ fn init_config(args: &ConfigInitArgs) -> Result<AgentRuntimeConfig, AgentCtlErro
     };
 
     let config = AgentRuntimeConfig {
-        core_api_url: args.core_api_url.clone(),
+        core_api_url: normalize_core_api_url(&args.core_api_url),
         ollama_url: args.ollama_url.clone(),
         auth_mode,
         technical_auth,
@@ -234,11 +352,14 @@ fn run_with_repository<R: ConfigRepository>(
             print_config(&config);
             Ok(())
         }
-        ConfigCommand::Validate(_) => {
+        ConfigCommand::Validate(args) => {
             let config = repository.load().map_err(AgentCtlError::Load)?;
             validate_config(&config)
                 .map_err(validation_error)
                 .map_err(AgentCtlError::InvalidConfig)?;
+            if args.check_respond {
+                check_config_respond(&config)?;
+            }
             println!("Config is valid.");
             Ok(())
         }

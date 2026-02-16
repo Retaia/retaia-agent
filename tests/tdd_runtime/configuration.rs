@@ -1,6 +1,6 @@
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigValidationError, LogLevel, TechnicalAuthConfig,
-    compact_validation_reason, validate_config,
+    compact_validation_reason, normalize_core_api_url, validate_config,
 };
 
 fn valid_config() -> AgentRuntimeConfig {
@@ -64,4 +64,20 @@ fn tdd_compact_validation_reason_produces_human_readable_string() {
         ConfigValidationError::EmptySecretKey,
     ]);
     assert_eq!(reason, "invalid core api url, empty secret key");
+}
+
+#[test]
+fn tdd_normalize_core_api_url_accepts_host_and_api_v1_with_or_without_trailing_slash() {
+    assert_eq!(
+        normalize_core_api_url("https://core.retaia.local"),
+        "https://core.retaia.local/api/v1"
+    );
+    assert_eq!(
+        normalize_core_api_url("https://core.retaia.local/api/v1"),
+        "https://core.retaia.local/api/v1"
+    );
+    assert_eq!(
+        normalize_core_api_url("https://core.retaia.local/api/v1/"),
+        "https://core.retaia.local/api/v1"
+    );
 }

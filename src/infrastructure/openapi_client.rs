@@ -1,10 +1,10 @@
 use retaia_core_client::apis::configuration::Configuration;
 
-use crate::domain::configuration::AgentRuntimeConfig;
+use crate::domain::configuration::{AgentRuntimeConfig, normalize_core_api_url};
 
 pub fn build_core_api_client(config: &AgentRuntimeConfig) -> Configuration {
     let mut client = Configuration::new();
-    client.base_path = config.core_api_url.clone();
+    client.base_path = normalize_core_api_url(&config.core_api_url);
     client
 }
 
@@ -43,5 +43,13 @@ mod tests {
         let client = build_core_api_client(&runtime_config());
         let client = with_bearer_token(client, "token-abc");
         assert_eq!(client.bearer_access_token.as_deref(), Some("token-abc"));
+    }
+
+    #[test]
+    fn tdd_openapi_client_normalizes_host_only_core_url_to_api_v1_base_path() {
+        let mut config = runtime_config();
+        config.core_api_url = "https://core.retaia.local/".to_string();
+        let client = build_core_api_client(&config);
+        assert_eq!(client.base_path, "https://core.retaia.local/api/v1");
     }
 }

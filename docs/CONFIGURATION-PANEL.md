@@ -14,6 +14,11 @@
 - Identifiants techniques (si mode technique)
 - Paramètres runtime (ex: concurrence/max jobs, niveau de log)
 
+Normalisation URL Core:
+
+- `https://host` est normalisé en `https://host/api/v1`.
+- `https://host/api/v1/` est normalisé en `https://host/api/v1`.
+
 ## UX Rules
 
 - Validation explicite des champs.
@@ -32,6 +37,9 @@
 - `agentctl config path`: affiche le chemin de config résolu.
 - `agentctl config show`: affiche la config active (secret masqué).
 - `agentctl config validate`: valide la config active.
+- `agentctl config validate --check-respond`: valide la compatibilité API côté Core/Ollama.
+  - Core: probe `GET /jobs` (statuts compatibles attendus + payload JSON).
+  - Ollama: probe `GET /api/tags` (JSON avec `models[]`).
 - `agentctl config init ...`: initialise la config (première installation).
 - `agentctl config set ...`: met à jour la config existante.
 
