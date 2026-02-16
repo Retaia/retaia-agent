@@ -20,6 +20,8 @@ mod runtime_control;
 mod runtime_loop_engine;
 #[path = "bdd_specs/runtime_orchestration.rs"]
 mod runtime_orchestration;
+#[path = "bdd_specs/runtime_session.rs"]
+mod runtime_session;
 #[path = "bdd_specs/runtime_sync.rs"]
 mod runtime_sync;
 #[path = "bdd_specs/runtime_sync_coordinator.rs"]

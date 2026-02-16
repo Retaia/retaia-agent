@@ -26,3 +26,22 @@
 - La validation est identique en GUI et CLI (mêmes erreurs, mêmes invariants).
 - Cible d'exécution: Linux/macOS/Windows, y compris environnements headless.
 - Persistance système et convention de chemin: voir `CONFIG-STORAGE.md`.
+
+## CLI-Only Commands (headless)
+
+- `agentctl config path`: affiche le chemin de config résolu.
+- `agentctl config show`: affiche la config active (secret masqué).
+- `agentctl config validate`: valide la config active.
+- `agentctl config init ...`: initialise la config (première installation).
+- `agentctl config set ...`: met à jour la config existante.
+
+Exemple:
+
+```bash
+cargo run --bin agentctl -- config init \
+  --core-api-url https://core.retaia.local \
+  --ollama-url http://127.0.0.1:11434 \
+  --auth-mode technical \
+  --client-id agent-prod \
+  --secret-key '$RETAIA_AGENT_SECRET'
+```

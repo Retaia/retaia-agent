@@ -4,6 +4,7 @@ Hub documentaire local, organisé par sujet.
 
 ## Sujets
 
+- Statut d'implémentation pré-v1: `PRE-V1-STATUS.md`
 - Runtime et contraintes: `RUNTIME-CONSTRAINTS.md`
 - UX menu système (tray): `UX-SYSTEM-TRAY.md`
 - Notifications: `NOTIFICATIONS.md`
