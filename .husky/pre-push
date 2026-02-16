@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$BRANCH" = "master" ]; then
+  echo "Push to master is blocked. Use a feature branch + PR."
+  exit 1
+fi
+
+npm run check:branch-up-to-date

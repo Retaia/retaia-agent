@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$BRANCH" = "master" ]; then
+  echo "Commit on master is blocked. Use a feature branch + PR."
+  exit 1
+fi
