@@ -22,4 +22,4 @@ Hub documentaire local, organisé par sujet.
 
 ## Docs API Generated
 
-- Les docs générées depuis l'OpenAPI sont isolées dans `api/openapi-client/`.
+- Les docs générées depuis l'OpenAPI sont isolées dans `api/`.
