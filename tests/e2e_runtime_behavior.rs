@@ -10,6 +10,8 @@ mod runtime_cli_shell_flow;
 mod runtime_loop_engine_flow;
 #[path = "e2e_flow/runtime_orchestration_flow.rs"]
 mod runtime_orchestration_flow;
+#[path = "e2e_flow/runtime_poll_cycle_flow.rs"]
+mod runtime_poll_cycle_flow;
 #[path = "e2e_flow/runtime_session_flow.rs"]
 mod runtime_session_flow;
 #[path = "e2e_flow/runtime_specs_flow.rs"]

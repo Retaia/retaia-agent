@@ -30,6 +30,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 - In progress:
   - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut).
   - Shell runtime CLI interactif (`agent-runtime`) ajouté comme miroir headless du menu système; UI desktop finale encore pending.
+  - Boucle daemon branchée sur cycle poll runtime (`run_runtime_poll_cycle`) avec projection d'état dégradé (unauthorized/connectivité) et notifications associées.
 - Pending:
   - Implémentation UI desktop concrète (au-delà du modèle de domaine/app).
 
@@ -98,6 +99,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
    - accès settings.
 2. Intégration shell GUI finale des adapters de notification selon cible (desktop/headless).
 3. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
+   - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.
 4. Revue finale de conformité v1 contre `specs/` avant freeze.
 
 ## Operational Reference

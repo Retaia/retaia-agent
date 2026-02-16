@@ -86,7 +86,7 @@ pub fn filter_jobs_for_declared_capabilities(jobs: Vec<CoreJobView>) -> Vec<Core
         .collect()
 }
 
-pub fn poll_runtime_snapshot<G: CoreApiGateway>(
+pub fn poll_runtime_snapshot<G: CoreApiGateway + ?Sized>(
     gateway: &G,
 ) -> Result<RuntimeSnapshot, CoreApiGatewayError> {
     let jobs = filter_jobs_for_declared_capabilities(gateway.poll_jobs()?);

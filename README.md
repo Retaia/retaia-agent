@@ -80,6 +80,14 @@ cargo run --bin agentctl -- daemon uninstall
 
 Disable autostart at boot with `--no-autostart`.
 
+Daemon runtime loop (foreground service mode):
+
+```bash
+cargo run --bin agent-runtime -- daemon --tick-ms 5000
+```
+
+With `core-api-client` enabled, daemon polling uses `GET /jobs` and can attach bearer auth from `RETAIA_AGENT_BEARER_TOKEN`.
+
 ## Development workflow
 
 ```bash
