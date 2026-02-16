@@ -35,3 +35,4 @@ Règle toggle:
 - Le moteur de processing est unique et partagé.
 - En environnement headless, un shell CLI (`agent-runtime`) expose le même contrat minimal
   (`menu/status/settings/play/pause/stop/quit`) en miroir fonctionnel du menu système.
+- Le daemon runtime (boot + arrière-plan) est unique; son lifecycle est pilotable depuis CLI et GUI.

@@ -65,6 +65,19 @@ cargo run --bin agent-runtime
 
 Supported commands: `menu`, `status`, `settings`, `play`, `pause`, `stop`, `quit`.
 
+Daemon management (shared service for CLI/GUI):
+
+```bash
+# install user-level daemon with autostart at boot
+cargo run --bin agentctl -- daemon install --autostart true
+
+# control lifecycle
+cargo run --bin agentctl -- daemon start
+cargo run --bin agentctl -- daemon status
+cargo run --bin agentctl -- daemon stop
+cargo run --bin agentctl -- daemon uninstall
+```
+
 ## Development workflow
 
 ```bash

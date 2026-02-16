@@ -5,6 +5,7 @@
 - Accessible depuis le menu de l'app.
 - Accessible aussi depuis le menu système/tray.
 - Accessible en CLI-only (SSH, serveur Linux, Raspberry Pi sans GUI) avec le même contrat de config.
+- Le daemon runtime est unique et doit être pilotable via CLI ou GUI (même instance de service).
 
 ## Minimal Fields
 
@@ -42,6 +43,7 @@ Normalisation URL Core:
   - Ollama: probe `POST /v1/chat/completions` via `genai` (endpoint OpenAI-compatible).
 - `agentctl config init ...`: initialise la config (première installation).
 - `agentctl config set ...`: met à jour la config existante.
+- `agentctl daemon install/start/stop/status/uninstall`: lifecycle du daemon partagé.
 
 Exemple:
 

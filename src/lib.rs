@@ -16,6 +16,10 @@ pub use application::core_api_gateway::{
     filter_jobs_for_declared_capabilities, poll_runtime_snapshot,
     runtime_snapshot_from_polled_jobs,
 };
+pub use application::daemon_manager::{
+    DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager, DaemonManagerError,
+    DaemonStatus,
+};
 pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
     dispatch_notifications, notification_message,

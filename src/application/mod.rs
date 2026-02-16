@@ -2,6 +2,7 @@ pub mod agent_registration;
 pub mod agent_runtime_app;
 pub mod config_repository;
 pub mod core_api_gateway;
+pub mod daemon_manager;
 pub mod notification_bridge;
 pub mod runtime_cli_shell;
 pub mod runtime_loop_engine;

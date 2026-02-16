@@ -1,8 +1,9 @@
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::exit;
+use std::time::Duration;
 
-use clap::{Parser, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
     AgentRuntimeConfig, ClientRuntimeTarget, ConfigRepository, FileConfigRepository,
     RuntimeSession, SystemConfigRepository, compact_validation_reason, execute_shell_command,
@@ -16,6 +17,19 @@ struct Cli {
     config: Option<PathBuf>,
     #[arg(long = "target", value_enum, default_value_t = TargetArg::Agent)]
     target: TargetArg,
+    #[command(subcommand)]
+    mode: Option<ModeCommand>,
+}
+
+#[derive(Debug, Subcommand)]
+enum ModeCommand {
+    Daemon(DaemonArgs),
+}
+
+#[derive(Debug, Clone, Args)]
+struct DaemonArgs {
+    #[arg(long = "tick-ms", default_value_t = 5000)]
+    tick_ms: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -58,8 +72,15 @@ fn run() -> Result<(), String> {
         )
     })?;
 
+    match cli.mode {
+        Some(ModeCommand::Daemon(args)) => run_daemon_loop(&session, args.tick_ms),
+        None => run_interactive_shell(&mut session),
+    }
+}
+
+fn run_interactive_shell(session: &mut RuntimeSession) -> Result<(), String> {
     println!("{}", help_text());
-    print!("{}", format_menu(&session));
+    print!("{}", format_menu(session));
 
     let stdin = io::stdin();
     loop {
@@ -76,7 +97,7 @@ fn run() -> Result<(), String> {
             break;
         }
 
-        let result = execute_shell_command(&mut session, parse_shell_command(&line));
+        let result = execute_shell_command(session, parse_shell_command(&line));
         if !result.output.is_empty() {
             print!("{}", result.output);
         }
@@ -86,6 +107,18 @@ fn run() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn run_daemon_loop(session: &RuntimeSession, tick_ms: u64) -> Result<(), String> {
+    let sleep_duration = Duration::from_millis(tick_ms.max(100));
+    println!(
+        "runtime daemon started target={:?} run_state={:?}",
+        session.target(),
+        session.run_state()
+    );
+    loop {
+        std::thread::sleep(sleep_duration);
+    }
 }
 
 fn main() {

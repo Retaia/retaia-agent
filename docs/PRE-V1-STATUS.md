@@ -61,6 +61,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `config validate`
     - `config init`
     - `config set`
+    - `daemon install/start/stop/status/uninstall` (service manager natif via port partagé)
   - Parsing CLI migré vers `clap`.
 - Pending:
   - Écran/panneau GUI branché sur les mêmes services en production app.
