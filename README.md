@@ -11,7 +11,11 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
 - CI gate: `branch-up-to-date` (branch must include latest `master` and keep linear history)
 - CI gate: `commitlint` (PR commit range must follow Conventional Commits)
 - CI test gates (blocking for PR merge):
-  - `test-and-coverage`: execute `tdd` + `bdd` + `e2e` en un seul job avec coverage minimale 80%
+  - `rust-build-cache`: pre-build des tests pour reduire les recompilations
+  - `test-tdd`: tests bases sur le fonctionnement du code
+  - `test-bdd`: scenarios bases sur la spec
+  - `test-e2e`: parcours end-to-end bases sur la spec
+  - `coverage-gate`: coverage minimale 80%
   - `ci-required`: aggregate required status
   - path filters: les jobs de tests lourds sont skips si aucun fichier applicatif pertinent n'a change
 - Local hooks:

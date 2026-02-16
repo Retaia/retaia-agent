@@ -52,6 +52,8 @@ jobs:
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Ensure branch is up to date and linear
         env:
@@ -74,6 +76,8 @@ jobs:
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-commitlint
         uses: taiki-e/install-action@cargo-commitlint
@@ -91,7 +95,7 @@ jobs:
           git fetch origin "$GITHUB_BASE_REF" --depth=1
           cargo commitlint check --from "origin/$GITHUB_BASE_REF" --to "$GITHUB_SHA" --verbose --strict
 
-  test-and-coverage:
+  rust-build-cache:
     runs-on: ubuntu-latest
     if: needs.changes.outputs.run_tests == 'true'
     needs:
@@ -109,11 +113,113 @@ jobs:
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Pre-build test targets
+        run: cargo test --tests --no-run
+
+  test-tdd:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true'
+    needs:
+      - changes
+      - rust-build-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          save-if: false
+
+      - name: Run TDD suite
+        run: cargo test --test tdd_runtime
+
+  test-bdd:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true'
+    needs:
+      - changes
+      - rust-build-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          save-if: false
+
+      - name: Run BDD suite
+        run: cargo test --test bdd_specs
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true'
+    needs:
+      - changes
+      - rust-build-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          save-if: false
+
+      - name: Run E2E suite
+        run: cargo test --test e2e_flow
+
+  coverage-gate:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true'
+    needs:
+      - changes
+      - rust-build-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          save-if: false
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Run tests and coverage gate (min 80%)
+      - name: Run coverage gate (min 80%)
         run: |
           mkdir -p coverage
           cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary.json --test tdd_runtime --test bdd_specs --test e2e_flow
@@ -135,15 +241,27 @@ jobs:
       - changes
       - branch-up-to-date
       - commitlint
-      - test-and-coverage
+      - rust-build-cache
+      - test-tdd
+      - test-bdd
+      - test-e2e
+      - coverage-gate
     steps:
       - name: Required CI gate
         run: |
           [ "${{ needs.branch-up-to-date.result }}" = "success" ] || exit 1
           [ "${{ needs.commitlint.result }}" = "success" ] || exit 1
           if [ "${{ needs.changes.outputs.run_tests }}" = "true" ]; then
-            [ "${{ needs.test-and-coverage.result }}" = "success" ] || exit 1
+            [ "${{ needs.rust-build-cache.result }}" = "success" ] || exit 1
+            [ "${{ needs.test-tdd.result }}" = "success" ] || exit 1
+            [ "${{ needs.test-bdd.result }}" = "success" ] || exit 1
+            [ "${{ needs.test-e2e.result }}" = "success" ] || exit 1
+            [ "${{ needs.coverage-gate.result }}" = "success" ] || exit 1
           else
-            [ "${{ needs.test-and-coverage.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.rust-build-cache.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.test-tdd.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.test-bdd.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.test-e2e.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.coverage-gate.result }}" = "skipped" ] || exit 1
           fi
           echo "All required CI jobs passed."
