@@ -6,6 +6,9 @@ on:
       - master
   pull_request:
 
+env:
+  CARGO_HUSKY_DONT_INSTALL_HOOKS: "1"
+
 jobs:
   branch-up-to-date:
     runs-on: ubuntu-latest

@@ -31,5 +31,5 @@ La source de vérité contrat/runtime est le submodule `specs/`.
   - `BDD` base sur les scenarios des specs
   - `E2E` base sur les parcours specs/workflows
 - Coverage minimale obligatoire en PR: `80%` (line coverage)
-- Hook Husky `pre-commit`: interdit les commits sur `master`
-- Hook Husky `pre-push`: interdit les pushes sur `master` + vérifie la fraîcheur/linéarité de branche
+- Hook git `pre-commit` (via `cargo-husky`): interdit les commits sur `master`
+- Hook git `pre-push` (via `cargo-husky`): interdit les pushes sur `master` + vérifie la fraîcheur/linéarité de branche

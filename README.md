@@ -17,6 +17,7 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
 - Local hooks:
   - `pre-commit`: blocks commits on `master`
   - `pre-push`: blocks pushes on `master` and runs `cargo run --bin check_branch_up_to_date`
+  - managed by `cargo-husky` from `.cargo-husky/hooks/`
 
 Cargo commands used by CI checks:
 
