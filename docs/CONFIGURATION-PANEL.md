@@ -25,3 +25,4 @@
 - Les champs supportés sont identiques en GUI et CLI.
 - La validation est identique en GUI et CLI (mêmes erreurs, mêmes invariants).
 - Cible d'exécution: Linux/macOS/Windows, y compris environnements headless.
+- Persistance système et convention de chemin: voir `CONFIG-STORAGE.md`.

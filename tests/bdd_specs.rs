@@ -2,6 +2,8 @@
 mod application_runtime;
 #[path = "bdd_specs/authz.rs"]
 mod authz;
+#[path = "bdd_specs/config_store.rs"]
+mod config_store;
 #[path = "bdd_specs/configuration.rs"]
 mod configuration;
 #[path = "bdd_specs/configuration_cli.rs"]

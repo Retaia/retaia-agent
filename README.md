@@ -69,6 +69,7 @@ See:
 - `CONTRIBUTING.md`
 - `AGENT.md`
 - `docs/README.md`
+- `docs/CONFIG-STORAGE.md`
 
 ## Security
 
