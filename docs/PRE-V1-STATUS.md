@@ -23,6 +23,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Gating mutation après état compatible lu par polling.
   - Runtime controls (`play/pause/stop`) + règles toggle menu.
   - Façade applicative `RuntimeSession` pour composer UI runtime + loop sync.
+  - Projection domaine `RuntimeStatusTracker` pour alimenter la fenêtre statut (`job_id`, `asset_uuid`, `%`, `stage`, message) sans logique dupliquée.
 - In progress:
   - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut).
 - Pending:
@@ -89,4 +90,3 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - `docs/CI-QUALITY-GATES.md`
 - Source normative:
   - `specs/`
-

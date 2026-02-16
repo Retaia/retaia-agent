@@ -62,6 +62,7 @@
   - transformer les événements runtime (push/poll/429) en plans d'action exécutables,
   - imposer le gating par état runtime (`running/paused/stopped`) sans dupliquer les règles domaine.
 - Façade application: `RuntimeSession` pour composer menu UI, sync runtime, et plans de polling dans un seul point d'entrée.
+- Projection statut window: `RuntimeStatusTracker` pour projeter les événements job/connectivité/auth en `RuntimeSnapshot` (job courant + progression + transitions).
 
 ## Normative References
 

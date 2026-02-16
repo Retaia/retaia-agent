@@ -22,6 +22,8 @@ mod runtime_loop_engine;
 mod runtime_orchestration;
 #[path = "bdd_specs/runtime_session.rs"]
 mod runtime_session;
+#[path = "bdd_specs/runtime_status_tracker.rs"]
+mod runtime_status_tracker;
 #[path = "bdd_specs/runtime_sync.rs"]
 mod runtime_sync;
 #[path = "bdd_specs/runtime_sync_coordinator.rs"]
