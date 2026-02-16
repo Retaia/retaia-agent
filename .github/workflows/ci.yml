@@ -84,7 +84,9 @@ jobs:
           shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-commitlint
-        uses: taiki-e/install-action@cargo-commitlint
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-commitlint
 
       - name: Validate commit messages (PR range)
         env:
@@ -221,7 +223,9 @@ jobs:
           save-if: false
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
       - name: Run coverage gate (min 80%)
         run: |
