@@ -34,5 +34,9 @@ Setup:
 
 ```bash
 cargo install cargo-commitlint
+# Ensure git uses repository hooks from .git/hooks.
+git config --unset core.hooksPath || true
+# Force hook refresh after hook file updates.
+cargo clean -p cargo-husky
 cargo test
 ```
