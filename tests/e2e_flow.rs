@@ -18,3 +18,5 @@ mod runtime_specs_flow;
 mod runtime_sync_flow;
 #[path = "e2e_flow/status_notifications.rs"]
 mod status_notifications;
+#[path = "e2e_flow/sync_coordinator_flow.rs"]
+mod sync_coordinator_flow;
