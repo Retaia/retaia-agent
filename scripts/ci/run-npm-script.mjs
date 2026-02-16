@@ -23,7 +23,7 @@ if (!Object.prototype.hasOwnProperty.call(scripts, scriptName)) {
       '- "test:tdd": tests bases sur le fonctionnement du code.',
       '- "test:bdd": tests bases sur les scenarios derives des specs.',
       '- "test:e2e": tests end-to-end derives des specs.',
-      '- "test:coverage": generation du rapport coverage (coverage/coverage-summary.json).',
+      '- "test:coverage": generation du rapport coverage Rust (coverage/llvm-cov-summary.json).',
     ].join("\n"),
   );
   process.exit(1);

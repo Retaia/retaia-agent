@@ -34,11 +34,18 @@ try {
   process.exit(1);
 }
 
-const coverage = summary?.total?.lines?.pct;
+const coverageCandidates = [
+  summary?.total?.lines?.pct,
+  summary?.totals?.lines?.percent,
+  summary?.data?.[0]?.totals?.lines?.percent,
+];
+const coverage = coverageCandidates.find((value) => Number.isFinite(value));
 
 if (!Number.isFinite(coverage)) {
   console.error("Invalid coverage summary format.");
-  console.error("Expected JSON path: total.lines.pct");
+  console.error(
+    "Expected one of JSON paths: total.lines.pct, totals.lines.percent, data[0].totals.lines.percent",
+  );
   process.exit(1);
 }
 

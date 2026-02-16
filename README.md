@@ -23,7 +23,7 @@ Required npm scripts (implemented by the codebase):
 - `test:tdd`
 - `test:bdd`
 - `test:e2e`
-- `test:coverage` (must generate `coverage/coverage-summary.json` with `total.lines.pct`)
+- `test:coverage` (must generate `coverage/llvm-cov-summary.json` from Rust coverage)
 
 Setup:
 
