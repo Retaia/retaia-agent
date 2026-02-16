@@ -28,6 +28,8 @@ mod runtime_control;
 mod runtime_loop_engine;
 #[path = "bdd_specs/runtime_orchestration.rs"]
 mod runtime_orchestration;
+#[path = "bdd_specs/runtime_profile_and_infra.rs"]
+mod runtime_profile_and_infra;
 #[path = "bdd_specs/runtime_session.rs"]
 mod runtime_session;
 #[path = "bdd_specs/runtime_status_tracker.rs"]
@@ -36,3 +38,7 @@ mod runtime_status_tracker;
 mod runtime_sync;
 #[path = "bdd_specs/runtime_sync_coordinator.rs"]
 mod runtime_sync_coordinator;
+#[path = "bdd_specs/spec_runtime_behavior_complement.rs"]
+mod spec_runtime_behavior_complement;
+#[path = "bdd_specs/spec_compatible_config_runtime.rs"]
+mod spec_compatible_config_runtime;

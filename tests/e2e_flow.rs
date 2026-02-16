@@ -32,6 +32,10 @@ mod runtime_specs_flow;
 mod runtime_status_flow;
 #[path = "e2e_flow/runtime_sync_flow.rs"]
 mod runtime_sync_flow;
+#[path = "e2e_flow/spec_compatible_coverage_flow.rs"]
+mod spec_compatible_coverage_flow;
+#[path = "e2e_flow/spec_runtime_behavior_complement.rs"]
+mod spec_runtime_behavior_complement;
 #[path = "e2e_flow/status_notifications.rs"]
 mod status_notifications;
 #[path = "e2e_flow/sync_coordinator_flow.rs"]
