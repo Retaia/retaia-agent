@@ -84,5 +84,5 @@ fn e2e_agentctl_set_requires_existing_config() {
 
     assert!(!set.status.success(), "set should fail on missing config");
     let stderr = String::from_utf8_lossy(&set.stderr);
-    assert!(stderr.contains("Unable to load current config for set"));
+    assert!(stderr.contains("unable to load current config for set"));
 }

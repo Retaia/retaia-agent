@@ -1,13 +1,19 @@
 use std::path::PathBuf;
 
 use crate::domain::configuration::{AgentRuntimeConfig, ConfigValidationError};
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ConfigRepositoryError {
+    #[error("storage unavailable")]
     StorageUnavailable,
+    #[error("configuration not found")]
     NotFound,
+    #[error("invalid data: {0}")]
     InvalidData(String),
+    #[error("persistence error: {0}")]
     Persistence(String),
+    #[error("validation error")]
     Validation(Vec<ConfigValidationError>),
 }
 

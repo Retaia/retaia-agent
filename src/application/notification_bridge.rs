@@ -1,4 +1,5 @@
 use crate::domain::runtime_ui::SystemNotification;
+use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NotificationMessage {
@@ -6,8 +7,9 @@ pub struct NotificationMessage {
     pub body: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum NotificationBridgeError {
+    #[error("notification sink failed: {0}")]
     SinkFailed(String),
 }
 
