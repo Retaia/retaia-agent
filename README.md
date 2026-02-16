@@ -16,6 +16,20 @@ L'agent est prévu comme une app de menu système (menu bar/tray) type Docker De
   - quand l'agent est `paused`, afficher `Play/Resume` et masquer `Pause`
   - quand l'agent est `running`, afficher `Pause` et masquer `Play/Resume`
 - accès rapide aux logs/statut
+- ouverture d'une fenetre minimale de statut job en cours:
+  - progression `%`
+  - action en cours (ex: `claim`, `transcode`, `upload`, `submit`)
+  - identifiant job/asset et message de statut court
+- acces au panneau de configuration depuis:
+  - menu de l'app
+  - menu système/tray
+
+Configuration minimale attendue:
+
+- URL Core/Agent API
+- URL Ollama
+- mode d'auth (interactif/technique) et identifiants techniques
+- parametres runtime (ex: concurrence/max jobs, niveau de log)
 
 Contraintes:
 

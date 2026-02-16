@@ -19,6 +19,9 @@ Ce dossier contient la documentation d'implémentation de l'agent.
 - Actions minimales: toggle `Play/Resume`/`Pause`, `Stop`, `Quit`.
 - Règle toggle: si `paused`, afficher `Play/Resume` et masquer `Pause`; si `running`, afficher `Pause` et masquer `Play/Resume`.
 - L'état runtime doit rester visible en permanence (`running`, `paused`, `stopped`).
+- Une fenêtre minimale doit afficher le job en cours (`%`, étape active, job/asset, statut court).
+- Un panneau de configuration doit être accessible depuis le menu app et le menu système.
+- Champs de config minimum: URL Core/Agent, URL Ollama, auth, paramètres runtime.
 - La GUI utilise strictement le meme moteur que la CLI (pas de logique parallèle).
 
 En CI, ces checks sont bloquants pour merge PR :

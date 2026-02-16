@@ -11,6 +11,12 @@ La source de vérité contrat/runtime est le submodule `specs/`.
 - Play/Pause est un toggle:
   - état `paused` => `Play/Resume` visible, `Pause` masqué
   - état `running` => `Pause` visible, `Play/Resume` masqué
+- Fenêtre minimale de statut job obligatoire si GUI présente:
+  - progression `%` du job actif
+  - étape active (`claim`, `processing`, `upload`, `submit`)
+  - job/asset courant + message court
+- Panneau de config accessible depuis menu app + menu système
+- Config minimale exposée: URL Core/Agent, URL Ollama, auth, paramètres runtime
 - Bearer-only
 - Respect strict de `effective_feature_enabled`
 - Aucun traitement MCP dans ce repo
