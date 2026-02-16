@@ -1,5 +1,8 @@
 use std::fs;
+use std::io::{Read, Write};
+use std::net::TcpListener;
 use std::process::Command;
+use std::thread;
 
 use tempfile::tempdir;
 
@@ -85,4 +88,52 @@ fn e2e_agentctl_set_requires_existing_config() {
     assert!(!set.status.success(), "set should fail on missing config");
     let stderr = String::from_utf8_lossy(&set.stderr);
     assert!(stderr.contains("unable to load current config for set"));
+}
+
+#[test]
+fn e2e_agentctl_validate_check_respond_succeeds_when_core_and_ollama_endpoints_reply() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    let port = listener.local_addr().expect("local addr").port();
+
+    let server = thread::spawn(move || {
+        for _ in 0..2 {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buffer = [0_u8; 1024];
+            let _ = stream.read(&mut buffer);
+            let response =
+                b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            stream.write_all(response).expect("write response");
+        }
+    });
+
+    let dir = tempdir().expect("temp dir");
+    let config_path = dir.path().join("agent-config-check-respond.toml");
+    let config_path_str = config_path.to_string_lossy().to_string();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let init = run_agentctl(&[
+        "config",
+        "init",
+        "--config",
+        &config_path_str,
+        "--core-api-url",
+        &base_url,
+        "--ollama-url",
+        &base_url,
+    ]);
+    assert!(init.status.success(), "init failed: {init:?}");
+
+    let validate = run_agentctl(&[
+        "config",
+        "validate",
+        "--config",
+        &config_path_str,
+        "--check-respond",
+    ]);
+    assert!(
+        validate.status.success(),
+        "validate with check-respond failed: {validate:?}"
+    );
+
+    server.join().expect("server thread");
 }

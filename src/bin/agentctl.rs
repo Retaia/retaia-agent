@@ -29,7 +29,7 @@ enum RootCommand {
 enum ConfigCommand {
     Path(CommonConfigArgs),
     Show(CommonConfigArgs),
-    Validate(CommonConfigArgs),
+    Validate(ConfigValidateArgs),
     Init(ConfigInitArgs),
     Set(ConfigSetArgs),
 }
@@ -37,7 +37,8 @@ enum ConfigCommand {
 impl ConfigCommand {
     fn config_path(&self) -> Option<&PathBuf> {
         match self {
-            Self::Path(args) | Self::Show(args) | Self::Validate(args) => args.config.as_ref(),
+            Self::Path(args) | Self::Show(args) => args.config.as_ref(),
+            Self::Validate(args) => args.common.config.as_ref(),
             Self::Init(args) => args.common.config.as_ref(),
             Self::Set(args) => args.common.config.as_ref(),
         }
@@ -48,6 +49,14 @@ impl ConfigCommand {
 struct CommonConfigArgs {
     #[arg(long = "config")]
     config: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Args)]
+struct ConfigValidateArgs {
+    #[command(flatten)]
+    common: CommonConfigArgs,
+    #[arg(long = "check-respond", default_value_t = false)]
+    check_respond: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -142,6 +151,8 @@ enum AgentCtlError {
     InvalidConfig(String),
     #[error("invalid config update: {0}")]
     InvalidConfigUpdate(String),
+    #[error("config endpoint unreachable ({url}): {reason}")]
+    EndpointUnreachable { url: String, reason: String },
 }
 
 fn print_config(config: &AgentRuntimeConfig) {
@@ -177,6 +188,30 @@ fn print_config(config: &AgentRuntimeConfig) {
 
 fn validation_error(errors: Vec<ConfigValidationError>) -> String {
     compact_validation_reason(&errors)
+}
+
+fn check_http_responds(url: &str) -> Result<(), AgentCtlError> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|error| AgentCtlError::EndpointUnreachable {
+            url: url.to_string(),
+            reason: error.to_string(),
+        })?;
+
+    client
+        .get(url)
+        .send()
+        .map(|_| ())
+        .map_err(|error| AgentCtlError::EndpointUnreachable {
+            url: url.to_string(),
+            reason: error.to_string(),
+        })
+}
+
+fn check_config_respond(config: &AgentRuntimeConfig) -> Result<(), AgentCtlError> {
+    check_http_responds(&config.core_api_url)?;
+    check_http_responds(&config.ollama_url)
 }
 
 fn init_config(args: &ConfigInitArgs) -> Result<AgentRuntimeConfig, AgentCtlError> {
@@ -234,11 +269,14 @@ fn run_with_repository<R: ConfigRepository>(
             print_config(&config);
             Ok(())
         }
-        ConfigCommand::Validate(_) => {
+        ConfigCommand::Validate(args) => {
             let config = repository.load().map_err(AgentCtlError::Load)?;
             validate_config(&config)
                 .map_err(validation_error)
                 .map_err(AgentCtlError::InvalidConfig)?;
+            if args.check_respond {
+                check_config_respond(&config)?;
+            }
             println!("Config is valid.");
             Ok(())
         }
