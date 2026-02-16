@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+MSG_FILE="$1"
+if [ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ]; then
+  echo "commit-msg hook: missing commit message file path."
+  exit 1
+fi
+
+if ! cargo commitlint --version >/dev/null 2>&1; then
+  echo "cargo-commitlint is required for commit-msg validation."
+  echo "Install it with: cargo install cargo-commitlint"
+  exit 1
+fi
+
+cargo commitlint check --edit "$MSG_FILE" --strict

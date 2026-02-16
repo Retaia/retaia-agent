@@ -6,4 +6,4 @@ if [ "$BRANCH" = "master" ]; then
   exit 1
 fi
 
-npm run check:branch-up-to-date
+cargo run --quiet --bin check_branch_up_to_date

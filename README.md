@@ -16,17 +16,21 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
   - `coverage-gate`: coverage minimale 80%
 - Local hooks:
   - `pre-commit`: blocks commits on `master`
-  - `pre-push`: blocks pushes on `master` and runs `npm run check:branch-up-to-date`
+  - `commit-msg`: enforces Conventional Commits via `cargo-commitlint`
+  - `pre-push`: blocks pushes on `master` and runs `cargo run --bin check_branch_up_to_date`
+  - managed by `cargo-husky` from `.cargo-husky/hooks/`
 
-Required npm scripts (implemented by the codebase):
+Cargo commands used by CI checks:
 
-- `test:tdd`
-- `test:bdd`
-- `test:e2e`
-- `test:coverage` (must generate `coverage/coverage-summary.json` with `total.lines.pct`)
+- `cargo test --test tdd_runtime`
+- `cargo test --test bdd_specs`
+- `cargo test --test e2e_flow`
+- `cargo llvm-cov --workspace --summary-only --json --output-path coverage/llvm-cov-summary.json`
+- `cargo run --bin check_coverage -- --file coverage/llvm-cov-summary.json --min 80`
 
 Setup:
 
 ```bash
-npm ci
+cargo install cargo-commitlint
+cargo test
 ```
