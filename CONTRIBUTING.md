@@ -9,7 +9,7 @@ Toute divergence contractuelle doit d'abord être corrigée dans la spec.
 - Commits atomiques, PR atomiques.
 - Rebase sur `master` avant merge.
 - Pas de merge commit de synchronisation.
-- Aucun commit/push direct sur `master` (bloqué par Husky).
+- Aucun commit/push direct sur `master` (bloqué par `cargo-husky`).
 
 ## Exigences de PR
 - Garder l'agent CLI obligatoire et GUI optionnelle.

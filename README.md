@@ -15,7 +15,7 @@ Rust agent client for the Retaia platform.
 - Contract-driven runtime behavior.
 - CLI mandatory, GUI optional.
 - Branch protection workflow with linear-history enforcement.
-- Husky local guards (`pre-commit`, `pre-push`) to block direct work on `master`.
+- `cargo-husky` local guards (`pre-commit`, `pre-push`) to block direct work on `master`.
 
 ## Project structure
 
@@ -28,14 +28,14 @@ Rust agent client for the Retaia platform.
 ## Requirements
 
 - Rust (stable toolchain)
-- Node.js 22+ (for CI/husky tooling)
+- `cargo-commitlint` (for local `commit-msg` hook)
 - Git
 
 ## Quick start
 
 ```bash
 git submodule update --init --recursive
-npm ci
+cargo install cargo-commitlint
 cargo test
 ```
 
@@ -46,14 +46,14 @@ cargo test
 git checkout -b codex/my-feature
 
 # run checks
-npm run check:branch-up-to-date
+cargo run --quiet --bin check_branch_up_to_date
 cargo test
 ```
 
 Rules:
 
-- No commit on `master` (blocked by husky `pre-commit`)
-- No push on `master` (blocked by husky `pre-push`)
+- No commit on `master` (blocked by `cargo-husky` `pre-commit`)
+- No push on `master` (blocked by `cargo-husky` `pre-push`)
 - Rebase on latest `master` before merge
 - Keep linear history (no merge commits in feature branch)
 
