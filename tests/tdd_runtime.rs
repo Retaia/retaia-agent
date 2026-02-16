@@ -1,3 +1,5 @@
+#[path = "tdd_runtime/application.rs"]
+mod application;
 #[path = "tdd_runtime/configuration.rs"]
 mod configuration;
 #[path = "tdd_runtime/feature_flags.rs"]
