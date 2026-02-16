@@ -16,7 +16,8 @@ Ce dossier contient la documentation d'implémentation de l'agent.
 
 ## UX cible de l'agent (GUI optionnelle)
 - Application de menu système (menu bar/tray), style Docker Desktop/Ollama.
-- Actions minimales: `Play/Resume`, `Pause`, `Stop`, `Quit`.
+- Actions minimales: toggle `Play/Resume`/`Pause`, `Stop`, `Quit`.
+- Règle toggle: si `paused`, afficher `Play/Resume` et masquer `Pause`; si `running`, afficher `Pause` et masquer `Play/Resume`.
 - L'état runtime doit rester visible en permanence (`running`, `paused`, `stopped`).
 - La GUI utilise strictement le meme moteur que la CLI (pas de logique parallèle).
 

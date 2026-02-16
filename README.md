@@ -11,7 +11,10 @@ Client agent Rust (CLI obligatoire, GUI optionnelle).
 L'agent est prévu comme une app de menu système (menu bar/tray) type Docker Desktop ou Ollama:
 
 - état visible (`running`, `paused`, `stopped`)
-- actions directes: `Play/Resume`, `Pause`, `Stop`, `Quit`
+- actions directes: toggle `Play/Resume`/`Pause`, `Stop`, `Quit`
+- regle toggle:
+  - quand l'agent est `paused`, afficher `Play/Resume` et masquer `Pause`
+  - quand l'agent est `running`, afficher `Pause` et masquer `Play/Resume`
 - accès rapide aux logs/statut
 
 Contraintes:
