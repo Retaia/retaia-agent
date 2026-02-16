@@ -29,6 +29,9 @@ pub use application::runtime_cli_shell::{
     format_status, help_text, parse_shell_command,
 };
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
+pub use application::runtime_poll_cycle::{
+    RuntimePollCycleOutcome, RuntimePollCycleStatus, run_runtime_poll_cycle,
+};
 pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
 pub use domain::capabilities::{

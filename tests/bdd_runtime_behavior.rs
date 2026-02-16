@@ -14,6 +14,8 @@ mod runtime_control;
 mod runtime_loop_engine;
 #[path = "bdd_specs/runtime_orchestration.rs"]
 mod runtime_orchestration;
+#[path = "bdd_specs/runtime_poll_cycle.rs"]
+mod runtime_poll_cycle;
 #[path = "bdd_specs/runtime_session.rs"]
 mod runtime_session;
 #[path = "bdd_specs/runtime_status_tracker.rs"]

@@ -18,6 +18,8 @@ mod runtime_control;
 mod runtime_loop_engine;
 #[path = "tdd_runtime/runtime_orchestration.rs"]
 mod runtime_orchestration;
+#[path = "tdd_runtime/runtime_poll_cycle.rs"]
+mod runtime_poll_cycle;
 #[path = "tdd_runtime/runtime_session.rs"]
 mod runtime_session;
 #[path = "tdd_runtime/runtime_status_tracker.rs"]

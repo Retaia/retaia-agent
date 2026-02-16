@@ -47,6 +47,25 @@ Le daemon exécute `agent-runtime` en mode service:
 cargo run --bin agent-runtime -- daemon
 ```
 
+Comportement runtime en mode daemon:
+
+- cycle de polling `GET /jobs` à intervalle fixe (paramètre `--tick-ms`),
+- projection runtime partagée (`RuntimeSession`) + dispatch notifications système,
+- dégradation explicite en cas d'erreur API:
+  - `401` -> état `auth_reauth_required`,
+  - transport/status inattendu -> état `reconnecting`,
+  - `429` -> backoff+jitter via règles domaine.
+
+Logs/observabilité:
+
+- logs structurés par cycle avec `run_state`,
+- corrélation job (`job_id`, `asset_uuid`) quand un job courant existe,
+- niveau de logs aligné sur la config runtime (`log_level`).
+
+Auth bearer pour polling API (build avec feature `core-api-client`):
+
+- env var optionnelle: `RETAIA_AGENT_BEARER_TOKEN`.
+
 Le shell interactif reste disponible en mode foreground:
 
 ```bash
