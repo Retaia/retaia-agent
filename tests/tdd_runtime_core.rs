@@ -1,21 +1,7 @@
-#[path = "tdd_runtime/agent_registration.rs"]
-mod agent_registration;
 #[path = "tdd_runtime/application.rs"]
 mod application;
-#[path = "tdd_runtime/capabilities.rs"]
-mod capabilities;
-#[path = "tdd_runtime/config_repository.rs"]
-mod config_repository;
-#[path = "tdd_runtime/config_store.rs"]
-mod config_store;
-#[path = "tdd_runtime/configuration.rs"]
-mod configuration;
-#[path = "tdd_runtime/configuration_interfaces.rs"]
-mod configuration_interfaces;
 #[path = "tdd_runtime/core_api_gateway.rs"]
 mod core_api_gateway;
-#[path = "tdd_runtime/feature_flags.rs"]
-mod feature_flags;
 #[path = "tdd_runtime/menu.rs"]
 mod menu;
 #[path = "tdd_runtime/notification_bridge.rs"]
@@ -38,3 +24,5 @@ mod runtime_status_tracker;
 mod runtime_sync;
 #[path = "tdd_runtime/runtime_sync_coordinator.rs"]
 mod runtime_sync_coordinator;
+#[path = "support/system_dispatcher_mock.rs"]
+mod system_dispatcher_mock;
