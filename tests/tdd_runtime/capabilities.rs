@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use retaia_agent::{
     AgentCapability, declared_agent_capabilities, declared_agent_capabilities_with_ffmpeg,
-    ffmpeg_available, has_required_capabilities,
+    ffmpeg_available, has_required_capabilities, photo_source_extension_supported,
 };
 
 #[test]
@@ -28,18 +28,36 @@ fn tdd_declared_agent_capabilities_contains_v1_processing_capability_set() {
     if ffmpeg_available() {
         assert!(proxy_caps.is_subset(&declared));
     } else {
-        assert!(proxy_caps.is_disjoint(&declared));
+        assert!(!declared.contains("media.proxies.video@1"));
+        assert!(!declared.contains("media.proxies.audio@1"));
+        assert!(declared.contains("media.proxies.photo@1"));
     }
 }
 
 #[test]
-fn tdd_declared_agent_capabilities_without_ffmpeg_excludes_proxy_capabilities() {
+fn tdd_declared_agent_capabilities_without_ffmpeg_excludes_only_audio_video_proxies() {
     let declared = declared_agent_capabilities_with_ffmpeg(false);
     assert!(declared.contains("media.facts@1"));
     assert!(declared.contains("media.thumbnails@1"));
     assert!(!declared.contains("media.proxies.video@1"));
     assert!(!declared.contains("media.proxies.audio@1"));
-    assert!(!declared.contains("media.proxies.photo@1"));
+    assert!(declared.contains("media.proxies.photo@1"));
+}
+
+#[test]
+fn tdd_photo_source_extension_support_covers_standard_and_camera_raw_formats() {
+    for extension in [
+        "jpeg", "jpg", "png", "dng", "tiff", "cr2", "cr3", "arw", "nef",
+    ] {
+        assert!(
+            photo_source_extension_supported(extension),
+            "{extension} should be supported"
+        );
+    }
+
+    assert!(!photo_source_extension_supported("gif"));
+    assert!(!photo_source_extension_supported("bmp"));
+    assert!(!photo_source_extension_supported("wav"));
 }
 
 #[test]
