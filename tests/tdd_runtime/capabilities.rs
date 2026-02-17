@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 
-use retaia_agent::{AgentCapability, declared_agent_capabilities, has_required_capabilities};
+use retaia_agent::{
+    AgentCapability, declared_agent_capabilities, declared_agent_capabilities_with_ffmpeg,
+    ffmpeg_available, has_required_capabilities,
+};
 
 #[test]
 fn tdd_first_agent_capability_is_media_facts_v1() {
@@ -10,15 +13,33 @@ fn tdd_first_agent_capability_is_media_facts_v1() {
 #[test]
 fn tdd_declared_agent_capabilities_contains_v1_processing_capability_set() {
     let declared = declared_agent_capabilities();
-    let expected = BTreeSet::from([
+    let expected_base = BTreeSet::from([
         "audio.waveform@1".to_string(),
         "media.facts@1".to_string(),
+        "media.thumbnails@1".to_string(),
+    ]);
+    assert!(expected_base.is_subset(&declared));
+
+    let proxy_caps = BTreeSet::from([
         "media.proxies.audio@1".to_string(),
         "media.proxies.photo@1".to_string(),
         "media.proxies.video@1".to_string(),
-        "media.thumbnails@1".to_string(),
     ]);
-    assert_eq!(declared, expected);
+    if ffmpeg_available() {
+        assert!(proxy_caps.is_subset(&declared));
+    } else {
+        assert!(proxy_caps.is_disjoint(&declared));
+    }
+}
+
+#[test]
+fn tdd_declared_agent_capabilities_without_ffmpeg_excludes_proxy_capabilities() {
+    let declared = declared_agent_capabilities_with_ffmpeg(false);
+    assert!(declared.contains("media.facts@1"));
+    assert!(declared.contains("media.thumbnails@1"));
+    assert!(!declared.contains("media.proxies.video@1"));
+    assert!(!declared.contains("media.proxies.audio@1"));
+    assert!(!declared.contains("media.proxies.photo@1"));
 }
 
 #[test]

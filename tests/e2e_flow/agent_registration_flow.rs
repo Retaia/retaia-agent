@@ -1,6 +1,6 @@
 use retaia_agent::{
     AgentRegistrationCommand, AgentRegistrationError, AgentRegistrationGateway,
-    AgentRegistrationIntent, AgentRegistrationOutcome, register_agent,
+    AgentRegistrationIntent, AgentRegistrationOutcome, ffmpeg_available, register_agent,
 };
 
 #[derive(Default)]
@@ -56,9 +56,17 @@ fn e2e_agent_registration_flow_builds_declared_capabilities_and_returns_effectiv
             .capabilities
             .contains(&"media.facts@1".to_string())
     );
-    assert!(
-        captured[0]
-            .capabilities
-            .contains(&"media.proxies.video@1".to_string())
-    );
+    if ffmpeg_available() {
+        assert!(
+            captured[0]
+                .capabilities
+                .contains(&"media.proxies.video@1".to_string())
+        );
+    } else {
+        assert!(
+            !captured[0]
+                .capabilities
+                .contains(&"media.proxies.video@1".to_string())
+        );
+    }
 }
