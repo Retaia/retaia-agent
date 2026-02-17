@@ -13,7 +13,7 @@ Rust agent client for the Retaia platform.
 ## Features
 
 - Contract-driven runtime behavior.
-- Capability-driven scheduling guard (`media.facts@1`, `media.thumbnails@1`, `audio.waveform@1`, and `media.proxies.*@1` only when `ffmpeg` is available).
+- Capability-driven scheduling guard (`media.facts@1`, `media.thumbnails@1`, `audio.waveform@1`; `media.proxies.video@1` and `media.proxies.audio@1` require `ffmpeg`; `media.proxies.photo@1` is backed by Rust image/raw codecs).
 - Derived-processing v1 runtime support (`claim/heartbeat/submit` + `/derived/upload/*` gateway).
 - CLI mandatory, GUI optional.
 - Same runtime configuration contract in GUI and CLI-only environments (Linux/macOS/Windows, including SSH/headless).
@@ -33,6 +33,7 @@ Rust agent client for the Retaia platform.
 - Rust (stable toolchain)
 - `cargo-commitlint` (for local `commit-msg` hook)
 - `ffmpeg` (required for audio/video proxy generation)
+- Rust photo codec stack (`image`) for photo proxy handling (`JPEG`, `PNG`, `TIFF`, `DNG`, camera RAW extensions such as Canon/Sony)
 - Git
 - Optional GUI notification adapter: `tauri` + `tauri-plugin-notification` via feature `tauri-notifications`
 - Optional generated Core API client: feature `core-api-client` (`crates/retaia-core-client`)

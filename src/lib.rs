@@ -55,7 +55,8 @@ pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
 pub use domain::capabilities::{
     AgentCapability, declared_agent_capabilities, declared_agent_capabilities_with_ffmpeg,
-    ffmpeg_available, has_required_capabilities,
+    declared_agent_capabilities_with_runtime, ffmpeg_available, has_required_capabilities,
+    photo_proxy_available, photo_source_extension_supported,
 };
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
