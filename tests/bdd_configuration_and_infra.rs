@@ -6,6 +6,8 @@ mod config_store;
 mod configuration;
 #[path = "bdd_specs/configuration_cli.rs"]
 mod configuration_cli;
+#[path = "bdd_specs/ffmpeg_proxy_generator.rs"]
+mod ffmpeg_proxy_generator;
 #[path = "bdd_specs/runtime_profile_and_infra.rs"]
 mod runtime_profile_and_infra;
 #[path = "bdd_specs/spec_compatible_config_runtime.rs"]

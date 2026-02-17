@@ -1,7 +1,7 @@
 use retaia_agent::{
     AgentRegistrationCommand, AgentRegistrationError, AgentRegistrationGateway,
     AgentRegistrationIntent, AgentRegistrationOutcome, build_agent_registration_command,
-    register_agent,
+    ffmpeg_available, register_agent,
 };
 
 #[derive(Default)]
@@ -54,11 +54,19 @@ fn tdd_build_agent_registration_command_includes_declared_capabilities() {
             .capabilities
             .contains(&"media.thumbnails@1".to_string())
     );
-    assert!(
-        command
-            .capabilities
-            .contains(&"media.proxies.video@1".to_string())
-    );
+    if ffmpeg_available() {
+        assert!(
+            command
+                .capabilities
+                .contains(&"media.proxies.video@1".to_string())
+        );
+    } else {
+        assert!(
+            !command
+                .capabilities
+                .contains(&"media.proxies.video@1".to_string())
+        );
+    }
 }
 
 #[test]

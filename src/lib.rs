@@ -33,6 +33,9 @@ pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
     dispatch_notifications, notification_message,
 };
+pub use application::proxy_generator::{
+    AudioProxyFormat, AudioProxyRequest, ProxyGenerationError, ProxyGenerator, VideoProxyRequest,
+};
 pub use application::runtime_cli_shell::{
     ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,
     format_status, help_text, parse_shell_command,
@@ -51,7 +54,8 @@ pub use application::runtime_poll_cycle::{
 pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
 pub use domain::capabilities::{
-    AgentCapability, declared_agent_capabilities, has_required_capabilities,
+    AgentCapability, declared_agent_capabilities, declared_agent_capabilities_with_ffmpeg,
+    ffmpeg_available, has_required_capabilities,
 };
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
@@ -82,6 +86,10 @@ pub use infrastructure::config_repository::{FileConfigRepository, SystemConfigRe
 pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
     save_config_to_path, save_system_config, system_config_file_path,
+};
+pub use infrastructure::ffmpeg_proxy_generator::{
+    CommandOutput, CommandRunner, FfmpegProxyGenerator, StdCommandRunner, build_audio_proxy_args,
+    build_video_proxy_args,
 };
 pub use infrastructure::notification_sink::{
     NotificationSinkProfile, RuntimeNotificationSink, StdoutNotificationSink,

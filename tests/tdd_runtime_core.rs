@@ -6,6 +6,8 @@ mod core_api_gateway;
 mod derived_job_executor;
 #[path = "tdd_runtime/derived_processing_gateway.rs"]
 mod derived_processing_gateway;
+#[path = "tdd_runtime/ffmpeg_proxy_generator.rs"]
+mod ffmpeg_proxy_generator;
 #[path = "tdd_runtime/menu.rs"]
 mod menu;
 #[path = "tdd_runtime/notification_bridge.rs"]
