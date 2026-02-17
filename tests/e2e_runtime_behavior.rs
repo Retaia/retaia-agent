@@ -8,6 +8,8 @@ mod notification_sink_flow;
 mod notification_sink_selection_flow;
 #[path = "e2e_flow/runtime_cli_shell_flow.rs"]
 mod runtime_cli_shell_flow;
+#[path = "e2e_flow/runtime_desktop_shell_controller_flow.rs"]
+mod runtime_desktop_shell_controller_flow;
 #[path = "e2e_flow/runtime_gui_shell_flow.rs"]
 mod runtime_gui_shell_flow;
 #[path = "e2e_flow/runtime_loop_engine_flow.rs"]

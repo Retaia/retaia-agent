@@ -12,6 +12,8 @@ mod notifications;
 mod runtime_cli_shell;
 #[path = "bdd_specs/runtime_control.rs"]
 mod runtime_control;
+#[path = "bdd_specs/runtime_desktop_shell_controller.rs"]
+mod runtime_desktop_shell_controller;
 #[path = "bdd_specs/runtime_gui_shell.rs"]
 mod runtime_gui_shell;
 #[path = "bdd_specs/runtime_loop_engine.rs"]
