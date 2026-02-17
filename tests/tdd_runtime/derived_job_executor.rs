@@ -151,6 +151,92 @@ impl DerivedExecutionPlanner for MissingIdempotencyPlanner {
     }
 }
 
+struct MismatchedJobTypePlanner;
+
+impl DerivedExecutionPlanner for MismatchedJobTypePlanner {
+    fn plan_for_claimed_job(
+        &self,
+        claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![],
+            submit: SubmitDerivedPayload {
+                job_type: DerivedJobType::GenerateThumbnails,
+                manifest: vec![DerivedManifestItem {
+                    kind: DerivedKind::Thumb,
+                    reference: format!("s3://derived/{}/thumb.jpg", claimed.asset_uuid),
+                    size_bytes: Some(1),
+                    sha256: None,
+                }],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-submit".to_string(),
+        })
+    }
+}
+
+struct EmptyProxyManifestPlanner;
+
+impl DerivedExecutionPlanner for EmptyProxyManifestPlanner {
+    fn plan_for_claimed_job(
+        &self,
+        _claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![],
+            submit: SubmitDerivedPayload {
+                job_type: DerivedJobType::GenerateProxy,
+                manifest: vec![],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-submit".to_string(),
+        })
+    }
+}
+
+struct UploadNotInManifestPlanner;
+
+impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
+    fn plan_for_claimed_job(
+        &self,
+        claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![retaia_agent::DerivedUploadPlan {
+                init: DerivedUploadInit {
+                    asset_uuid: claimed.asset_uuid.clone(),
+                    kind: DerivedKind::ProxyAudio,
+                    content_type: "audio/mp4".to_string(),
+                    size_bytes: 512,
+                    sha256: None,
+                    idempotency_key: "idem-init".to_string(),
+                },
+                parts: vec![],
+                complete: DerivedUploadComplete {
+                    asset_uuid: claimed.asset_uuid.clone(),
+                    upload_id: "up-1".to_string(),
+                    idempotency_key: "idem-complete".to_string(),
+                    parts: None,
+                },
+            }],
+            submit: SubmitDerivedPayload {
+                job_type: DerivedJobType::GenerateProxy,
+                manifest: vec![DerivedManifestItem {
+                    kind: DerivedKind::ProxyVideo,
+                    reference: "s3://derived/proxy.mp4".to_string(),
+                    size_bytes: Some(1024),
+                    sha256: None,
+                }],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-submit".to_string(),
+        })
+    }
+}
+
 #[test]
 fn tdd_execute_derived_job_once_runs_claim_heartbeat_upload_submit_flow() {
     let gateway = MemoryGateway::default();
@@ -180,4 +266,43 @@ fn tdd_execute_derived_job_once_rejects_missing_submit_idempotency_key() {
     let err = execute_derived_job_once(&gateway, &MissingIdempotencyPlanner, "job-1")
         .expect_err("missing key should fail");
     assert_eq!(err, DerivedJobExecutorError::MissingSubmitIdempotencyKey);
+}
+
+#[test]
+fn tdd_execute_derived_job_once_rejects_submit_job_type_mismatch_vs_claimed_job() {
+    let gateway = MemoryGateway::default();
+
+    let err = execute_derived_job_once(&gateway, &MismatchedJobTypePlanner, "job-1")
+        .expect_err("job type mismatch should fail");
+    assert_eq!(
+        err,
+        DerivedJobExecutorError::SubmitJobTypeMismatch {
+            claimed: DerivedJobType::GenerateProxy,
+            planned: DerivedJobType::GenerateThumbnails,
+        }
+    );
+}
+
+#[test]
+fn tdd_execute_derived_job_once_rejects_empty_manifest_for_proxy_job_type() {
+    let gateway = MemoryGateway::default();
+
+    let err = execute_derived_job_once(&gateway, &EmptyProxyManifestPlanner, "job-1")
+        .expect_err("proxy manifest should be required");
+    assert_eq!(
+        err,
+        DerivedJobExecutorError::MissingSubmitManifestForJobType(DerivedJobType::GenerateProxy)
+    );
+}
+
+#[test]
+fn tdd_execute_derived_job_once_rejects_upload_kind_missing_from_submit_manifest() {
+    let gateway = MemoryGateway::default();
+
+    let err = execute_derived_job_once(&gateway, &UploadNotInManifestPlanner, "job-1")
+        .expect_err("upload kind must exist in manifest");
+    assert_eq!(
+        err,
+        DerivedJobExecutorError::UploadKindNotInSubmitManifest(DerivedKind::ProxyAudio)
+    );
 }

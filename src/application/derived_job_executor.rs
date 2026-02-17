@@ -36,6 +36,24 @@ pub enum DerivedJobExecutorError {
     UploadAssetMismatch { job_id: String },
     #[error("execution plan invalid: upload init and complete asset mismatch")]
     UploadInitCompleteAssetMismatch,
+    #[error(
+        "execution plan invalid: submit job type {planned:?} does not match claimed job type {claimed:?}"
+    )]
+    SubmitJobTypeMismatch {
+        claimed: crate::application::derived_processing_gateway::DerivedJobType,
+        planned: crate::application::derived_processing_gateway::DerivedJobType,
+    },
+    #[error("execution plan invalid: submit manifest is required for job type {0:?}")]
+    MissingSubmitManifestForJobType(crate::application::derived_processing_gateway::DerivedJobType),
+    #[error(
+        "execution plan invalid: derived kind {kind:?} is incompatible with job type {job_type:?}"
+    )]
+    IncompatibleDerivedKindForJobType {
+        job_type: crate::application::derived_processing_gateway::DerivedJobType,
+        kind: crate::application::derived_processing_gateway::DerivedKind,
+    },
+    #[error("execution plan invalid: upload kind {0:?} is not present in submit manifest")]
+    UploadKindNotInSubmitManifest(crate::application::derived_processing_gateway::DerivedKind),
 }
 
 pub trait DerivedExecutionPlanner {
@@ -61,6 +79,8 @@ pub fn execute_derived_job_once<G: DerivedProcessingGateway, P: DerivedExecution
     if plan.submit_idempotency_key.trim().is_empty() {
         return Err(DerivedJobExecutorError::MissingSubmitIdempotencyKey);
     }
+    validate_submit_payload_for_claimed_job(&claimed, &plan.submit)?;
+    validate_uploads_against_submit_manifest(&plan)?;
 
     for upload in &plan.uploads {
         if upload.init.asset_uuid != claimed.asset_uuid
@@ -101,4 +121,87 @@ pub fn execute_derived_job_once<G: DerivedProcessingGateway, P: DerivedExecution
         asset_uuid: claimed.asset_uuid,
         upload_count: plan.uploads.len(),
     })
+}
+
+fn validate_submit_payload_for_claimed_job(
+    claimed: &ClaimedDerivedJob,
+    submit: &SubmitDerivedPayload,
+) -> Result<(), DerivedJobExecutorError> {
+    if submit.job_type != claimed.job_type {
+        return Err(DerivedJobExecutorError::SubmitJobTypeMismatch {
+            claimed: claimed.job_type,
+            planned: submit.job_type,
+        });
+    }
+
+    use crate::application::derived_processing_gateway::{DerivedJobType, DerivedKind};
+    match submit.job_type {
+        DerivedJobType::GenerateProxy => {
+            if submit.manifest.is_empty() {
+                return Err(DerivedJobExecutorError::MissingSubmitManifestForJobType(
+                    DerivedJobType::GenerateProxy,
+                ));
+            }
+            for item in &submit.manifest {
+                match item.kind {
+                    DerivedKind::ProxyVideo | DerivedKind::ProxyAudio | DerivedKind::ProxyPhoto => {
+                    }
+                    kind => {
+                        return Err(DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
+                            job_type: DerivedJobType::GenerateProxy,
+                            kind,
+                        });
+                    }
+                }
+            }
+        }
+        DerivedJobType::GenerateThumbnails => {
+            if submit.manifest.is_empty() {
+                return Err(DerivedJobExecutorError::MissingSubmitManifestForJobType(
+                    DerivedJobType::GenerateThumbnails,
+                ));
+            }
+            for item in &submit.manifest {
+                if item.kind != DerivedKind::Thumb {
+                    return Err(DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
+                        job_type: DerivedJobType::GenerateThumbnails,
+                        kind: item.kind,
+                    });
+                }
+            }
+        }
+        DerivedJobType::GenerateAudioWaveform => {
+            for item in &submit.manifest {
+                if item.kind != DerivedKind::Waveform {
+                    return Err(DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
+                        job_type: DerivedJobType::GenerateAudioWaveform,
+                        kind: item.kind,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_uploads_against_submit_manifest(
+    plan: &DerivedExecutionPlan,
+) -> Result<(), DerivedJobExecutorError> {
+    let manifest_kinds = plan
+        .submit
+        .manifest
+        .iter()
+        .map(|item| item.kind)
+        .collect::<Vec<_>>();
+
+    for upload in &plan.uploads {
+        if !manifest_kinds.contains(&upload.init.kind) {
+            return Err(DerivedJobExecutorError::UploadKindNotInSubmitManifest(
+                upload.init.kind,
+            ));
+        }
+    }
+
+    Ok(())
 }

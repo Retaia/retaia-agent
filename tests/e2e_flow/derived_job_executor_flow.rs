@@ -156,3 +156,43 @@ fn e2e_derived_job_executor_flow_claims_uploads_and_submits_for_v1_derived_job()
         ]
     );
 }
+
+struct IncompatibleThumbnailManifestPlanner;
+
+impl DerivedExecutionPlanner for IncompatibleThumbnailManifestPlanner {
+    fn plan_for_claimed_job(
+        &self,
+        claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![],
+            submit: SubmitDerivedPayload {
+                job_type: DerivedJobType::GenerateThumbnails,
+                manifest: vec![DerivedManifestItem {
+                    kind: DerivedKind::ProxyPhoto,
+                    reference: format!("s3://derived/{}/proxy.webp", claimed.asset_uuid),
+                    size_bytes: Some(1024),
+                    sha256: None,
+                }],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-invalid-thumb".to_string(),
+        })
+    }
+}
+
+#[test]
+fn e2e_derived_job_executor_flow_rejects_submit_manifest_kind_not_compatible_with_job_type() {
+    let gateway = RecordingGateway::default();
+    let err = execute_derived_job_once(&gateway, &IncompatibleThumbnailManifestPlanner, "job-23")
+        .expect_err("incompatible kind should be rejected");
+
+    assert_eq!(
+        err,
+        DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
+            job_type: DerivedJobType::GenerateThumbnails,
+            kind: DerivedKind::ProxyPhoto,
+        }
+    );
+}
