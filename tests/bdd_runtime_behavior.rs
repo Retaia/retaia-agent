@@ -4,6 +4,8 @@ mod application_runtime;
 mod notification_bridge;
 #[path = "bdd_specs/notification_sink.rs"]
 mod notification_sink;
+#[path = "bdd_specs/notification_sink_selection.rs"]
+mod notification_sink_selection;
 #[path = "bdd_specs/notifications.rs"]
 mod notifications;
 #[path = "bdd_specs/runtime_cli_shell.rs"]

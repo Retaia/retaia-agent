@@ -38,6 +38,9 @@
   - utilise `notify-rust` sur OS supportés (`macOS`, `Linux`, `Windows`)
   - comportement strict: succès si dispatch OS réussi, erreur sinon (`OK/NOK`)
 - Adapter infra de base: `StdoutNotificationSink`
+- Sélecteur runtime: `select_notification_sink(profile)` + `notification_sink_profile_for_target(target)`
+  - `AGENT`/`MCP` => profil `HeadlessCli` (`StdoutNotificationSink`)
+  - `UI_WEB`/`UI_MOBILE` => profil `DesktopSystem` (`SystemNotificationSink`)
 - Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
 - Façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)` pour enchaîner projection + dispatch dans le flux agent.
 - Règle: la déduplication reste dans le domaine (`AgentUiRuntime`), le bridge ne doit pas réintroduire de logique métier.

@@ -8,6 +8,8 @@ mod menu;
 mod notification_bridge;
 #[path = "tdd_runtime/notification_sink.rs"]
 mod notification_sink;
+#[path = "tdd_runtime/notification_sink_selection.rs"]
+mod notification_sink_selection;
 #[path = "tdd_runtime/notifications.rs"]
 mod notifications;
 #[path = "tdd_runtime/runtime_cli_shell.rs"]

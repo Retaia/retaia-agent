@@ -51,6 +51,7 @@ Comportement runtime en mode daemon:
 
 - cycle de polling `GET /jobs` à intervalle fixe (paramètre `--tick-ms`),
 - projection runtime partagée (`RuntimeSession`) + dispatch notifications système,
+- sélection du sink de notification par target runtime (`headless` => stdout, `desktop` => system notification),
 - dégradation explicite en cas d'erreur API:
   - `401` -> état `auth_reauth_required`,
   - transport/status inattendu -> état `reconnecting`,
