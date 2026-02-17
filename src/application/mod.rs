@@ -6,6 +6,7 @@ pub mod daemon_manager;
 pub mod derived_job_executor;
 pub mod derived_processing_gateway;
 pub mod notification_bridge;
+pub mod proxy_generator;
 pub mod runtime_cli_shell;
 pub mod runtime_desktop_shell_controller;
 pub mod runtime_gui_shell;

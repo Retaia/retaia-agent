@@ -33,6 +33,9 @@ pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
     dispatch_notifications, notification_message,
 };
+pub use application::proxy_generator::{
+    AudioProxyFormat, AudioProxyRequest, ProxyGenerationError, ProxyGenerator, VideoProxyRequest,
+};
 pub use application::runtime_cli_shell::{
     ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,
     format_status, help_text, parse_shell_command,
@@ -82,6 +85,10 @@ pub use infrastructure::config_repository::{FileConfigRepository, SystemConfigRe
 pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
     save_config_to_path, save_system_config, system_config_file_path,
+};
+pub use infrastructure::ffmpeg_proxy_generator::{
+    CommandOutput, CommandRunner, FfmpegProxyGenerator, StdCommandRunner, build_audio_proxy_args,
+    build_video_proxy_args,
 };
 pub use infrastructure::notification_sink::{
     NotificationSinkProfile, RuntimeNotificationSink, StdoutNotificationSink,

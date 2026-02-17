@@ -4,6 +4,8 @@ mod app_runtime_flow;
 mod derived_job_executor_flow;
 #[path = "e2e_flow/derived_processing_gateway_flow.rs"]
 mod derived_processing_gateway_flow;
+#[path = "e2e_flow/ffmpeg_proxy_generator_flow.rs"]
+mod ffmpeg_proxy_generator_flow;
 #[path = "e2e_flow/notification_bridge_flow.rs"]
 mod notification_bridge_flow;
 #[path = "e2e_flow/notification_sink_flow.rs"]

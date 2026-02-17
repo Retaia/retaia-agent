@@ -32,6 +32,7 @@ Rust agent client for the Retaia platform.
 
 - Rust (stable toolchain)
 - `cargo-commitlint` (for local `commit-msg` hook)
+- `ffmpeg` (required for audio/video proxy generation)
 - Git
 - Optional GUI notification adapter: `tauri` + `tauri-plugin-notification` via feature `tauri-notifications`
 - Optional generated Core API client: feature `core-api-client` (`crates/retaia-core-client`)
