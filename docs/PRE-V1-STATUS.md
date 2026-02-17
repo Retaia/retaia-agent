@@ -30,6 +30,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 - In progress:
   - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut).
   - Contrat applicatif shell GUI minimal implémenté (`runtime_gui_shell`): actions menu (`play/pause/stop/open status/open settings`), rendu statut/settings, contrôle daemon (`start/stop/status`) via port partagé `DaemonManager`.
+  - Contrôleur desktop applicatif (`DesktopShellController`) implémenté pour relier bridge toolkit GUI et moteur partagé (`RuntimeSession`) avec orchestration menu/statut/settings/quit.
   - Shell runtime CLI interactif (`agent-runtime`) ajouté comme miroir headless du menu système; UI desktop finale encore pending.
   - Boucle daemon branchée sur cycle poll runtime (`run_runtime_poll_cycle`) avec projection d'état dégradé (unauthorized/connectivité) et notifications associées.
 - Pending:
@@ -96,9 +97,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 ## Remaining Pre-v1 Work (Priority)
 
 1. Shell GUI minimal branché sur le runtime partagé:
-   - menu système (contrat app prêt, intégration toolkit desktop pending),
-   - fenêtre statut job en cours (contrat app prêt, intégration toolkit desktop pending),
-   - accès settings (contrat app prêt, intégration toolkit desktop pending).
+   - menu système (controller app prêt, intégration toolkit desktop pending),
+   - fenêtre statut job en cours (controller app prêt, intégration toolkit desktop pending),
+   - accès settings (controller app prêt, intégration toolkit desktop pending).
 2. Intégration shell GUI finale des adapters de notification selon cible (desktop/headless).
 3. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
    - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.

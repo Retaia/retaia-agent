@@ -5,6 +5,7 @@ pub mod core_api_gateway;
 pub mod daemon_manager;
 pub mod notification_bridge;
 pub mod runtime_cli_shell;
+pub mod runtime_desktop_shell_controller;
 pub mod runtime_gui_shell;
 pub mod runtime_loop_engine;
 pub mod runtime_poll_cycle;
