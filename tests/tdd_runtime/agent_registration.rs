@@ -48,14 +48,27 @@ fn tdd_build_agent_registration_command_includes_declared_capabilities() {
     let command = build_agent_registration_command(intent());
     assert_eq!(command.agent_name, "retaia-agent");
     assert_eq!(command.agent_version, "0.1.0");
-    assert_eq!(command.capabilities, vec!["media.facts@1".to_string()]);
+    assert!(command.capabilities.contains(&"media.facts@1".to_string()));
+    assert!(
+        command
+            .capabilities
+            .contains(&"media.thumbnails@1".to_string())
+    );
+    assert!(
+        command
+            .capabilities
+            .contains(&"media.proxies.video@1".to_string())
+    );
 }
 
 #[test]
 fn tdd_register_agent_passes_built_command_to_gateway() {
     let gateway = StubGateway::with_result(Ok(AgentRegistrationOutcome {
         agent_id: Some("agent-1".to_string()),
-        effective_capabilities: vec!["media.facts@1".to_string()],
+        effective_capabilities: vec![
+            "media.facts@1".to_string(),
+            "media.thumbnails@1".to_string(),
+        ],
         capability_warnings: Vec::new(),
     }));
 
@@ -68,7 +81,11 @@ fn tdd_register_agent_passes_built_command_to_gateway() {
         .expect("last command lock")
         .clone()
         .expect("sent command");
-    assert_eq!(sent.capabilities, vec!["media.facts@1".to_string()]);
+    assert!(sent.capabilities.contains(&"media.facts@1".to_string()));
+    assert!(
+        sent.capabilities
+            .contains(&"media.thumbnails@1".to_string())
+    );
 }
 
 #[test]

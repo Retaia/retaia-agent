@@ -38,9 +38,27 @@ fn e2e_agent_registration_flow_builds_declared_capabilities_and_returns_effectiv
 
     let outcome = register_agent(&gateway, intent).expect("registration should succeed");
     assert_eq!(outcome.agent_id.as_deref(), Some("agent-e2e"));
-    assert_eq!(outcome.effective_capabilities, vec!["media.facts@1"]);
+    assert!(
+        outcome
+            .effective_capabilities
+            .contains(&"media.facts@1".to_string())
+    );
+    assert!(
+        outcome
+            .effective_capabilities
+            .contains(&"media.thumbnails@1".to_string())
+    );
 
     let captured = gateway.captured.lock().expect("captured lock");
     assert_eq!(captured.len(), 1);
-    assert_eq!(captured[0].capabilities, vec!["media.facts@1"]);
+    assert!(
+        captured[0]
+            .capabilities
+            .contains(&"media.facts@1".to_string())
+    );
+    assert!(
+        captured[0]
+            .capabilities
+            .contains(&"media.proxies.video@1".to_string())
+    );
 }

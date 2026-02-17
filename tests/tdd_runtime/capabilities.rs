@@ -8,9 +8,16 @@ fn tdd_first_agent_capability_is_media_facts_v1() {
 }
 
 #[test]
-fn tdd_declared_agent_capabilities_contains_only_first_capability_for_now() {
+fn tdd_declared_agent_capabilities_contains_v1_processing_capability_set() {
     let declared = declared_agent_capabilities();
-    let expected = BTreeSet::from(["media.facts@1".to_string()]);
+    let expected = BTreeSet::from([
+        "audio.waveform@1".to_string(),
+        "media.facts@1".to_string(),
+        "media.proxies.audio@1".to_string(),
+        "media.proxies.photo@1".to_string(),
+        "media.proxies.video@1".to_string(),
+        "media.thumbnails@1".to_string(),
+    ]);
     assert_eq!(declared, expected);
 }
 

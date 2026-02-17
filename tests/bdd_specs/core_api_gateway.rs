@@ -49,7 +49,7 @@ fn bdd_given_polled_jobs_with_incompatible_capability_when_building_runtime_snap
             job_id: "job-incompatible".to_string(),
             asset_uuid: "asset-x".to_string(),
             state: CoreJobState::Claimed,
-            required_capabilities: vec!["media.proxies.video@1".to_string()],
+            required_capabilities: vec!["media.unknown@1".to_string()],
         }],
     };
 

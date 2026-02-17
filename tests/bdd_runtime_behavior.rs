@@ -1,5 +1,7 @@
 #[path = "bdd_specs/application_runtime.rs"]
 mod application_runtime;
+#[path = "bdd_specs/derived_processing_gateway.rs"]
+mod derived_processing_gateway;
 #[path = "bdd_specs/notification_bridge.rs"]
 mod notification_bridge;
 #[path = "bdd_specs/notification_sink.rs"]

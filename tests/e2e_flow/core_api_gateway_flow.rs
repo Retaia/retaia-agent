@@ -71,7 +71,7 @@ fn e2e_polled_jobs_gateway_projection_ignores_claimed_job_without_declared_capab
             job_id: "job-unsupported".to_string(),
             asset_uuid: "asset-unsupported".to_string(),
             state: CoreJobState::Claimed,
-            required_capabilities: vec!["media.proxies.video@1".to_string()],
+            required_capabilities: vec!["media.unknown@1".to_string()],
         }],
     };
 
