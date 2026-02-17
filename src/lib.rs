@@ -28,6 +28,10 @@ pub use application::runtime_cli_shell::{
     ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,
     format_status, help_text, parse_shell_command,
 };
+pub use application::runtime_gui_shell::{
+    GuiActionOutcome, GuiDaemonContext, GuiMenuAction, GuiMenuView, RuntimeGuiShellError,
+    apply_gui_menu_action, menu_view, settings_panel_content, status_window_content,
+};
 pub use application::runtime_loop_engine::RuntimeLoopEngine;
 pub use application::runtime_poll_cycle::{
     RuntimePollCycleOutcome, RuntimePollCycleStatus, run_runtime_poll_cycle,
