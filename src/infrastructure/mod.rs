@@ -6,6 +6,8 @@ pub mod openapi_agent_registration_gateway;
 #[cfg(feature = "core-api-client")]
 pub mod openapi_client;
 #[cfg(feature = "core-api-client")]
+pub mod openapi_derived_processing_gateway;
+#[cfg(feature = "core-api-client")]
 pub mod openapi_jobs_gateway;
 #[cfg(feature = "tauri-notifications")]
 pub mod tauri_notification_sink;

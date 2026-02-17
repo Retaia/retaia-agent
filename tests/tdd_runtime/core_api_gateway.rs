@@ -60,7 +60,7 @@ fn tdd_filter_jobs_for_declared_capabilities_keeps_only_subset_matches() {
             job_id: "job-unsupported".to_string(),
             asset_uuid: "asset-2".to_string(),
             state: CoreJobState::Pending,
-            required_capabilities: vec!["media.proxies.video@1".to_string()],
+            required_capabilities: vec!["media.unknown@1".to_string()],
         },
     ];
 

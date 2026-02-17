@@ -13,7 +13,8 @@ Rust agent client for the Retaia platform.
 ## Features
 
 - Contract-driven runtime behavior.
-- Capability-driven scheduling guard (phase 1: `media.facts@1`).
+- Capability-driven scheduling guard (`media.facts@1`, `media.proxies.*@1`, `media.thumbnails@1`, `audio.waveform@1`).
+- Derived-processing v1 runtime support (`claim/heartbeat/submit` + `/derived/upload/*` gateway).
 - CLI mandatory, GUI optional.
 - Same runtime configuration contract in GUI and CLI-only environments (Linux/macOS/Windows, including SSH/headless).
 - Branch protection workflow with linear-history enforcement.

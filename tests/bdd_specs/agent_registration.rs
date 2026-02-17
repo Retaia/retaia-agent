@@ -41,7 +41,11 @@ fn bdd_given_agent_registration_when_building_command_then_first_capability_is_d
     };
 
     let outcome = register_agent(&gateway, intent).expect("registration should succeed");
-    assert_eq!(outcome.effective_capabilities, vec!["media.facts@1"]);
+    assert!(
+        outcome
+            .effective_capabilities
+            .contains(&"media.facts@1".to_string())
+    );
 
     let captured = gateway
         .captured
@@ -49,5 +53,10 @@ fn bdd_given_agent_registration_when_building_command_then_first_capability_is_d
         .expect("captured lock")
         .clone()
         .expect("captured command");
-    assert_eq!(captured.capabilities, vec!["media.facts@1"]);
+    assert!(captured.capabilities.contains(&"media.facts@1".to_string()));
+    assert!(
+        captured
+            .capabilities
+            .contains(&"media.thumbnails@1".to_string())
+    );
 }

@@ -23,11 +23,13 @@ Le crate généré est branché en dépendance optionnelle via feature:
   - `with_bearer_token(...)`
   - `OpenApiAgentRegistrationGateway` (`POST /agents/register`)
   - `OpenApiJobsGateway` (`GET /jobs` via OpenAPI client)
+  - `OpenApiDerivedProcessingGateway` (`POST /jobs/{job_id}/claim|heartbeat|submit` + `POST /assets/{uuid}/derived/upload/*`)
 - port applicatif DDD:
   - `AgentRegistrationGateway`
   - `register_agent(...)`
   - `CoreApiGateway`
   - `poll_runtime_snapshot(...)`
+  - `DerivedProcessingGateway`
 
 Activation:
 

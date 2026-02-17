@@ -20,6 +20,11 @@ pub use application::daemon_manager::{
     DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager, DaemonManagerError,
     DaemonStatus,
 };
+pub use application::derived_processing_gateway::{
+    ClaimedDerivedJob, DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
+    DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
+    HeartbeatReceipt, SubmitDerivedPayload, validate_derived_upload_init,
+};
 pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
     dispatch_notifications, notification_message,
@@ -83,6 +88,8 @@ pub use infrastructure::notification_sink::{
 pub use infrastructure::openapi_agent_registration_gateway::OpenApiAgentRegistrationGateway;
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::openapi_client::{build_core_api_client, with_bearer_token};
+#[cfg(feature = "core-api-client")]
+pub use infrastructure::openapi_derived_processing_gateway::OpenApiDerivedProcessingGateway;
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::openapi_jobs_gateway::OpenApiJobsGateway;
 #[cfg(feature = "tauri-notifications")]
