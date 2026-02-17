@@ -3,6 +3,7 @@ pub mod agent_runtime_app;
 pub mod config_repository;
 pub mod core_api_gateway;
 pub mod daemon_manager;
+pub mod derived_job_executor;
 pub mod derived_processing_gateway;
 pub mod notification_bridge;
 pub mod runtime_cli_shell;

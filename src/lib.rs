@@ -20,6 +20,10 @@ pub use application::daemon_manager::{
     DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager, DaemonManagerError,
     DaemonStatus,
 };
+pub use application::derived_job_executor::{
+    DerivedExecutionPlan, DerivedExecutionPlanner, DerivedExecutionReport, DerivedJobExecutorError,
+    DerivedUploadPlan, execute_derived_job_once,
+};
 pub use application::derived_processing_gateway::{
     ClaimedDerivedJob, DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
