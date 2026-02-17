@@ -4,6 +4,8 @@ mod app_runtime_flow;
 mod notification_bridge_flow;
 #[path = "e2e_flow/notification_sink_flow.rs"]
 mod notification_sink_flow;
+#[path = "e2e_flow/notification_sink_selection_flow.rs"]
+mod notification_sink_selection_flow;
 #[path = "e2e_flow/runtime_cli_shell_flow.rs"]
 mod runtime_cli_shell_flow;
 #[path = "e2e_flow/runtime_gui_shell_flow.rs"]

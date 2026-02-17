@@ -7,8 +7,9 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
     AgentRuntimeConfig, ClientRuntimeTarget, ConfigRepository, CoreApiGateway, CoreApiGatewayError,
     FileConfigRepository, LogLevel, RuntimePollCycleStatus, RuntimeSession, SystemConfigRepository,
-    SystemNotificationSink, compact_validation_reason, execute_shell_command, format_menu,
-    help_text, parse_shell_command, run_runtime_poll_cycle,
+    compact_validation_reason, execute_shell_command, format_menu, help_text,
+    notification_sink_profile_for_target, parse_shell_command, run_runtime_poll_cycle,
+    select_notification_sink,
 };
 use tracing::{info, warn};
 
@@ -114,7 +115,7 @@ fn run_interactive_shell(session: &mut RuntimeSession) -> Result<(), String> {
 
 fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), String> {
     let gateway = build_gateway(session.settings());
-    let sink = SystemNotificationSink::new();
+    let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
     let sleep_duration = Duration::from_millis(tick_ms.max(100));
     let mut tick = 0_u64;
     info!(
