@@ -1,5 +1,7 @@
 #[path = "e2e_flow/app_runtime_flow.rs"]
 mod app_runtime_flow;
+#[path = "e2e_flow/derived_job_executor_flow.rs"]
+mod derived_job_executor_flow;
 #[path = "e2e_flow/derived_processing_gateway_flow.rs"]
 mod derived_processing_gateway_flow;
 #[path = "e2e_flow/notification_bridge_flow.rs"]

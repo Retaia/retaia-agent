@@ -2,6 +2,8 @@
 mod application;
 #[path = "tdd_runtime/core_api_gateway.rs"]
 mod core_api_gateway;
+#[path = "tdd_runtime/derived_job_executor.rs"]
+mod derived_job_executor;
 #[path = "tdd_runtime/derived_processing_gateway.rs"]
 mod derived_processing_gateway;
 #[path = "tdd_runtime/menu.rs"]
