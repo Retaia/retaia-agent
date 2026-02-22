@@ -2,6 +2,7 @@
   "desktop.feature_required": "agent-desktop-shell nécessite --features desktop-shell",
   "runtime.feature_required": "agent-runtime nécessite le mode daemon: lance `agent-runtime daemon`.",
   "runtime.invalid_config": "configuration runtime invalide",
+  "runtime.load_config_failed": "impossible de charger la configuration",
   "runtime.interactive_disabled": "le mode interactif est désactivé; lance `agent-runtime daemon` et pilote avec `agentctl daemon ...`",
   "runtime.history_store_unavailable": "store d'historique indisponible; poursuite sans historique sqlite",
   "runtime.daemon_started": "daemon runtime démarré",
