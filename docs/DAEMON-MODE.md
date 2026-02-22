@@ -40,6 +40,8 @@ cargo run --bin agentctl -- daemon status
 cargo run --bin agentctl -- daemon stats
 cargo run --bin agentctl -- daemon history --limit 200
 cargo run --bin agentctl -- daemon cycles --limit 500
+cargo run --bin agentctl -- daemon report --provider github --repo owner/repo
+cargo run --bin agentctl -- daemon report --provider jira
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
@@ -83,6 +85,11 @@ Garde-fous perfs:
   - sur tick non-success (`throttled`/`degraded`),
   - heartbeat périodique (1/60 ticks).
 - Compaction périodique côté daemon (conservation des dernières lignes cycles).
+
+Bug report:
+
+- `agentctl daemon report` agrège snapshot + historique et imprime un contenu prêt à copier-coller.
+- Aucun ticket n'est créé automatiquement (GitHub/Jira restent actionnés manuellement côté opérateur).
 
 Auth bearer pour polling API (build avec feature `core-api-client`):
 

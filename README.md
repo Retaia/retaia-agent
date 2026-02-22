@@ -101,6 +101,8 @@ cargo run --bin agentctl -- daemon status
 cargo run --bin agentctl -- daemon stats
 cargo run --bin agentctl -- daemon history --limit 200
 cargo run --bin agentctl -- daemon cycles --limit 500
+cargo run --bin agentctl -- daemon report --provider github --repo owner/repo
+cargo run --bin agentctl -- daemon report --provider jira
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
@@ -120,6 +122,10 @@ Model enforced:
 Persistence model:
 - `daemon-stats.json`: lightweight current snapshot (for quick UI updates),
 - `daemon-history.sqlite3`: long-term debug history (completed jobs + sampled daemon cycles).
+
+Bug report workflow:
+- `agentctl daemon report` outputs a copy-paste bug report payload (Markdown),
+- no automatic issue creation is performed by the agent CLI.
 
 With `core-api-client` enabled, daemon polling uses `GET /jobs` and can attach bearer auth from `RETAIA_AGENT_BEARER_TOKEN`.
 

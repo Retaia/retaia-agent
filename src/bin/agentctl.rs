@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
@@ -60,12 +61,33 @@ enum DaemonCommand {
     Stats,
     History(DaemonHistoryArgs),
     Cycles(DaemonHistoryArgs),
+    Report(DaemonReportArgs),
 }
 
 #[derive(Debug, Clone, Args)]
 struct DaemonHistoryArgs {
     #[arg(long = "limit", default_value_t = 100)]
     limit: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum ReportProviderArg {
+    Github,
+    Jira,
+}
+
+#[derive(Debug, Clone, Args)]
+struct DaemonReportArgs {
+    #[arg(long = "provider", value_enum, default_value_t = ReportProviderArg::Github)]
+    provider: ReportProviderArg,
+    #[arg(long = "title")]
+    title: Option<String>,
+    #[arg(long = "repo")]
+    repo: Option<String>,
+    #[arg(long = "history-limit", default_value_t = 50)]
+    history_limit: usize,
+    #[arg(long = "cycles-limit", default_value_t = 120)]
+    cycles_limit: usize,
 }
 
 impl ConfigCommand {
@@ -636,6 +658,120 @@ fn print_daemon_status(status: DaemonStatus) {
     }
 }
 
+fn daemon_status_as_label(status: Option<DaemonStatus>) -> &'static str {
+    match status {
+        Some(DaemonStatus::Running) => "running",
+        Some(DaemonStatus::NotInstalled) => "not_installed",
+        Some(DaemonStatus::Stopped(_)) => "stopped",
+        None => "unknown",
+    }
+}
+
+fn build_bug_report_markdown<M: DaemonManager>(
+    manager: &M,
+    args: &DaemonReportArgs,
+) -> Result<(String, String), AgentCtlError> {
+    let daemon_status = manager
+        .status(DaemonLabelRequest {
+            label: "io.retaia.agent".to_string(),
+            level: DaemonLevel::User,
+        })
+        .ok();
+    let stats = load_runtime_stats().ok();
+    let history_store = RuntimeHistoryStore::open_default().ok();
+    let completed = match history_store.as_ref() {
+        Some(store) => store
+            .recent_completed_jobs(args.history_limit.max(1))
+            .map_err(AgentCtlError::DaemonHistory)?,
+        None => Vec::new(),
+    };
+    let cycles = match history_store.as_ref() {
+        Some(store) => store
+            .recent_cycles(args.cycles_limit.max(1))
+            .map_err(AgentCtlError::DaemonHistory)?,
+        None => Vec::new(),
+    };
+
+    let title = args
+        .title
+        .clone()
+        .unwrap_or_else(|| "Retaia agent daemon bug report".to_string());
+
+    let mut body = String::new();
+    let _ = writeln!(body, "## Context");
+    let _ = writeln!(
+        body,
+        "- daemon_status: `{}`",
+        daemon_status_as_label(daemon_status.clone())
+    );
+    let _ = writeln!(
+        body,
+        "- stats_file: `{}`",
+        retaia_agent::DAEMON_STATS_FILE_NAME
+    );
+    let _ = writeln!(
+        body,
+        "- history_db: `{}`",
+        retaia_agent::runtime_history_db_path()
+            .ok()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "unavailable".to_string())
+    );
+    if let Some(stats) = stats.as_ref() {
+        let _ = writeln!(body, "- run_state: `{}`", stats.run_state);
+        let _ = writeln!(body, "- daemon_tick: `{}`", stats.tick);
+        if let Some(job) = stats.current_job.as_ref() {
+            let _ = writeln!(body, "- current_job_id: `{}`", job.job_id);
+            let _ = writeln!(body, "- current_asset_uuid: `{}`", job.asset_uuid);
+            let _ = writeln!(body, "- current_progress: `{}`", job.progress_percent);
+            let _ = writeln!(body, "- current_stage: `{}`", job.stage);
+        }
+        if let Some(last) = stats.last_job.as_ref() {
+            let _ = writeln!(body, "- last_job_id: `{}`", last.job_id);
+            let _ = writeln!(body, "- last_job_duration_ms: `{}`", last.duration_ms);
+        }
+    }
+
+    let _ = writeln!(body, "\n## Recent Completed Jobs");
+    if completed.is_empty() {
+        let _ = writeln!(body, "- none");
+    } else {
+        for row in completed {
+            let _ = writeln!(
+                body,
+                "- completed_at={} job_id=`{}` duration_ms={}",
+                row.completed_at_unix_ms, row.job_id, row.duration_ms
+            );
+        }
+    }
+
+    let _ = writeln!(body, "\n## Recent Runtime Cycles");
+    if cycles.is_empty() {
+        let _ = writeln!(body, "- none");
+    } else {
+        for row in cycles {
+            let _ = writeln!(
+                body,
+                "- ts={} tick={} outcome=`{}` run_state=`{}` job_id=`{}` progress=`{}` stage=`{}`",
+                row.ts_unix_ms,
+                row.tick,
+                row.outcome,
+                row.run_state,
+                row.job_id.as_deref().unwrap_or("-"),
+                row.progress_percent
+                    .map(|v| v.to_string())
+                    .unwrap_or_else(|| "-".to_string()),
+                row.stage.as_deref().unwrap_or("-"),
+            );
+        }
+    }
+
+    let _ = writeln!(body, "\n## Notes");
+    let _ = writeln!(body, "- Attach steps to reproduce and expected behavior.");
+
+    Ok((title, body))
+}
+
 fn run_daemon_command<M: DaemonManager>(
     manager: &M,
     command: DaemonCommand,
@@ -759,6 +895,34 @@ fn run_daemon_command<M: DaemonManager>(
                     row.stage.as_deref().unwrap_or("-"),
                     row.short_status.as_deref().unwrap_or("-")
                 );
+            }
+            Ok(())
+        }
+        DaemonCommand::Report(args) => {
+            let (title, body) = build_bug_report_markdown(manager, &args)?;
+            match args.provider {
+                ReportProviderArg::Github => {
+                    println!("provider=github");
+                    println!("title={title}");
+                    println!("\n--- COPY BODY BELOW ---\n{body}\n--- END BODY ---\n");
+                    if let Some(repo) = args.repo.as_ref() {
+                        println!(
+                            "example_command=gh issue create --repo {repo} --title \"$TITLE\" --body-file report.md"
+                        );
+                    } else {
+                        println!(
+                            "example_command=gh issue create --repo owner/repo --title \"$TITLE\" --body-file report.md"
+                        );
+                    }
+                }
+                ReportProviderArg::Jira => {
+                    println!("provider=jira");
+                    println!("summary={title}");
+                    println!("\n--- COPY DESCRIPTION BELOW ---\n{body}\n--- END DESCRIPTION ---\n");
+                    println!(
+                        "example_payload={{\"fields\":{{\"project\":{{\"key\":\"PROJ\"}},\"summary\":\"$SUMMARY\",\"description\":\"$DESCRIPTION\",\"issuetype\":{{\"name\":\"Bug\"}}}}}}"
+                    );
+                }
             }
             Ok(())
         }
@@ -943,6 +1107,38 @@ mod tests {
                 "daemon".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn tdd_clap_parses_daemon_report_args() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "daemon",
+            "report",
+            "--provider",
+            "github",
+            "--repo",
+            "acme/retaia-agent",
+            "--title",
+            "Bug report",
+            "--history-limit",
+            "20",
+            "--cycles-limit",
+            "40",
+        ])
+        .expect("daemon report parse should succeed");
+
+        match cli.command {
+            RootCommand::Daemon {
+                command: DaemonCommand::Report(args),
+            } => {
+                assert_eq!(args.repo.as_deref(), Some("acme/retaia-agent"));
+                assert_eq!(args.title.as_deref(), Some("Bug report"));
+                assert_eq!(args.history_limit, 20);
+                assert_eq!(args.cycles_limit, 40);
+            }
+            _ => panic!("unexpected parse result"),
+        }
     }
 
     #[derive(Default)]
