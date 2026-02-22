@@ -89,6 +89,11 @@ pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
     save_config_to_path, save_system_config, system_config_file_path,
 };
+pub use infrastructure::daemon_diagnostics::{
+    BugReportMarkdown, ClipboardCopyError, DEFAULT_DAEMON_LABEL, DaemonDiagnosticsSnapshot,
+    DiagnosticsLimits, build_bug_report_markdown, collect_daemon_diagnostics, copy_to_clipboard,
+    daemon_status_as_label, render_daemon_inspect,
+};
 pub use infrastructure::ffmpeg_proxy_generator::{
     CommandOutput, CommandRunner, FfmpegProxyGenerator, StdCommandRunner, build_audio_proxy_args,
     build_video_proxy_args,

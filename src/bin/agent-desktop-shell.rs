@@ -14,10 +14,12 @@ mod desktop_shell {
     use clap::Parser;
     use eframe::egui;
     use retaia_agent::{
-        AgentRuntimeConfig, AuthMode, ConfigRepository, DaemonLabelRequest, DaemonLevel,
-        DaemonManager, DaemonManagerError, DaemonRuntimeStats, DaemonStatus, FileConfigRepository,
-        Language, LogLevel, RuntimeStatsStoreError, SystemConfigRepository, detect_language,
-        load_runtime_stats, t,
+        AgentRuntimeConfig, AuthMode, ConfigRepository, DAEMON_STATS_FILE_NAME, DaemonLabelRequest,
+        DaemonLevel, DaemonManager, DaemonManagerError, DaemonRuntimeStats, DaemonStatus,
+        DiagnosticsLimits, FileConfigRepository, Language, LogLevel, RuntimeStatsStoreError,
+        SystemConfigRepository, build_bug_report_markdown, collect_daemon_diagnostics,
+        copy_to_clipboard, detect_language, load_runtime_stats, render_daemon_inspect,
+        runtime_history_db_path, t,
     };
     use service_manager::{
         ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx, ServiceStopCtx,
@@ -204,6 +206,7 @@ mod desktop_shell {
         started_at: Instant,
         status_modal: Option<String>,
         settings_modal: Option<String>,
+        info_modal: Option<String>,
         last_error: Option<String>,
         quit_requested: bool,
     }
@@ -222,6 +225,7 @@ mod desktop_shell {
                 started_at: Instant::now(),
                 status_modal: None,
                 settings_modal: None,
+                info_modal: None,
                 last_error: None,
                 quit_requested: false,
             };
@@ -272,7 +276,17 @@ mod desktop_shell {
         }
 
         fn open_status(&mut self) {
-            self.status_modal = Some(self.format_status_modal());
+            let diagnostics = collect_daemon_diagnostics(
+                &self.manager,
+                DiagnosticsLimits {
+                    history_limit: 50,
+                    cycles_limit: 120,
+                },
+            );
+            let history_db = runtime_history_db_path()
+                .ok()
+                .map(|path| path.display().to_string());
+            self.status_modal = Some(render_daemon_inspect(&diagnostics, history_db.as_deref()));
         }
 
         fn open_preferences(&mut self) {
@@ -340,6 +354,9 @@ mod desktop_shell {
             if ctx.input(|i| i.key_pressed(egui::Key::Q)) {
                 self.quit_requested = true;
             }
+            if ctx.input(|i| i.key_pressed(egui::Key::B)) {
+                self.copy_bug_report();
+            }
         }
 
         fn daemon_toggle_label(&self) -> &'static str {
@@ -349,50 +366,30 @@ mod desktop_shell {
             }
         }
 
-        fn format_status_modal(&self) -> String {
-            let mut lines = Vec::new();
-            lines.push(format!(
-                "daemon_status={}",
-                daemon_status_label(self.daemon_status.as_ref())
-            ));
-            if let Some(stats) = self.stats.as_ref() {
-                lines.push(format!("updated_at_unix_ms={}", stats.updated_at_unix_ms));
-                lines.push(format!("run_state={}", stats.run_state));
-                lines.push(format!("tick={}", stats.tick));
-                if let Some(job) = stats.current_job.as_ref() {
-                    lines.push(format!("current_job_id={}", job.job_id));
-                    lines.push(format!("current_asset_uuid={}", job.asset_uuid));
-                    lines.push(format!("current_progress_percent={}", job.progress_percent));
-                    lines.push(format!("current_stage={}", job.stage));
-                    lines.push(format!("current_status={}", job.status));
-                    lines.push(format!(
-                        "current_started_at_unix_ms={}",
-                        job.started_at_unix_ms
-                    ));
-                } else {
-                    lines.push("current_job_id=-".to_string());
-                    lines.push("current_asset_uuid=-".to_string());
-                    lines.push("current_progress_percent=-".to_string());
-                    lines.push("current_stage=-".to_string());
-                    lines.push("current_status=idle".to_string());
-                    lines.push("current_started_at_unix_ms=-".to_string());
+        fn copy_bug_report(&mut self) {
+            let diagnostics = collect_daemon_diagnostics(
+                &self.manager,
+                DiagnosticsLimits {
+                    history_limit: 50,
+                    cycles_limit: 120,
+                },
+            );
+            let history_db = runtime_history_db_path()
+                .ok()
+                .map(|path| path.display().to_string());
+            let markdown = build_bug_report_markdown(
+                &diagnostics,
+                None,
+                DAEMON_STATS_FILE_NAME,
+                history_db.as_deref(),
+            );
+            let payload = format!("title={}\n\n{}", markdown.title, markdown.body);
+            match copy_to_clipboard(&payload) {
+                Ok(()) => {
+                    self.info_modal = Some(t(self.lang, "gui.info.report_copied").to_string());
                 }
-                if let Some(job) = stats.last_job.as_ref() {
-                    lines.push(format!("last_job_id={}", job.job_id));
-                    lines.push(format!("last_job_duration_ms={}", job.duration_ms));
-                    lines.push(format!(
-                        "last_job_completed_at_unix_ms={}",
-                        job.completed_at_unix_ms
-                    ));
-                } else {
-                    lines.push("last_job_id=-".to_string());
-                    lines.push("last_job_duration_ms=-".to_string());
-                    lines.push("last_job_completed_at_unix_ms=-".to_string());
-                }
-            } else {
-                lines.push("stats=unavailable".to_string());
+                Err(error) => self.last_error = Some(error.to_string()),
             }
-            lines.join("\n")
         }
     }
 
@@ -447,6 +444,12 @@ mod desktop_shell {
                         }
                         if ui.button(t(self.lang, "gui.button.open_status")).clicked() {
                             self.open_status();
+                        }
+                        if ui
+                            .button(t(self.lang, "gui.button.copy_bug_report"))
+                            .clicked()
+                        {
+                            self.copy_bug_report();
                         }
                         if ui
                             .button(t(self.lang, "gui.button.open_preferences"))
@@ -579,6 +582,19 @@ mod desktop_shell {
                     });
                 if !open {
                     self.settings_modal = None;
+                }
+            }
+
+            if let Some(info) = self.info_modal.as_mut() {
+                let mut open = true;
+                egui::Window::new(t(self.lang, "gui.modal.info"))
+                    .open(&mut open)
+                    .resizable(false)
+                    .show(ctx, |ui| {
+                        ui.label(info.as_str());
+                    });
+                if !open {
+                    self.info_modal = None;
                 }
             }
 
