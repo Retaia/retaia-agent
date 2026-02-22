@@ -8,6 +8,7 @@ Le runtime agent doit pouvoir tourner en arrière-plan et démarrer au boot, ave
 
 - Une instance de daemon partagée (pas de runtime parallèle CLI vs GUI).
 - Gestion lifecycle unifiée: `install`, `start`, `stop`, `status`, `uninstall`.
+- Publication des stats runtime par le daemon dans un store local (`daemon-stats.json`).
 - Support Linux/macOS/Windows via service manager natif (lib `service-manager`).
 
 ## Commandes CLI
@@ -35,6 +36,7 @@ cargo run --bin agentctl -- daemon install --no-autostart
 ```bash
 cargo run --bin agentctl -- daemon start
 cargo run --bin agentctl -- daemon status
+cargo run --bin agentctl -- daemon stats
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
@@ -67,11 +69,8 @@ Auth bearer pour polling API (build avec feature `core-api-client`):
 
 - env var optionnelle: `RETAIA_AGENT_BEARER_TOKEN`.
 
-Le shell interactif reste disponible en mode foreground:
-
-```bash
-cargo run --bin agent-runtime
-```
+Le mode interactif local est volontairement désactivé: seul `agent-runtime -- daemon` exécute le runtime.
+CLI et GUI jouent le rôle de clients de contrôle/observabilité du daemon.
 
 ## Notes d'intégration GUI
 

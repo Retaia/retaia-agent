@@ -106,6 +106,10 @@ pub use infrastructure::openapi_client::{build_core_api_client, with_bearer_toke
 pub use infrastructure::openapi_derived_processing_gateway::OpenApiDerivedProcessingGateway;
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::openapi_jobs_gateway::OpenApiJobsGateway;
+pub use infrastructure::runtime_stats_store::{
+    DAEMON_STATS_FILE_NAME, DaemonCurrentJobStats, DaemonLastJobStats, DaemonRuntimeStats,
+    RuntimeStatsStoreError, load_runtime_stats, now_unix_ms, run_state_label, save_runtime_stats,
+};
 pub use infrastructure::rust_photo_proxy_generator::{
     RawPhotoDecoder, RawloaderPhotoDecoder, RustPhotoProxyGenerator,
 };

@@ -1,20 +1,19 @@
-use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::exit;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
     AgentRuntimeConfig, ClientRuntimeTarget, ConfigRepository, CoreApiGateway, CoreApiGatewayError,
-    FileConfigRepository, LogLevel, RuntimePollCycleStatus, RuntimeSession, SystemConfigRepository,
-    compact_validation_reason, execute_shell_command, format_menu, help_text,
-    notification_sink_profile_for_target, parse_shell_command, run_runtime_poll_cycle,
-    select_notification_sink,
+    DaemonCurrentJobStats, DaemonLastJobStats, DaemonRuntimeStats, FileConfigRepository, LogLevel,
+    RuntimePollCycleStatus, RuntimeSession, SystemConfigRepository, compact_validation_reason,
+    notification_sink_profile_for_target, now_unix_ms, run_runtime_poll_cycle, run_state_label,
+    save_runtime_stats, select_notification_sink,
 };
 use tracing::{info, warn};
 
 #[derive(Debug, Parser)]
-#[command(name = "agent-runtime", about = "Retaia runtime interactive shell")]
+#[command(name = "agent-runtime", about = "Retaia runtime daemon process")]
 struct Cli {
     #[arg(long = "config")]
     config: Option<PathBuf>,
@@ -78,39 +77,11 @@ fn run() -> Result<(), String> {
 
     match cli.mode {
         Some(ModeCommand::Daemon(args)) => run_daemon_loop(&mut session, args.tick_ms),
-        None => run_interactive_shell(&mut session),
+        None => Err(
+            "interactive mode is disabled; run `agent-runtime daemon` and control it with `agentctl daemon ...`"
+                .to_string(),
+        ),
     }
-}
-
-fn run_interactive_shell(session: &mut RuntimeSession) -> Result<(), String> {
-    println!("{}", help_text());
-    print!("{}", format_menu(session));
-
-    let stdin = io::stdin();
-    loop {
-        print!("agent-runtime> ");
-        io::stdout()
-            .flush()
-            .map_err(|error| format!("unable to flush stdout: {error}"))?;
-
-        let mut line = String::new();
-        let read = stdin
-            .read_line(&mut line)
-            .map_err(|error| format!("unable to read input: {error}"))?;
-        if read == 0 {
-            break;
-        }
-
-        let result = execute_shell_command(session, parse_shell_command(&line));
-        if !result.output.is_empty() {
-            print!("{}", result.output);
-        }
-        if result.should_exit {
-            break;
-        }
-    }
-
-    Ok(())
 }
 
 fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), String> {
@@ -118,6 +89,10 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
     let sleep_duration = Duration::from_millis(tick_ms.max(100));
     let mut tick = 0_u64;
+    let mut current_job_id: Option<String> = None;
+    let mut current_job_started_at: Option<Instant> = None;
+    let mut current_job_started_at_unix_ms: Option<u64> = None;
+    let mut last_job: Option<DaemonLastJobStats> = None;
     info!(
         target = ?session.target(),
         run_state = ?session.run_state(),
@@ -156,6 +131,61 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
         }
         if outcome.status == RuntimePollCycleStatus::Throttled {
             warn!(tick, "core API throttled; backoff plan applied");
+        }
+        let status = session.status_view();
+        let current_job_snapshot = status.current_job.clone();
+        match current_job_snapshot.as_ref() {
+            Some(job) => match current_job_id.as_deref() {
+                Some(existing) if existing == job.job_id.as_str() => {}
+                Some(existing) => {
+                    if let Some(started) = current_job_started_at.take() {
+                        last_job = Some(DaemonLastJobStats {
+                            job_id: existing.to_string(),
+                            duration_ms: started.elapsed().as_millis() as u64,
+                            completed_at_unix_ms: now_unix_ms(),
+                        });
+                    }
+                    current_job_id = Some(job.job_id.clone());
+                    current_job_started_at = Some(Instant::now());
+                    current_job_started_at_unix_ms = Some(now_unix_ms());
+                }
+                None => {
+                    current_job_id = Some(job.job_id.clone());
+                    current_job_started_at = Some(Instant::now());
+                    current_job_started_at_unix_ms = Some(now_unix_ms());
+                }
+            },
+            None => {
+                if let Some(existing) = current_job_id.take()
+                    && let Some(started) = current_job_started_at.take()
+                {
+                    last_job = Some(DaemonLastJobStats {
+                        job_id: existing,
+                        duration_ms: started.elapsed().as_millis() as u64,
+                        completed_at_unix_ms: now_unix_ms(),
+                    });
+                }
+                current_job_started_at_unix_ms = None;
+            }
+        }
+
+        let current_job = current_job_snapshot.map(|job| DaemonCurrentJobStats {
+            job_id: job.job_id,
+            asset_uuid: job.asset_uuid,
+            progress_percent: job.progress_percent,
+            stage: format!("{:?}", job.stage).to_lowercase(),
+            status: job.short_status,
+            started_at_unix_ms: current_job_started_at_unix_ms.unwrap_or_else(now_unix_ms),
+        });
+        let stats = DaemonRuntimeStats {
+            updated_at_unix_ms: now_unix_ms(),
+            run_state: run_state_label(status.run_state).to_string(),
+            tick,
+            current_job,
+            last_job: last_job.clone(),
+        };
+        if let Err(error) = save_runtime_stats(&stats) {
+            warn!(tick, error = %error, "unable to persist daemon stats");
         }
         std::thread::sleep(sleep_duration);
     }
