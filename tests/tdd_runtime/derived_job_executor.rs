@@ -237,6 +237,156 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
     }
 }
 
+struct WaveformGateway {
+    calls: Mutex<Vec<String>>,
+}
+
+impl Default for WaveformGateway {
+    fn default() -> Self {
+        Self {
+            calls: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl DerivedProcessingGateway for WaveformGateway {
+    fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("claim:{job_id}"));
+        Ok(ClaimedDerivedJob {
+            job_id: job_id.to_string(),
+            asset_uuid: "asset-wave-1".to_string(),
+            lock_token: "lock-wave-1".to_string(),
+            job_type: DerivedJobType::GenerateAudioWaveform,
+        })
+    }
+
+    fn heartbeat(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+    ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("heartbeat:{job_id}"));
+        Ok(HeartbeatReceipt { locked_until: None })
+    }
+
+    fn submit_derived(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+        _idempotency_key: &str,
+        _payload: &SubmitDerivedPayload,
+    ) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("submit:{job_id}"));
+        Ok(())
+    }
+
+    fn upload_init(&self, request: &DerivedUploadInit) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("upload_init:{}", request.asset_uuid));
+        Ok(())
+    }
+
+    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("upload_part:{}", request.part_number));
+        Ok(())
+    }
+
+    fn upload_complete(
+        &self,
+        request: &DerivedUploadComplete,
+    ) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("upload_complete:{}", request.asset_uuid));
+        Ok(())
+    }
+}
+
+struct ValidWaveformPlanner;
+
+impl DerivedExecutionPlanner for ValidWaveformPlanner {
+    fn plan_for_claimed_job(
+        &self,
+        claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![retaia_agent::DerivedUploadPlan {
+                init: DerivedUploadInit {
+                    asset_uuid: claimed.asset_uuid.clone(),
+                    kind: DerivedKind::Waveform,
+                    content_type: "application/json".to_string(),
+                    size_bytes: 128,
+                    sha256: None,
+                    idempotency_key: "idem-wave-init".to_string(),
+                },
+                parts: vec![DerivedUploadPart {
+                    asset_uuid: claimed.asset_uuid.clone(),
+                    upload_id: "up-wave-1".to_string(),
+                    part_number: 1,
+                }],
+                complete: DerivedUploadComplete {
+                    asset_uuid: claimed.asset_uuid.clone(),
+                    upload_id: "up-wave-1".to_string(),
+                    idempotency_key: "idem-wave-complete".to_string(),
+                    parts: None,
+                },
+            }],
+            submit: SubmitDerivedPayload {
+                job_type: DerivedJobType::GenerateAudioWaveform,
+                manifest: vec![DerivedManifestItem {
+                    kind: DerivedKind::Waveform,
+                    reference: "s3://derived/waveform.json".to_string(),
+                    size_bytes: Some(128),
+                    sha256: None,
+                }],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-wave-submit".to_string(),
+        })
+    }
+}
+
+struct IncompatibleWaveformPlanner;
+
+impl DerivedExecutionPlanner for IncompatibleWaveformPlanner {
+    fn plan_for_claimed_job(
+        &self,
+        _claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![],
+            submit: SubmitDerivedPayload {
+                job_type: DerivedJobType::GenerateAudioWaveform,
+                manifest: vec![DerivedManifestItem {
+                    kind: DerivedKind::ProxyAudio,
+                    reference: "s3://derived/proxy.m4a".to_string(),
+                    size_bytes: Some(42),
+                    sha256: None,
+                }],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-wave-submit".to_string(),
+        })
+    }
+}
+
 #[test]
 fn tdd_execute_derived_job_once_runs_claim_heartbeat_upload_submit_flow() {
     let gateway = MemoryGateway::default();
@@ -304,5 +454,29 @@ fn tdd_execute_derived_job_once_rejects_upload_kind_missing_from_submit_manifest
     assert_eq!(
         err,
         DerivedJobExecutorError::UploadKindNotInSubmitManifest(DerivedKind::ProxyAudio)
+    );
+}
+
+#[test]
+fn tdd_execute_derived_job_once_allows_waveform_job_with_waveform_manifest_and_upload() {
+    let gateway = WaveformGateway::default();
+    let report = execute_derived_job_once(&gateway, &ValidWaveformPlanner, "job-wave-1")
+        .expect("waveform flow should succeed");
+    assert_eq!(report.job_id, "job-wave-1");
+    assert_eq!(report.asset_uuid, "asset-wave-1");
+    assert_eq!(report.upload_count, 1);
+}
+
+#[test]
+fn tdd_execute_derived_job_once_rejects_non_waveform_manifest_for_waveform_job_type() {
+    let gateway = WaveformGateway::default();
+    let err = execute_derived_job_once(&gateway, &IncompatibleWaveformPlanner, "job-wave-2")
+        .expect_err("non-waveform manifest must fail");
+    assert_eq!(
+        err,
+        DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
+            job_type: DerivedJobType::GenerateAudioWaveform,
+            kind: DerivedKind::ProxyAudio,
+        }
     );
 }

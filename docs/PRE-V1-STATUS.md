@@ -89,6 +89,10 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Coverage mesurée: 89.90% (dernier run local).
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
+  - Scénarios sans fixtures externes ajoutés:
+    - robustesse runtime multi-ticks (`success/throttle/unauthorized`) + dédup notifications,
+    - renforcement executor dérivés pour `audio.waveform@1` (manifest compatible/incompatible),
+    - cas négatifs photo proxy sans médias externes (inputs invalides, fallback decoder, conversions, write path).
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
   - Ajouter des scénarios photo proxy pre-v1 avec fixtures:
     - happy path RAW par marque/modèle (Canon/Nikon/Sony),

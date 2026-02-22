@@ -4,6 +4,7 @@ use retaia_agent::{
     NotificationSink, PollEndpoint, RuntimePollCycleStatus, RuntimeSession, SystemNotification,
     run_runtime_poll_cycle,
 };
+use std::cell::RefCell;
 
 fn settings() -> AgentRuntimeConfig {
     AgentRuntimeConfig {
@@ -26,6 +27,24 @@ impl CoreApiGateway for StubGateway {
     }
 }
 
+struct SequenceGateway {
+    results: RefCell<Vec<Result<Vec<CoreJobView>, CoreApiGatewayError>>>,
+}
+
+impl SequenceGateway {
+    fn new(results: Vec<Result<Vec<CoreJobView>, CoreApiGatewayError>>) -> Self {
+        Self {
+            results: RefCell::new(results),
+        }
+    }
+}
+
+impl CoreApiGateway for SequenceGateway {
+    fn poll_jobs(&self) -> Result<Vec<CoreJobView>, CoreApiGatewayError> {
+        self.results.borrow_mut().remove(0)
+    }
+}
+
 #[derive(Default)]
 struct NopSink;
 
@@ -35,6 +54,22 @@ impl NotificationSink for NopSink {
         _message: &NotificationMessage,
         _source: &SystemNotification,
     ) -> Result<(), NotificationBridgeError> {
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct RecordingSink {
+    notifications: RefCell<Vec<SystemNotification>>,
+}
+
+impl NotificationSink for RecordingSink {
+    fn send(
+        &self,
+        _message: &NotificationMessage,
+        source: &SystemNotification,
+    ) -> Result<(), NotificationBridgeError> {
+        self.notifications.borrow_mut().push(source.clone());
         Ok(())
     }
 }
@@ -114,5 +149,35 @@ fn tdd_runtime_poll_cycle_success_projects_claimed_job_and_dispatches_new_job_no
     assert_eq!(
         status.current_job.as_ref().map(|job| job.job_id.as_str()),
         Some("job-42")
+    );
+}
+
+#[test]
+fn tdd_runtime_poll_cycle_repeated_unauthorized_is_deduplicated_then_recovery_produces_no_auth_repeat()
+ {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let gateway = SequenceGateway::new(vec![
+        Err(CoreApiGatewayError::Unauthorized),
+        Err(CoreApiGatewayError::Unauthorized),
+        Ok(vec![]),
+    ]);
+    let sink = RecordingSink::default();
+
+    let first = run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 1);
+    let second =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 2);
+    let third = run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 3);
+
+    assert_eq!(first.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(second.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(third.status, RuntimePollCycleStatus::Success);
+    assert_eq!(first.report.expect("first report").dispatch.delivered, 1);
+    assert_eq!(second.report.expect("second report").dispatch.delivered, 0);
+    assert_eq!(third.report.expect("third report").dispatch.delivered, 0);
+
+    let recorded = sink.notifications.borrow();
+    assert_eq!(
+        recorded.as_slice(),
+        &[SystemNotification::AuthExpiredReauthRequired]
     );
 }
