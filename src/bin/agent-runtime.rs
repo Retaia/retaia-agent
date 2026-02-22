@@ -4,8 +4,9 @@ use std::time::{Duration, Instant};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
-    AgentRuntimeConfig, ClientRuntimeTarget, ConfigRepository, CoreApiGateway, CoreApiGatewayError,
-    DaemonCurrentJobStats, DaemonLastJobStats, DaemonRuntimeStats, FileConfigRepository, LogLevel,
+    AgentRuntimeConfig, ClientRuntimeTarget, CompletedJobEntry, ConfigRepository, CoreApiGateway,
+    CoreApiGatewayError, DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats,
+    DaemonRuntimeStats, FileConfigRepository, LogLevel, RuntimeHistoryStore,
     RuntimePollCycleStatus, RuntimeSession, SystemConfigRepository, compact_validation_reason,
     notification_sink_profile_for_target, now_unix_ms, run_runtime_poll_cycle, run_state_label,
     save_runtime_stats, select_notification_sink,
@@ -88,11 +89,20 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     let gateway = build_gateway(session.settings());
     let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
     let sleep_duration = Duration::from_millis(tick_ms.max(100));
+    let mut history_store = match RuntimeHistoryStore::open_default() {
+        Ok(store) => Some(store),
+        Err(error) => {
+            warn!(error = %error, "history store unavailable; continuing without sqlite history");
+            None
+        }
+    };
     let mut tick = 0_u64;
     let mut current_job_id: Option<String> = None;
     let mut current_job_started_at: Option<Instant> = None;
     let mut current_job_started_at_unix_ms: Option<u64> = None;
     let mut last_job: Option<DaemonLastJobStats> = None;
+    let mut last_cycle_fingerprint: Option<String> = None;
+    let mut last_persisted_cycle_tick: u64 = 0;
     info!(
         target = ?session.target(),
         run_state = ?session.run_state(),
@@ -139,11 +149,22 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                 Some(existing) if existing == job.job_id.as_str() => {}
                 Some(existing) => {
                     if let Some(started) = current_job_started_at.take() {
-                        last_job = Some(DaemonLastJobStats {
+                        let completed = DaemonLastJobStats {
                             job_id: existing.to_string(),
                             duration_ms: started.elapsed().as_millis() as u64,
                             completed_at_unix_ms: now_unix_ms(),
-                        });
+                        };
+                        if let Some(store) = history_store.as_mut() {
+                            let entry = CompletedJobEntry {
+                                completed_at_unix_ms: completed.completed_at_unix_ms,
+                                job_id: completed.job_id.clone(),
+                                duration_ms: completed.duration_ms,
+                            };
+                            if let Err(error) = store.insert_completed_job(&entry) {
+                                warn!(tick, error = %error, "unable to persist completed job");
+                            }
+                        }
+                        last_job = Some(completed);
                     }
                     current_job_id = Some(job.job_id.clone());
                     current_job_started_at = Some(Instant::now());
@@ -159,11 +180,22 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                 if let Some(existing) = current_job_id.take()
                     && let Some(started) = current_job_started_at.take()
                 {
-                    last_job = Some(DaemonLastJobStats {
+                    let completed = DaemonLastJobStats {
                         job_id: existing,
                         duration_ms: started.elapsed().as_millis() as u64,
                         completed_at_unix_ms: now_unix_ms(),
-                    });
+                    };
+                    if let Some(store) = history_store.as_mut() {
+                        let entry = CompletedJobEntry {
+                            completed_at_unix_ms: completed.completed_at_unix_ms,
+                            job_id: completed.job_id.clone(),
+                            duration_ms: completed.duration_ms,
+                        };
+                        if let Err(error) = store.insert_completed_job(&entry) {
+                            warn!(tick, error = %error, "unable to persist completed job");
+                        }
+                    }
+                    last_job = Some(completed);
                 }
                 current_job_started_at_unix_ms = None;
             }
@@ -187,7 +219,78 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
         if let Err(error) = save_runtime_stats(&stats) {
             warn!(tick, error = %error, "unable to persist daemon stats");
         }
+        if let Some(store) = history_store.as_mut() {
+            let fingerprint = cycle_fingerprint(
+                outcome.status,
+                status.run_state,
+                stats.current_job.as_ref().map(|job| {
+                    (
+                        job.job_id.as_str(),
+                        job.progress_percent,
+                        job.stage.as_str(),
+                    )
+                }),
+            );
+            let changed = last_cycle_fingerprint
+                .as_ref()
+                .map(|previous| previous != &fingerprint)
+                .unwrap_or(true);
+            let should_persist = changed
+                || !matches!(outcome.status, RuntimePollCycleStatus::Success)
+                || tick.saturating_sub(last_persisted_cycle_tick) >= 60;
+            if should_persist {
+                let entry = DaemonCycleEntry {
+                    ts_unix_ms: stats.updated_at_unix_ms,
+                    tick,
+                    outcome: outcome_label(outcome.status).to_string(),
+                    run_state: run_state_label(status.run_state).to_string(),
+                    job_id: stats.current_job.as_ref().map(|job| job.job_id.clone()),
+                    asset_uuid: stats.current_job.as_ref().map(|job| job.asset_uuid.clone()),
+                    progress_percent: stats.current_job.as_ref().map(|job| job.progress_percent),
+                    stage: stats.current_job.as_ref().map(|job| job.stage.clone()),
+                    short_status: stats.current_job.as_ref().map(|job| job.status.clone()),
+                };
+                if let Err(error) = store.insert_cycle(&entry) {
+                    warn!(tick, error = %error, "unable to persist cycle history");
+                } else {
+                    last_cycle_fingerprint = Some(fingerprint);
+                    last_persisted_cycle_tick = tick;
+                }
+            }
+            if tick % 600 == 0
+                && let Err(error) = store.compact_old_cycles(250_000)
+            {
+                warn!(tick, error = %error, "unable to compact cycle history");
+            }
+        }
         std::thread::sleep(sleep_duration);
+    }
+}
+
+fn cycle_fingerprint(
+    outcome: RuntimePollCycleStatus,
+    run_state: retaia_agent::AgentRunState,
+    job: Option<(&str, u8, &str)>,
+) -> String {
+    let (job_id, progress, stage) = match job {
+        Some((id, p, s)) => (id, p.to_string(), s.to_string()),
+        None => ("-", "-".to_string(), "-".to_string()),
+    };
+    format!(
+        "{}|{}|{}|{}|{}",
+        outcome_label(outcome),
+        run_state_label(run_state),
+        job_id,
+        progress,
+        stage
+    )
+}
+
+fn outcome_label(status: RuntimePollCycleStatus) -> &'static str {
+    match status {
+        RuntimePollCycleStatus::Success => "success",
+        RuntimePollCycleStatus::Throttled => "throttled",
+        RuntimePollCycleStatus::Degraded => "degraded",
     }
 }
 

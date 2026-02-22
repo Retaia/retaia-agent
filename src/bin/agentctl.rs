@@ -12,8 +12,9 @@ use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigInterface, ConfigRepository, ConfigRepositoryError,
     ConfigValidationError, DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager,
     DaemonManagerError, DaemonStatus, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
-    RuntimeStatsStoreError, SystemConfigRepository, TechnicalAuthConfig, apply_config_update,
-    compact_validation_reason, load_runtime_stats, normalize_core_api_url, validate_config,
+    RuntimeHistoryStore, RuntimeHistoryStoreError, RuntimeStatsStoreError, SystemConfigRepository,
+    TechnicalAuthConfig, apply_config_update, compact_validation_reason, load_runtime_stats,
+    normalize_core_api_url, runtime_history_db_path, validate_config,
 };
 use service_manager::{
     ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx,
@@ -57,6 +58,14 @@ enum DaemonCommand {
     Stop(DaemonLabelArgs),
     Status(DaemonLabelArgs),
     Stats,
+    History(DaemonHistoryArgs),
+    Cycles(DaemonHistoryArgs),
+}
+
+#[derive(Debug, Clone, Args)]
+struct DaemonHistoryArgs {
+    #[arg(long = "limit", default_value_t = 100)]
+    limit: usize,
 }
 
 impl ConfigCommand {
@@ -231,6 +240,8 @@ enum AgentCtlError {
     Daemon(DaemonManagerError),
     #[error("unable to load daemon stats: {0}")]
     DaemonStats(RuntimeStatsStoreError),
+    #[error("unable to load daemon history: {0}")]
+    DaemonHistory(RuntimeHistoryStoreError),
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -696,6 +707,58 @@ fn run_daemon_command<M: DaemonManager>(
                 println!("last_job_id=-");
                 println!("last_job_duration_ms=-");
                 println!("last_job_completed_at_unix_ms=-");
+            }
+            Ok(())
+        }
+        DaemonCommand::History(args) => {
+            let store =
+                RuntimeHistoryStore::open_default().map_err(AgentCtlError::DaemonHistory)?;
+            let rows = store
+                .recent_completed_jobs(args.limit.max(1))
+                .map_err(AgentCtlError::DaemonHistory)?;
+            println!(
+                "history_db_path={}",
+                runtime_history_db_path()
+                    .map_err(AgentCtlError::DaemonHistory)?
+                    .display()
+            );
+            println!("rows={}", rows.len());
+            for row in rows {
+                println!(
+                    "completed_at_unix_ms={} job_id={} duration_ms={}",
+                    row.completed_at_unix_ms, row.job_id, row.duration_ms
+                );
+            }
+            Ok(())
+        }
+        DaemonCommand::Cycles(args) => {
+            let store =
+                RuntimeHistoryStore::open_default().map_err(AgentCtlError::DaemonHistory)?;
+            let rows = store
+                .recent_cycles(args.limit.max(1))
+                .map_err(AgentCtlError::DaemonHistory)?;
+            println!(
+                "history_db_path={}",
+                runtime_history_db_path()
+                    .map_err(AgentCtlError::DaemonHistory)?
+                    .display()
+            );
+            println!("rows={}", rows.len());
+            for row in rows {
+                println!(
+                    "ts_unix_ms={} tick={} outcome={} run_state={} job_id={} asset_uuid={} progress_percent={} stage={} status={}",
+                    row.ts_unix_ms,
+                    row.tick,
+                    row.outcome,
+                    row.run_state,
+                    row.job_id.as_deref().unwrap_or("-"),
+                    row.asset_uuid.as_deref().unwrap_or("-"),
+                    row.progress_percent
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "-".to_string()),
+                    row.stage.as_deref().unwrap_or("-"),
+                    row.short_status.as_deref().unwrap_or("-")
+                );
             }
             Ok(())
         }

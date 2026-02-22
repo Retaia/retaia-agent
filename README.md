@@ -99,6 +99,8 @@ cargo run --bin agentctl -- daemon install
 cargo run --bin agentctl -- daemon start
 cargo run --bin agentctl -- daemon status
 cargo run --bin agentctl -- daemon stats
+cargo run --bin agentctl -- daemon history --limit 200
+cargo run --bin agentctl -- daemon cycles --limit 500
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
@@ -114,6 +116,10 @@ cargo run --bin agent-runtime -- daemon --tick-ms 5000
 Model enforced:
 - daemon is the only runtime execution engine,
 - GUI and CLI are control/reporting clients over daemon state.
+
+Persistence model:
+- `daemon-stats.json`: lightweight current snapshot (for quick UI updates),
+- `daemon-history.sqlite3`: long-term debug history (completed jobs + sampled daemon cycles).
 
 With `core-api-client` enabled, daemon polling uses `GET /jobs` and can attach bearer auth from `RETAIA_AGENT_BEARER_TOKEN`.
 
