@@ -29,14 +29,14 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Socle capabilities v1: déclaration agent `media.facts@1`, `media.proxies.*@1`, `media.thumbnails@1`, `audio.waveform@1` + garde défensive de compatibilité (`required_capabilities ⊆ capabilities déclarées`) avant projection runtime.
   - Use-case d'enregistrement agent (`register_agent`) + port DDD `AgentRegistrationGateway` + adapter OpenAPI `POST /agents/register` publiant explicitement les capabilities déclarées.
 - In progress:
-  - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut).
+  - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut/préférences).
   - Contrat applicatif shell GUI minimal implémenté (`runtime_gui_shell`): actions menu (`play/pause/stop/open status/open settings`), rendu statut/settings, contrôle daemon (`start/stop/status`) via port partagé `DaemonManager`.
   - Contrôleur desktop applicatif (`DesktopShellController`) implémenté pour relier bridge toolkit GUI et moteur partagé (`RuntimeSession`) avec orchestration menu/statut/settings/quit.
-  - Shell desktop minimal réel ajouté sous feature `desktop-shell` (`agent-desktop-shell`) via fenêtre native + raccourcis clavier + fenêtres status/settings.
-  - Shell runtime CLI interactif (`agent-runtime`) ajouté comme miroir headless du menu système; UI desktop finale encore pending.
+  - Shell desktop réel ajouté sous feature `desktop-shell` (`agent-desktop-shell`) avec tray natif, fenêtre masquable (`hide to tray`), raccourcis clavier et actions runtime/daemon synchronisées.
+  - Shell runtime CLI interactif (`agent-runtime`) ajouté comme miroir headless du menu système.
   - Boucle daemon branchée sur cycle poll runtime (`run_runtime_poll_cycle`) avec projection d'état dégradé (unauthorized/connectivité) et notifications associées.
 - Pending:
-  - Intégration tray/menu système native complète (au-delà du shell desktop minimal fenêtre + raccourcis).
+  - Enrichissement UX desktop (fenêtre contrôles persistants + historique jobs/metrics détaillées).
 
 ### Notifications
 
