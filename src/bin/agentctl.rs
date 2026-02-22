@@ -89,8 +89,8 @@ struct DaemonReportArgs {
     history_limit: usize,
     #[arg(long = "cycles-limit", default_value_t = 120)]
     cycles_limit: usize,
-    #[arg(long = "copy", default_value_t = false)]
-    copy: bool,
+    #[arg(long = "no-copy", default_value_t = false)]
+    no_copy: bool,
 }
 
 impl ConfigCommand {
@@ -967,10 +967,11 @@ fn run_daemon_command<M: DaemonManager>(
         }
         DaemonCommand::Report(args) => {
             let (title, body) = build_bug_report_markdown(manager, &args)?;
+            let should_copy = !args.no_copy;
             match args.provider {
                 ReportProviderArg::Github => {
                     let payload = format!("title={title}\n\n{body}");
-                    if args.copy {
+                    if should_copy {
                         copy_to_clipboard(&payload)?;
                         println!("copied_to_clipboard=true");
                     }
@@ -989,7 +990,7 @@ fn run_daemon_command<M: DaemonManager>(
                 }
                 ReportProviderArg::Jira => {
                     let payload = format!("summary={title}\n\n{body}");
-                    if args.copy {
+                    if should_copy {
                         copy_to_clipboard(&payload)?;
                         println!("copied_to_clipboard=true");
                     }
@@ -1202,7 +1203,7 @@ mod tests {
             "20",
             "--cycles-limit",
             "40",
-            "--copy",
+            "--no-copy",
         ])
         .expect("daemon report parse should succeed");
 
@@ -1214,7 +1215,7 @@ mod tests {
                 assert_eq!(args.title.as_deref(), Some("Bug report"));
                 assert_eq!(args.history_limit, 20);
                 assert_eq!(args.cycles_limit, 40);
-                assert!(args.copy);
+                assert!(args.no_copy);
             }
             _ => panic!("unexpected parse result"),
         }
