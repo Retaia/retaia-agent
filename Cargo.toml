@@ -11,6 +11,7 @@ path = "src/lib.rs"
 backon = "1.6.0"
 clap = { version = "4.5", features = ["derive"] }
 directories = "5.0"
+eframe = { version = "0.33", default-features = true, optional = true }
 genai = "0.4.0-alpha.7"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tiff", "webp"] }
 notify-rust = "4.12"
@@ -29,7 +30,6 @@ tokio = { version = "1.49", features = ["rt"] }
 toml = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-winit = { version = "0.30.12", optional = true }
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", default-features = false, features = ["user-hooks"] }
@@ -39,4 +39,4 @@ tempfile = "3.10"
 default = []
 core-api-client = ["dep:retaia_core_client"]
 tauri-notifications = ["dep:tauri", "dep:tauri-plugin-notification"]
-desktop-shell = ["dep:winit", "dep:rfd", "dep:tray-icon"]
+desktop-shell = ["dep:eframe", "dep:rfd", "dep:tray-icon"]

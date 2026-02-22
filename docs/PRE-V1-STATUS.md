@@ -33,6 +33,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Contrat applicatif shell GUI minimal implémenté (`runtime_gui_shell`): actions menu (`play/pause/stop/open status/open settings`), rendu statut/settings, contrôle daemon (`start/stop/status`) via port partagé `DaemonManager`.
   - Contrôleur desktop applicatif (`DesktopShellController`) implémenté pour relier bridge toolkit GUI et moteur partagé (`RuntimeSession`) avec orchestration menu/statut/settings/quit.
   - Shell desktop réel ajouté sous feature `desktop-shell` (`agent-desktop-shell`) avec tray natif, fenêtre masquable (`hide to tray`), raccourcis clavier et actions runtime/daemon synchronisées.
+  - Fenêtre desktop "control center" branchée (boutons cliquables + stats runtime + dernier job/durée observée) tout en gardant le tray comme point d'entrée principal.
   - Shell runtime CLI interactif (`agent-runtime`) ajouté comme miroir headless du menu système.
   - Boucle daemon branchée sur cycle poll runtime (`run_runtime_poll_cycle`) avec projection d'état dégradé (unauthorized/connectivité) et notifications associées.
 - Pending:
