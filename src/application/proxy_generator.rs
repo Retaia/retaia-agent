@@ -6,6 +6,12 @@ pub enum AudioProxyFormat {
     Mpeg,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PhotoProxyFormat {
+    Jpeg,
+    Webp,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VideoProxyRequest {
     pub input_path: String,
@@ -25,6 +31,15 @@ pub struct AudioProxyRequest {
     pub sample_rate_hz: u32,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PhotoProxyRequest {
+    pub input_path: String,
+    pub output_path: String,
+    pub format: PhotoProxyFormat,
+    pub max_width: u16,
+    pub max_height: u16,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ProxyGenerationError {
     #[error("invalid proxy request: {0}")]
@@ -42,5 +57,7 @@ pub trait ProxyGenerator {
     fn generate_video_proxy(&self, request: &VideoProxyRequest)
     -> Result<(), ProxyGenerationError>;
     fn generate_audio_proxy(&self, request: &AudioProxyRequest)
+    -> Result<(), ProxyGenerationError>;
+    fn generate_photo_proxy(&self, request: &PhotoProxyRequest)
     -> Result<(), ProxyGenerationError>;
 }

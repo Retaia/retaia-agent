@@ -34,6 +34,8 @@ mod runtime_status_tracker;
 mod runtime_sync;
 #[path = "bdd_specs/runtime_sync_coordinator.rs"]
 mod runtime_sync_coordinator;
+#[path = "bdd_specs/rust_photo_proxy_generator.rs"]
+mod rust_photo_proxy_generator;
 #[path = "bdd_specs/spec_runtime_behavior_complement.rs"]
 mod spec_runtime_behavior_complement;
 #[path = "support/system_dispatcher_mock.rs"]

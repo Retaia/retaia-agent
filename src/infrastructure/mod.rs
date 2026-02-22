@@ -10,5 +10,6 @@ pub mod openapi_client;
 pub mod openapi_derived_processing_gateway;
 #[cfg(feature = "core-api-client")]
 pub mod openapi_jobs_gateway;
+pub mod rust_photo_proxy_generator;
 #[cfg(feature = "tauri-notifications")]
 pub mod tauri_notification_sink;

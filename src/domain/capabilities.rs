@@ -71,6 +71,7 @@ pub fn photo_proxy_available() -> bool {
     photo_source_extension_supported("jpg")
         && photo_source_extension_supported("png")
         && photo_source_extension_supported("tiff")
+        && photo_source_extension_supported("webp")
         && photo_source_extension_supported("dng")
         && photo_source_extension_supported("cr2")
         && photo_source_extension_supported("cr3")
@@ -87,7 +88,7 @@ pub fn photo_source_extension_supported(extension: &str) -> bool {
     }
 
     match ImageFormat::from_extension(&ext) {
-        Some(ImageFormat::Jpeg | ImageFormat::Png | ImageFormat::Tiff) => true,
+        Some(ImageFormat::Jpeg | ImageFormat::Png | ImageFormat::Tiff | ImageFormat::WebP) => true,
         _ => matches!(
             ext.as_str(),
             "dng"

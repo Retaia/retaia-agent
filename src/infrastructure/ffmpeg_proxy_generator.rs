@@ -1,7 +1,8 @@
 use std::process::Command;
 
 use crate::application::proxy_generator::{
-    AudioProxyFormat, AudioProxyRequest, ProxyGenerationError, ProxyGenerator, VideoProxyRequest,
+    AudioProxyFormat, AudioProxyRequest, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
+    VideoProxyRequest,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,6 +79,15 @@ impl<R: CommandRunner> ProxyGenerator for FfmpegProxyGenerator<R> {
             &self.ffmpeg_binary,
             &build_audio_proxy_args(request),
         )
+    }
+
+    fn generate_photo_proxy(
+        &self,
+        _request: &PhotoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        Err(ProxyGenerationError::InvalidRequest(
+            "photo proxy generation is handled by RustPhotoProxyGenerator".to_string(),
+        ))
     }
 }
 

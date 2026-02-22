@@ -34,7 +34,8 @@ pub use application::notification_bridge::{
     dispatch_notifications, notification_message,
 };
 pub use application::proxy_generator::{
-    AudioProxyFormat, AudioProxyRequest, ProxyGenerationError, ProxyGenerator, VideoProxyRequest,
+    AudioProxyFormat, AudioProxyRequest, PhotoProxyFormat, PhotoProxyRequest, ProxyGenerationError,
+    ProxyGenerator, VideoProxyRequest,
 };
 pub use application::runtime_cli_shell::{
     ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,
@@ -105,5 +106,8 @@ pub use infrastructure::openapi_client::{build_core_api_client, with_bearer_toke
 pub use infrastructure::openapi_derived_processing_gateway::OpenApiDerivedProcessingGateway;
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::openapi_jobs_gateway::OpenApiJobsGateway;
+pub use infrastructure::rust_photo_proxy_generator::{
+    RawPhotoDecoder, RawloaderPhotoDecoder, RustPhotoProxyGenerator,
+};
 #[cfg(feature = "tauri-notifications")]
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;
