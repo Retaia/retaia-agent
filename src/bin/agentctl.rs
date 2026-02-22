@@ -12,8 +12,8 @@ use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigInterface, ConfigRepository, ConfigRepositoryError,
     ConfigValidationError, DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager,
     DaemonManagerError, DaemonStatus, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
-    SystemConfigRepository, TechnicalAuthConfig, apply_config_update, compact_validation_reason,
-    normalize_core_api_url, validate_config,
+    RuntimeStatsStoreError, SystemConfigRepository, TechnicalAuthConfig, apply_config_update,
+    compact_validation_reason, load_runtime_stats, normalize_core_api_url, validate_config,
 };
 use service_manager::{
     ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx,
@@ -56,6 +56,7 @@ enum DaemonCommand {
     Start(DaemonLabelArgs),
     Stop(DaemonLabelArgs),
     Status(DaemonLabelArgs),
+    Stats,
 }
 
 impl ConfigCommand {
@@ -228,6 +229,8 @@ enum AgentCtlError {
     DaemonProgramResolve(String),
     #[error("daemon operation failed: {0}")]
     Daemon(DaemonManagerError),
+    #[error("unable to load daemon stats: {0}")]
+    DaemonStats(RuntimeStatsStoreError),
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -660,6 +663,40 @@ fn run_daemon_command<M: DaemonManager>(
                 .status(daemon_label_request(&args))
                 .map_err(AgentCtlError::Daemon)?;
             print_daemon_status(status);
+            Ok(())
+        }
+        DaemonCommand::Stats => {
+            let stats = load_runtime_stats().map_err(AgentCtlError::DaemonStats)?;
+            println!("updated_at_unix_ms={}", stats.updated_at_unix_ms);
+            println!("run_state={}", stats.run_state);
+            println!("tick={}", stats.tick);
+            if let Some(job) = stats.current_job {
+                println!("current_job_id={}", job.job_id);
+                println!("current_asset_uuid={}", job.asset_uuid);
+                println!("current_progress_percent={}", job.progress_percent);
+                println!("current_stage={}", job.stage);
+                println!("current_status={}", job.status);
+                println!("current_started_at_unix_ms={}", job.started_at_unix_ms);
+            } else {
+                println!("current_job_id=-");
+                println!("current_asset_uuid=-");
+                println!("current_progress_percent=-");
+                println!("current_stage=-");
+                println!("current_status=idle");
+                println!("current_started_at_unix_ms=-");
+            }
+            if let Some(last) = stats.last_job {
+                println!("last_job_id={}", last.job_id);
+                println!("last_job_duration_ms={}", last.duration_ms);
+                println!(
+                    "last_job_completed_at_unix_ms={}",
+                    last.completed_at_unix_ms
+                );
+            } else {
+                println!("last_job_id=-");
+                println!("last_job_duration_ms=-");
+                println!("last_job_completed_at_unix_ms=-");
+            }
             Ok(())
         }
     }

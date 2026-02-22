@@ -60,13 +60,11 @@ cargo run --bin agentctl -- config validate --check-respond
 
 `agentctl` is powered by `clap` and uses the same validation contract as GUI/runtime services.
 
-Interactive runtime shell (CLI-only environments):
+Daemon runtime process (single execution engine):
 
 ```bash
-cargo run --bin agent-runtime
+cargo run --bin agent-runtime -- daemon
 ```
-
-Supported commands: `menu`, `status`, `settings`, `play`, `pause`, `stop`, `quit`.
 
 Desktop shell (tray + control center GUI, feature-gated):
 
@@ -80,19 +78,16 @@ Tray entries:
 - `Open Window`
 - `Open Status`
 - `Open Preferences`
-- `Play/Resume`
-- `Pause`
-- `Stop`
 - `Start/Stop Daemon`
 - `Refresh Daemon Status`
 - `Quit`
 
-Window shortcuts (same runtime controls as tray): `S` status, `C` preferences, `P` play/resume, `A` pause, `X` stop, `D` start/stop daemon (toggle), `R` refresh daemon status, `Q` quit.
+Window shortcuts (same controls as tray): `S` status, `C` preferences, `D` start/stop daemon (toggle), `R` refresh daemon status, `Q` quit.
 
 Control center includes:
-- clickable runtime controls (`Play/Resume`, `Pause`, `Stop`, daemon toggle)
+- daemon controls (`Start/Stop daemon`, `Refresh Daemon Status`)
 - quick actions (`Open Status`, `Open Preferences`, `Hide to Tray`, `Quit`)
-- runtime stats (`current job`, stage/progress/status, last observed job id and duration, app uptime)
+- runtime stats from daemon store (`current job`, stage/progress/status, last observed job id and duration, UI uptime)
 
 Daemon management (shared service for CLI/GUI):
 
@@ -103,6 +98,7 @@ cargo run --bin agentctl -- daemon install
 # control lifecycle
 cargo run --bin agentctl -- daemon start
 cargo run --bin agentctl -- daemon status
+cargo run --bin agentctl -- daemon stats
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
@@ -114,6 +110,10 @@ Daemon runtime loop (foreground service mode):
 ```bash
 cargo run --bin agent-runtime -- daemon --tick-ms 5000
 ```
+
+Model enforced:
+- daemon is the only runtime execution engine,
+- GUI and CLI are control/reporting clients over daemon state.
 
 With `core-api-client` enabled, daemon polling uses `GET /jobs` and can attach bearer auth from `RETAIA_AGENT_BEARER_TOKEN`.
 
