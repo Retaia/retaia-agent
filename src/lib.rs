@@ -91,8 +91,10 @@ pub use infrastructure::config_store::{
 };
 pub use infrastructure::daemon_diagnostics::{
     BugReportMarkdown, ClipboardCopyError, DEFAULT_DAEMON_LABEL, DaemonDiagnosticsSnapshot,
-    DiagnosticsLimits, build_bug_report_markdown, collect_daemon_diagnostics, copy_to_clipboard,
-    daemon_status_as_label, render_daemon_inspect,
+    DiagnosticsLimits, RedactedRuntimeConfig, append_redacted_config_markdown,
+    build_bug_report_markdown, collect_daemon_diagnostics, copy_to_clipboard,
+    daemon_status_as_label, redacted_runtime_config_from, render_daemon_inspect,
+    render_daemon_inspect_json,
 };
 pub use infrastructure::ffmpeg_proxy_generator::{
     CommandOutput, CommandRunner, FfmpegProxyGenerator, StdCommandRunner, build_audio_proxy_args,

@@ -1,7 +1,9 @@
 use retaia_agent::{
-    CompletedJobEntry, DaemonCurrentJobStats, DaemonCycleEntry, DaemonDiagnosticsSnapshot,
-    DaemonLastJobStats, DaemonRuntimeStats, DaemonStatus, build_bug_report_markdown,
-    daemon_status_as_label, render_daemon_inspect,
+    AgentRuntimeConfig, AuthMode, CompletedJobEntry, DaemonCurrentJobStats, DaemonCycleEntry,
+    DaemonDiagnosticsSnapshot, DaemonLastJobStats, DaemonRuntimeStats, DaemonStatus, LogLevel,
+    TechnicalAuthConfig, append_redacted_config_markdown, build_bug_report_markdown,
+    daemon_status_as_label, redacted_runtime_config_from, render_daemon_inspect,
+    render_daemon_inspect_json,
 };
 
 #[test]
@@ -100,4 +102,39 @@ fn tdd_daemon_diagnostics_render_inspect_without_stats() {
     assert!(rendered.contains("stats=unavailable"));
     assert!(rendered.contains("completed_jobs_count=0"));
     assert!(rendered.contains("cycles_count=0"));
+}
+
+#[test]
+fn tdd_daemon_diagnostics_render_inspect_json_contains_redacted_config() {
+    let snapshot = DaemonDiagnosticsSnapshot {
+        daemon_status: Some(DaemonStatus::Running),
+        stats: None,
+        completed_jobs: Vec::new(),
+        cycles: Vec::new(),
+    };
+    let config = redacted_runtime_config_from(&AgentRuntimeConfig {
+        core_api_url: "https://core.example".to_string(),
+        ollama_url: "http://localhost:11434".to_string(),
+        auth_mode: AuthMode::Technical,
+        technical_auth: Some(TechnicalAuthConfig {
+            client_id: "client-id".to_string(),
+            secret_key: "secret".to_string(),
+        }),
+        max_parallel_jobs: 3,
+        log_level: LogLevel::Info,
+    });
+    let rendered =
+        render_daemon_inspect_json(&snapshot, Some("/tmp/history.sqlite3"), Some(&config));
+    assert!(rendered.contains("\"daemon_status\": \"running\""));
+    assert!(rendered.contains("\"history_db_path\": \"/tmp/history.sqlite3\""));
+    assert!(rendered.contains("\"redacted_config\""));
+    assert!(rendered.contains("\"technical_secret_key_set\": true"));
+}
+
+#[test]
+fn tdd_daemon_diagnostics_append_redacted_config_markdown_outputs_section() {
+    let mut body = String::new();
+    append_redacted_config_markdown(&mut body, None);
+    assert!(body.contains("## Redacted Runtime Config"));
+    assert!(body.contains("- unavailable"));
 }

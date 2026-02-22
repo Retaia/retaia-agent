@@ -19,8 +19,8 @@ mod desktop_shell {
         DaemonLevel, DaemonManager, DaemonManagerError, DaemonRuntimeStats, DaemonStatus,
         DiagnosticsLimits, FileConfigRepository, Language, LogLevel, RuntimeStatsStoreError,
         SystemConfigRepository, build_bug_report_markdown, collect_daemon_diagnostics,
-        copy_to_clipboard, detect_language, load_runtime_stats, render_daemon_inspect,
-        runtime_history_db_path, t,
+        copy_to_clipboard, detect_language, load_runtime_stats, redacted_runtime_config_from,
+        render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path, t,
     };
     use service_manager::{
         ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx, ServiceStopCtx,
@@ -358,6 +358,9 @@ mod desktop_shell {
             if ctx.input(|i| i.key_pressed(egui::Key::B)) {
                 self.copy_bug_report();
             }
+            if ctx.input(|i| i.key_pressed(egui::Key::J)) {
+                self.copy_diagnostics_json();
+            }
         }
 
         fn daemon_toggle_label(&self) -> &'static str {
@@ -388,6 +391,31 @@ mod desktop_shell {
             match copy_to_clipboard(&payload) {
                 Ok(()) => {
                     self.info_modal = Some(t(self.lang, "gui.info.report_copied").to_string());
+                }
+                Err(error) => self.last_error = Some(error.to_string()),
+            }
+        }
+
+        fn copy_diagnostics_json(&mut self) {
+            let diagnostics = collect_daemon_diagnostics(
+                &self.manager,
+                DiagnosticsLimits {
+                    history_limit: 50,
+                    cycles_limit: 120,
+                },
+            );
+            let history_db = runtime_history_db_path()
+                .ok()
+                .map(|path| path.display().to_string());
+            let redacted_config = redacted_runtime_config_from(&self.config);
+            let payload = render_daemon_inspect_json(
+                &diagnostics,
+                history_db.as_deref(),
+                Some(&redacted_config),
+            );
+            match copy_to_clipboard(&payload) {
+                Ok(()) => {
+                    self.info_modal = Some(t(self.lang, "gui.info.diagnostics_copied").to_string());
                 }
                 Err(error) => self.last_error = Some(error.to_string()),
             }
@@ -451,6 +479,12 @@ mod desktop_shell {
                             .clicked()
                         {
                             self.copy_bug_report();
+                        }
+                        if ui
+                            .button(t(self.lang, "gui.button.copy_diagnostics_json"))
+                            .clicked()
+                        {
+                            self.copy_diagnostics_json();
                         }
                         if ui
                             .button(t(self.lang, "gui.button.open_preferences"))
