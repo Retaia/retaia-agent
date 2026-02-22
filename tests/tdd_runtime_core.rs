@@ -26,6 +26,8 @@ mod runtime_control;
 mod runtime_desktop_shell_controller;
 #[path = "tdd_runtime/runtime_gui_shell.rs"]
 mod runtime_gui_shell;
+#[path = "tdd_runtime/runtime_history_store.rs"]
+mod runtime_history_store;
 #[path = "tdd_runtime/runtime_loop_engine.rs"]
 mod runtime_loop_engine;
 #[path = "tdd_runtime/runtime_orchestration.rs"]
