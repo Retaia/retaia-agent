@@ -76,3 +76,49 @@ fn map_openapi_jobs_error(error: OpenApiError<JobsGetError>) -> CoreApiGatewayEr
         OpenApiError::Io(err) => CoreApiGatewayError::Transport(err.to_string()),
     }
 }
+
+#[cfg(all(test, feature = "core-api-client"))]
+mod tests {
+    use super::map_openapi_jobs_error;
+    use crate::application::core_api_gateway::CoreApiGatewayError;
+    use reqwest::StatusCode;
+    use retaia_core_client::apis::jobs_api::JobsGetError;
+    use retaia_core_client::apis::{Error as OpenApiError, ResponseContent};
+
+    fn response_error(status: u16) -> OpenApiError<JobsGetError> {
+        OpenApiError::ResponseError(ResponseContent {
+            status: StatusCode::from_u16(status).expect("valid status"),
+            content: String::new(),
+            entity: None,
+        })
+    }
+
+    #[test]
+    fn tdd_openapi_jobs_gateway_maps_expected_http_statuses() {
+        assert_eq!(
+            map_openapi_jobs_error(response_error(401)),
+            CoreApiGatewayError::Unauthorized
+        );
+        assert_eq!(
+            map_openapi_jobs_error(response_error(429)),
+            CoreApiGatewayError::Throttled
+        );
+        assert_eq!(
+            map_openapi_jobs_error(response_error(422)),
+            CoreApiGatewayError::UnexpectedStatus(422)
+        );
+        assert_eq!(
+            map_openapi_jobs_error(response_error(500)),
+            CoreApiGatewayError::UnexpectedStatus(500)
+        );
+    }
+
+    #[test]
+    fn tdd_openapi_jobs_gateway_maps_transport_errors() {
+        let error = map_openapi_jobs_error(OpenApiError::Io(std::io::Error::other("network down")));
+        match error {
+            CoreApiGatewayError::Transport(message) => assert!(message.contains("network down")),
+            other => panic!("unexpected error variant: {other:?}"),
+        }
+    }
+}
