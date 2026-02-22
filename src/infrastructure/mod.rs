@@ -1,6 +1,7 @@
 pub mod config_repository;
 pub mod config_store;
 pub mod ffmpeg_proxy_generator;
+pub mod i18n;
 pub mod notification_sink;
 #[cfg(feature = "core-api-client")]
 pub mod openapi_agent_registration_gateway;

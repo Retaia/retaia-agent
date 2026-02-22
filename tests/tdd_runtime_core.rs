@@ -8,6 +8,8 @@ mod derived_job_executor;
 mod derived_processing_gateway;
 #[path = "tdd_runtime/ffmpeg_proxy_generator.rs"]
 mod ffmpeg_proxy_generator;
+#[path = "tdd_runtime/i18n.rs"]
+mod i18n;
 #[path = "tdd_runtime/menu.rs"]
 mod menu;
 #[path = "tdd_runtime/notification_bridge.rs"]

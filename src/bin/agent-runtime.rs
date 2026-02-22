@@ -8,8 +8,8 @@ use retaia_agent::{
     CoreApiGatewayError, DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats,
     DaemonRuntimeStats, FileConfigRepository, LogLevel, RuntimeHistoryStore,
     RuntimePollCycleStatus, RuntimeSession, SystemConfigRepository, compact_validation_reason,
-    notification_sink_profile_for_target, now_unix_ms, run_runtime_poll_cycle, run_state_label,
-    save_runtime_stats, select_notification_sink,
+    detect_language, notification_sink_profile_for_target, now_unix_ms, run_runtime_poll_cycle,
+    run_state_label, save_runtime_stats, select_notification_sink, t,
 };
 use tracing::{info, warn};
 
@@ -66,33 +66,33 @@ fn load_settings(config_path: Option<PathBuf>) -> Result<AgentRuntimeConfig, Str
 }
 
 fn run() -> Result<(), String> {
+    let lang = detect_language();
     let cli = Cli::parse();
     let settings = load_settings(cli.config)?;
     init_logging(settings.log_level);
     let mut session = RuntimeSession::new(cli.target.into(), settings).map_err(|errors| {
         format!(
-            "invalid runtime config: {}",
+            "{}: {}",
+            t(lang, "runtime.invalid_config"),
             compact_validation_reason(&errors)
         )
     })?;
 
     match cli.mode {
         Some(ModeCommand::Daemon(args)) => run_daemon_loop(&mut session, args.tick_ms),
-        None => Err(
-            "interactive mode is disabled; run `agent-runtime daemon` and control it with `agentctl daemon ...`"
-                .to_string(),
-        ),
+        None => Err(t(lang, "runtime.interactive_disabled").to_string()),
     }
 }
 
 fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), String> {
+    let lang = detect_language();
     let gateway = build_gateway(session.settings());
     let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
     let sleep_duration = Duration::from_millis(tick_ms.max(100));
     let mut history_store = match RuntimeHistoryStore::open_default() {
         Ok(store) => Some(store),
         Err(error) => {
-            warn!(error = %error, "history store unavailable; continuing without sqlite history");
+            warn!(error = %error, "{}", t(lang, "runtime.history_store_unavailable"));
             None
         }
     };
@@ -106,7 +106,8 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     info!(
         target = ?session.target(),
         run_state = ?session.run_state(),
-        "runtime daemon started"
+        "{}",
+        t(lang, "runtime.daemon_started")
     );
     loop {
         tick += 1;
@@ -129,18 +130,20 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                 progress_percent = job.progress_percent,
                 stage = ?job.stage,
                 short_status = %job.short_status,
-                "runtime cycle"
+                "{}",
+                t(lang, "runtime.cycle")
             );
         } else {
             info!(
                 tick,
                 outcome = ?outcome.status,
                 run_state = ?status.run_state,
-                "runtime cycle"
+                "{}",
+                t(lang, "runtime.cycle")
             );
         }
         if outcome.status == RuntimePollCycleStatus::Throttled {
-            warn!(tick, "core API throttled; backoff plan applied");
+            warn!(tick, "{}", t(lang, "runtime.throttled"));
         }
         let status = session.status_view();
         let current_job_snapshot = status.current_job.clone();
@@ -161,7 +164,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                                 duration_ms: completed.duration_ms,
                             };
                             if let Err(error) = store.insert_completed_job(&entry) {
-                                warn!(tick, error = %error, "unable to persist completed job");
+                                warn!(tick, error = %error, "{}", t(lang, "runtime.persist_completed_failed"));
                             }
                         }
                         last_job = Some(completed);
@@ -192,7 +195,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                             duration_ms: completed.duration_ms,
                         };
                         if let Err(error) = store.insert_completed_job(&entry) {
-                            warn!(tick, error = %error, "unable to persist completed job");
+                            warn!(tick, error = %error, "{}", t(lang, "runtime.persist_completed_failed"));
                         }
                     }
                     last_job = Some(completed);
@@ -217,7 +220,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
             last_job: last_job.clone(),
         };
         if let Err(error) = save_runtime_stats(&stats) {
-            warn!(tick, error = %error, "unable to persist daemon stats");
+            warn!(tick, error = %error, "{}", t(lang, "runtime.persist_stats_failed"));
         }
         if let Some(store) = history_store.as_mut() {
             let fingerprint = cycle_fingerprint(
@@ -251,7 +254,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                     short_status: stats.current_job.as_ref().map(|job| job.status.clone()),
                 };
                 if let Err(error) = store.insert_cycle(&entry) {
-                    warn!(tick, error = %error, "unable to persist cycle history");
+                    warn!(tick, error = %error, "{}", t(lang, "runtime.persist_cycle_failed"));
                 } else {
                     last_cycle_fingerprint = Some(fingerprint);
                     last_persisted_cycle_tick = tick;
@@ -260,7 +263,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
             if tick % 600 == 0
                 && let Err(error) = store.compact_old_cycles(250_000)
             {
-                warn!(tick, error = %error, "unable to compact cycle history");
+                warn!(tick, error = %error, "{}", t(lang, "runtime.compact_failed"));
             }
         }
         std::thread::sleep(sleep_duration);
@@ -340,8 +343,12 @@ impl CoreApiGateway for FeatureDisabledCoreGateway {
 }
 
 fn main() {
+    let lang = detect_language();
     if let Err(error) = run() {
         eprintln!("{error}");
+        if error.contains("daemon mode") {
+            eprintln!("{}", t(lang, "runtime.feature_required"));
+        }
         exit(1);
     }
 }

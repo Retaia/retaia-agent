@@ -15,8 +15,8 @@ use retaia_agent::{
     ConfigValidationError, DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager,
     DaemonManagerError, DaemonStatus, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
     RuntimeHistoryStore, RuntimeHistoryStoreError, RuntimeStatsStoreError, SystemConfigRepository,
-    TechnicalAuthConfig, apply_config_update, compact_validation_reason, load_runtime_stats,
-    normalize_core_api_url, runtime_history_db_path, validate_config,
+    TechnicalAuthConfig, apply_config_update, compact_validation_reason, detect_language,
+    load_runtime_stats, normalize_core_api_url, runtime_history_db_path, t, validate_config,
 };
 use service_manager::{
     ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx,
@@ -842,34 +842,35 @@ fn run_clipboard_command(program: &str, args: &[&str], content: &str) -> Result<
 fn run_daemon_command<M: DaemonManager>(
     manager: &M,
     command: DaemonCommand,
+    lang: retaia_agent::Language,
 ) -> Result<(), AgentCtlError> {
     match command {
         DaemonCommand::Install(args) => {
             manager
                 .install(daemon_install_request(&args)?)
                 .map_err(AgentCtlError::Daemon)?;
-            println!("Daemon installed.");
+            println!("{}", t(lang, "daemon.installed"));
             Ok(())
         }
         DaemonCommand::Uninstall(args) => {
             manager
                 .uninstall(daemon_label_request(&args))
                 .map_err(AgentCtlError::Daemon)?;
-            println!("Daemon uninstalled.");
+            println!("{}", t(lang, "daemon.uninstalled"));
             Ok(())
         }
         DaemonCommand::Start(args) => {
             manager
                 .start(daemon_label_request(&args))
                 .map_err(AgentCtlError::Daemon)?;
-            println!("Daemon started.");
+            println!("{}", t(lang, "daemon.started"));
             Ok(())
         }
         DaemonCommand::Stop(args) => {
             manager
                 .stop(daemon_label_request(&args))
                 .map_err(AgentCtlError::Daemon)?;
-            println!("Daemon stopped.");
+            println!("{}", t(lang, "daemon.stopped"));
             Ok(())
         }
         DaemonCommand::Status(args) => {
@@ -977,7 +978,11 @@ fn run_daemon_command<M: DaemonManager>(
                     }
                     println!("provider=github");
                     println!("title={title}");
-                    println!("\n--- COPY BODY BELOW ---\n{body}\n--- END BODY ---\n");
+                    println!(
+                        "\n{}\n{body}\n{}\n",
+                        t(lang, "report.copy_block_body_start"),
+                        t(lang, "report.copy_block_body_end")
+                    );
                     if let Some(repo) = args.repo.as_ref() {
                         println!(
                             "example_command=gh issue create --repo {repo} --title \"$TITLE\" --body-file report.md"
@@ -996,7 +1001,11 @@ fn run_daemon_command<M: DaemonManager>(
                     }
                     println!("provider=jira");
                     println!("summary={title}");
-                    println!("\n--- COPY DESCRIPTION BELOW ---\n{body}\n--- END DESCRIPTION ---\n");
+                    println!(
+                        "\n{}\n{body}\n{}\n",
+                        t(lang, "report.copy_block_desc_start"),
+                        t(lang, "report.copy_block_desc_end")
+                    );
                     println!(
                         "example_payload={{\"fields\":{{\"project\":{{\"key\":\"PROJ\"}},\"summary\":\"$SUMMARY\",\"description\":\"$DESCRIPTION\",\"issuetype\":{{\"name\":\"Bug\"}}}}}}"
                     );
@@ -1010,6 +1019,7 @@ fn run_daemon_command<M: DaemonManager>(
 fn run_with_repository<R: ConfigRepository>(
     repository: &R,
     command: ConfigCommand,
+    lang: retaia_agent::Language,
 ) -> Result<(), AgentCtlError> {
     match command {
         ConfigCommand::Path(_) => {
@@ -1032,13 +1042,13 @@ fn run_with_repository<R: ConfigRepository>(
             if args.check_respond {
                 check_config_respond(&config)?;
             }
-            println!("Config is valid.");
+            println!("{}", t(lang, "config.valid"));
             Ok(())
         }
         ConfigCommand::Init(args) => {
             let config = init_config(&args)?;
             repository.save(&config).map_err(AgentCtlError::Save)?;
-            println!("Config initialized.");
+            println!("{}", t(lang, "config.initialized"));
             Ok(())
         }
         ConfigCommand::Set(args) => {
@@ -1050,19 +1060,20 @@ fn run_with_repository<R: ConfigRepository>(
                     .map_err(validation_error)
                     .map_err(AgentCtlError::InvalidConfigUpdate)?;
             repository.save(&next).map_err(AgentCtlError::Save)?;
-            println!("Config updated.");
+            println!("{}", t(lang, "config.updated"));
             Ok(())
         }
     }
 }
 
 fn run(cli: Cli) -> Result<(), AgentCtlError> {
+    let lang = detect_language();
     match cli.command {
         RootCommand::Config { command } => match command.config_path().cloned() {
-            Some(path) => run_with_repository(&FileConfigRepository::new(path), command),
-            None => run_with_repository(&SystemConfigRepository, command),
+            Some(path) => run_with_repository(&FileConfigRepository::new(path), command, lang),
+            None => run_with_repository(&SystemConfigRepository, command, lang),
         },
-        RootCommand::Daemon { command } => run_daemon_command(&NativeDaemonManager, command),
+        RootCommand::Daemon { command } => run_daemon_command(&NativeDaemonManager, command, lang),
     }
 }
 
@@ -1271,7 +1282,8 @@ mod tests {
             system: false,
         });
 
-        run_daemon_command(&manager, command).expect("daemon command should succeed");
+        run_daemon_command(&manager, command, retaia_agent::Language::En)
+            .expect("daemon command should succeed");
     }
 
     #[test]
@@ -1282,7 +1294,8 @@ mod tests {
             system: false,
         });
 
-        let err = run_daemon_command(&manager, command).expect_err("daemon command must fail");
+        let err = run_daemon_command(&manager, command, retaia_agent::Language::En)
+            .expect_err("daemon command must fail");
         assert!(err.to_string().contains("daemon operation failed"));
         assert_eq!(DaemonLevel::User, super::daemon_level(false));
     }

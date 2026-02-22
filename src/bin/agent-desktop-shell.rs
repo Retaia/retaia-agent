@@ -16,7 +16,8 @@ mod desktop_shell {
     use retaia_agent::{
         AgentRuntimeConfig, AuthMode, ConfigRepository, DaemonLabelRequest, DaemonLevel,
         DaemonManager, DaemonManagerError, DaemonRuntimeStats, DaemonStatus, FileConfigRepository,
-        LogLevel, RuntimeStatsStoreError, SystemConfigRepository, load_runtime_stats,
+        Language, LogLevel, RuntimeStatsStoreError, SystemConfigRepository, detect_language,
+        load_runtime_stats, t,
     };
     use service_manager::{
         ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx, ServiceStopCtx,
@@ -121,17 +122,17 @@ mod desktop_shell {
     }
 
     impl TrayHandle {
-        fn new() -> Result<Self, String> {
+        fn new(lang: Language) -> Result<Self, String> {
             let menu = Menu::new();
 
-            let open_window = MenuItem::new("Open Window", true, None);
-            let open_status = MenuItem::new("Open Status", true, None);
-            let open_settings = MenuItem::new("Open Preferences", true, None);
+            let open_window = MenuItem::new(t(lang, "gui.tray.open_window"), true, None);
+            let open_status = MenuItem::new(t(lang, "gui.tray.open_status"), true, None);
+            let open_settings = MenuItem::new(t(lang, "gui.tray.open_preferences"), true, None);
             let separator_top = PredefinedMenuItem::separator();
-            let daemon_toggle = MenuItem::new("Start/Stop Daemon", true, None);
-            let refresh_daemon = MenuItem::new("Refresh Daemon Status", true, None);
+            let daemon_toggle = MenuItem::new(t(lang, "gui.tray.start_stop_daemon"), true, None);
+            let refresh_daemon = MenuItem::new(t(lang, "gui.tray.refresh_daemon"), true, None);
             let separator_bottom = PredefinedMenuItem::separator();
-            let quit = MenuItem::new("Quit", true, None);
+            let quit = MenuItem::new(t(lang, "gui.tray.quit"), true, None);
 
             menu.append(&open_window)
                 .map_err(|error| format!("unable to append tray menu item: {error}"))?;
@@ -194,6 +195,7 @@ mod desktop_shell {
     }
 
     struct ControlCenterApp {
+        lang: Language,
         manager: NativeDaemonManager,
         tray: TrayHandle,
         config: AgentRuntimeConfig,
@@ -207,10 +209,11 @@ mod desktop_shell {
     }
 
     impl ControlCenterApp {
-        fn new(config: AgentRuntimeConfig) -> Result<Self, String> {
-            let tray = TrayHandle::new()?;
+        fn new(config: AgentRuntimeConfig, lang: Language) -> Result<Self, String> {
+            let tray = TrayHandle::new(lang)?;
             let manager = NativeDaemonManager;
             let mut app = Self {
+                lang,
                 manager,
                 tray,
                 config,
@@ -341,8 +344,8 @@ mod desktop_shell {
 
         fn daemon_toggle_label(&self) -> &'static str {
             match self.daemon_status {
-                Some(DaemonStatus::Running) => "Stop Daemon",
-                _ => "Start Daemon",
+                Some(DaemonStatus::Running) => t(self.lang, "gui.button.stop_daemon"),
+                _ => t(self.lang, "gui.button.start_daemon"),
             }
         }
 
@@ -404,22 +407,24 @@ mod desktop_shell {
             }
 
             egui::TopBottomPanel::top("top").show(ctx, |ui| {
-                ui.heading("Retaia Agent Control Center");
+                ui.heading(t(self.lang, "gui.title"));
                 ui.horizontal(|ui| {
                     let run_state = self
                         .stats
                         .as_ref()
                         .map(|stats| stats.run_state.as_str())
                         .unwrap_or("unknown");
-                    ui.label(format!("Run state: {run_state}"));
+                    ui.label(format!("{}: {run_state}", t(self.lang, "gui.run_state")));
                     ui.separator();
                     ui.label(format!(
-                        "Daemon: {}",
+                        "{}: {}",
+                        t(self.lang, "gui.daemon"),
                         daemon_status_label(self.daemon_status.as_ref())
                     ));
                     ui.separator();
                     ui.label(format!(
-                        "UI uptime: {}",
+                        "{}: {}",
+                        t(self.lang, "gui.ui_uptime"),
                         format_duration(self.started_at.elapsed())
                     ));
                 });
@@ -428,84 +433,132 @@ mod desktop_shell {
             egui::CentralPanel::default().show(ctx, |ui| {
                 ui.columns(2, |columns| {
                     columns[0].group(|ui| {
-                        ui.heading("Daemon Controls");
+                        ui.heading(t(self.lang, "gui.controls"));
                         if ui.button(self.daemon_toggle_label()).clicked() {
                             self.daemon_toggle();
                         }
-                        if ui.button("Refresh Daemon Status").clicked() {
+                        if ui
+                            .button(t(self.lang, "gui.button.refresh_daemon"))
+                            .clicked()
+                        {
                             self.refresh_daemon_status();
                             self.refresh_stats();
                             self.refresh_tray();
                         }
-                        if ui.button("Open Status").clicked() {
+                        if ui.button(t(self.lang, "gui.button.open_status")).clicked() {
                             self.open_status();
                         }
-                        if ui.button("Open Preferences").clicked() {
+                        if ui
+                            .button(t(self.lang, "gui.button.open_preferences"))
+                            .clicked()
+                        {
                             self.open_preferences();
                         }
-                        if ui.button("Hide to Tray").clicked() {
+                        if ui.button(t(self.lang, "gui.button.hide_to_tray")).clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
                         }
-                        if ui.button("Quit").clicked() {
+                        if ui.button(t(self.lang, "gui.button.quit")).clicked() {
                             self.quit_requested = true;
                         }
                     });
 
                     columns[1].group(|ui| {
-                        ui.heading("Runtime Stats (from daemon)");
+                        ui.heading(t(self.lang, "gui.stats"));
                         if let Some(stats) = self.stats.as_ref() {
-                            ui.label(format!("Updated: {}", stats.updated_at_unix_ms));
-                            ui.label(format!("Tick: {}", stats.tick));
+                            ui.label(format!(
+                                "{}: {}",
+                                t(self.lang, "gui.updated"),
+                                stats.updated_at_unix_ms
+                            ));
+                            ui.label(format!("{}: {}", t(self.lang, "gui.tick"), stats.tick));
                             match stats.current_job.as_ref() {
                                 Some(job) => {
-                                    ui.label(format!("Current job: {}", job.job_id));
-                                    ui.label(format!("Asset: {}", job.asset_uuid));
-                                    ui.label(format!("Progress: {}%", job.progress_percent));
-                                    ui.label(format!("Stage: {}", job.stage));
-                                    ui.label(format!("Status: {}", job.status));
+                                    ui.label(format!(
+                                        "{}: {}",
+                                        t(self.lang, "gui.current_job"),
+                                        job.job_id
+                                    ));
+                                    ui.label(format!(
+                                        "{}: {}",
+                                        t(self.lang, "gui.asset"),
+                                        job.asset_uuid
+                                    ));
+                                    ui.label(format!(
+                                        "{}: {}%",
+                                        t(self.lang, "gui.progress"),
+                                        job.progress_percent
+                                    ));
+                                    ui.label(format!(
+                                        "{}: {}",
+                                        t(self.lang, "gui.stage"),
+                                        job.stage
+                                    ));
+                                    ui.label(format!(
+                                        "{}: {}",
+                                        t(self.lang, "gui.status"),
+                                        job.status
+                                    ));
                                     let elapsed_ms =
                                         now_ms().saturating_sub(job.started_at_unix_ms);
                                     ui.label(format!(
-                                        "Current job duration: {}",
+                                        "{}: {}",
+                                        t(self.lang, "gui.current_job_duration"),
                                         format_duration(Duration::from_millis(elapsed_ms))
                                     ));
                                 }
                                 None => {
-                                    ui.label("Current job: idle");
-                                    ui.label("Asset: -");
-                                    ui.label("Progress: -");
-                                    ui.label("Stage: -");
-                                    ui.label("Status: idle");
+                                    ui.label(format!(
+                                        "{}: {}",
+                                        t(self.lang, "gui.current_job"),
+                                        t(self.lang, "gui.idle")
+                                    ));
+                                    ui.label(format!("{}: -", t(self.lang, "gui.asset")));
+                                    ui.label(format!("{}: -", t(self.lang, "gui.progress")));
+                                    ui.label(format!("{}: -", t(self.lang, "gui.stage")));
+                                    ui.label(format!(
+                                        "{}: {}",
+                                        t(self.lang, "gui.status"),
+                                        t(self.lang, "gui.idle")
+                                    ));
                                 }
                             }
                             ui.separator();
-                            ui.heading("Last Job");
+                            ui.heading(t(self.lang, "gui.last_job"));
                             if let Some(last) = stats.last_job.as_ref() {
-                                ui.label(format!("Last job id: {}", last.job_id));
                                 ui.label(format!(
-                                    "Duration: {}",
+                                    "{}: {}",
+                                    t(self.lang, "gui.last_job_id"),
+                                    last.job_id
+                                ));
+                                ui.label(format!(
+                                    "{}: {}",
+                                    t(self.lang, "gui.duration"),
                                     format_duration(Duration::from_millis(last.duration_ms))
                                 ));
-                                ui.label(format!("Completed at: {}", last.completed_at_unix_ms));
+                                ui.label(format!(
+                                    "{}: {}",
+                                    t(self.lang, "gui.completed_at"),
+                                    last.completed_at_unix_ms
+                                ));
                             } else {
-                                ui.label("Last job id: -");
-                                ui.label("Duration: -");
-                                ui.label("Completed at: -");
+                                ui.label(format!("{}: -", t(self.lang, "gui.last_job_id")));
+                                ui.label(format!("{}: -", t(self.lang, "gui.duration")));
+                                ui.label(format!("{}: -", t(self.lang, "gui.completed_at")));
                             }
                         } else {
-                            ui.label("No daemon stats available yet.");
-                            ui.label("Start daemon and wait for at least one runtime tick.");
+                            ui.label(t(self.lang, "gui.no_stats"));
+                            ui.label(t(self.lang, "gui.start_daemon_hint"));
                         }
                     });
                 });
 
                 ui.separator();
-                ui.label("Shortcuts: S status, C preferences, D daemon toggle, R refresh, Q quit");
+                ui.label(t(self.lang, "gui.shortcuts"));
             });
 
             if let Some(content) = self.status_modal.as_mut() {
                 let mut open = true;
-                egui::Window::new("Status")
+                egui::Window::new(t(self.lang, "gui.modal.status"))
                     .open(&mut open)
                     .resizable(true)
                     .show(ctx, |ui| {
@@ -518,7 +571,7 @@ mod desktop_shell {
 
             if let Some(content) = self.settings_modal.as_mut() {
                 let mut open = true;
-                egui::Window::new("Preferences")
+                egui::Window::new(t(self.lang, "gui.modal.preferences"))
                     .open(&mut open)
                     .resizable(true)
                     .show(ctx, |ui| {
@@ -531,7 +584,7 @@ mod desktop_shell {
 
             if let Some(error) = self.last_error.as_mut() {
                 let mut open = true;
-                egui::Window::new("Error")
+                egui::Window::new(t(self.lang, "gui.modal.error"))
                     .open(&mut open)
                     .resizable(false)
                     .show(ctx, |ui| {
@@ -653,20 +706,21 @@ mod desktop_shell {
     }
 
     fn run() -> Result<(), String> {
+        let lang = detect_language();
         let cli = Cli::parse();
         let settings = load_settings(cli.config)?;
 
         let options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
-                .with_title("Retaia Agent Control Center")
+                .with_title(t(lang, "gui.title"))
                 .with_inner_size([960.0, 600.0]),
             ..Default::default()
         };
 
         eframe::run_native(
-            "Retaia Agent Control Center",
+            t(lang, "gui.title"),
             options,
-            Box::new(move |_cc| Ok(Box::new(ControlCenterApp::new(settings)?))),
+            Box::new(move |_cc| Ok(Box::new(ControlCenterApp::new(settings, lang)?))),
         )
         .map_err(|error| error.to_string())
     }

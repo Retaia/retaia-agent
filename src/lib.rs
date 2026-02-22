@@ -93,6 +93,7 @@ pub use infrastructure::ffmpeg_proxy_generator::{
     CommandOutput, CommandRunner, FfmpegProxyGenerator, StdCommandRunner, build_audio_proxy_args,
     build_video_proxy_args,
 };
+pub use infrastructure::i18n::{Language, detect_language, parse_language, t};
 pub use infrastructure::notification_sink::{
     NotificationSinkProfile, RuntimeNotificationSink, StdoutNotificationSink,
     SystemNotificationSink, dispatch_system_notification, notification_sink_profile_for_target,
