@@ -36,6 +36,7 @@ jobs:
             run_tests:
               - "Cargo.toml"
               - "Cargo.lock"
+              - "locales/**"
               - "src/**"
               - "tests/**"
               - ".cargo-husky/hooks/**"
