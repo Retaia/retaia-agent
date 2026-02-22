@@ -92,7 +92,8 @@ impl<D: RawPhotoDecoder> ProxyGenerator for RustPhotoProxyGenerator<D> {
     }
 }
 
-fn validate_photo_request(request: &PhotoProxyRequest) -> Result<(), ProxyGenerationError> {
+#[doc(hidden)]
+pub fn validate_photo_request(request: &PhotoProxyRequest) -> Result<(), ProxyGenerationError> {
     if request.input_path.trim().is_empty() {
         return Err(ProxyGenerationError::InvalidRequest(
             "photo input path is required".to_string(),
@@ -111,7 +112,8 @@ fn validate_photo_request(request: &PhotoProxyRequest) -> Result<(), ProxyGenera
     Ok(())
 }
 
-fn load_source_image<D: RawPhotoDecoder>(
+#[doc(hidden)]
+pub fn load_source_image<D: RawPhotoDecoder>(
     raw_decoder: &D,
     input_path: &str,
 ) -> Result<DynamicImage, ProxyGenerationError> {
@@ -127,7 +129,8 @@ fn load_source_image<D: RawPhotoDecoder>(
     }
 }
 
-fn write_photo_proxy(
+#[doc(hidden)]
+pub fn write_photo_proxy(
     image: &DynamicImage,
     output_path: &str,
     format: PhotoProxyFormat,
@@ -152,7 +155,8 @@ fn write_photo_proxy(
         .map_err(|error| ProxyGenerationError::Process(error.to_string()))
 }
 
-fn to_rgb8_from_integer(
+#[doc(hidden)]
+pub fn to_rgb8_from_integer(
     data: &[u16],
     cpp: usize,
     width: u32,
@@ -185,7 +189,8 @@ fn to_rgb8_from_integer(
     Ok(out)
 }
 
-fn to_rgb8_from_float(
+#[doc(hidden)]
+pub fn to_rgb8_from_float(
     data: &[f32],
     cpp: usize,
     width: u32,
@@ -217,10 +222,12 @@ fn to_rgb8_from_float(
     Ok(out)
 }
 
-fn scale_u16_to_u8(value: u16, max_value: f32) -> u8 {
+#[doc(hidden)]
+pub fn scale_u16_to_u8(value: u16, max_value: f32) -> u8 {
     ((value as f32 / max_value) * 255.0).clamp(0.0, 255.0) as u8
 }
 
-fn scale_f32_to_u8(value: f32) -> u8 {
+#[doc(hidden)]
+pub fn scale_f32_to_u8(value: f32) -> u8 {
     (value * 255.0).clamp(0.0, 255.0) as u8
 }
