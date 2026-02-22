@@ -13,7 +13,7 @@
 
 - Toggle `Play/Resume` / `Pause`
 - `Stop`
-- `Start/Stop Daemon` (selon état service)
+- Toggle `Start/Stop Daemon` (selon état service)
 - `Refresh Daemon Status`
 - `Open Window`
 - `Open Status`

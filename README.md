@@ -83,12 +83,11 @@ Tray entries:
 - `Play/Resume`
 - `Pause`
 - `Stop`
-- `Start Daemon`
-- `Stop Daemon`
+- `Start/Stop Daemon`
 - `Refresh Daemon Status`
 - `Quit`
 
-Window shortcuts (same runtime controls as tray): `S` status, `C` preferences, `P` play/resume, `A` pause, `X` stop, `D` start daemon, `E` stop daemon, `R` refresh daemon status, `W` show window, `Q` quit.
+Window shortcuts (same runtime controls as tray): `S` status, `C` preferences, `P` play/resume, `A` pause, `X` stop, `D` start/stop daemon (toggle), `R` refresh daemon status, `W` show window, `Q` quit.
 
 Daemon management (shared service for CLI/GUI):
 

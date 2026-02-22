@@ -120,8 +120,7 @@ mod desktop_shell {
         play_resume: MenuItem,
         pause: MenuItem,
         stop: MenuItem,
-        start_daemon: MenuItem,
-        stop_daemon: MenuItem,
+        daemon_toggle_id: MenuId,
         refresh_daemon_id: MenuId,
         quit_id: MenuId,
     }
@@ -138,8 +137,7 @@ mod desktop_shell {
             let pause = MenuItem::new("Pause", true, None);
             let stop = MenuItem::new("Stop", true, None);
             let separator_mid = PredefinedMenuItem::separator();
-            let start_daemon = MenuItem::new("Start Daemon", true, None);
-            let stop_daemon = MenuItem::new("Stop Daemon", true, None);
+            let daemon_toggle = MenuItem::new("Start/Stop Daemon", true, None);
             let refresh_daemon = MenuItem::new("Refresh Daemon Status", true, None);
             let separator_bottom = PredefinedMenuItem::separator();
             let quit = MenuItem::new("Quit", true, None);
@@ -160,9 +158,7 @@ mod desktop_shell {
                 .map_err(|error| format!("unable to append tray menu item: {error}"))?;
             menu.append(&separator_mid)
                 .map_err(|error| format!("unable to append tray menu separator: {error}"))?;
-            menu.append(&start_daemon)
-                .map_err(|error| format!("unable to append tray menu item: {error}"))?;
-            menu.append(&stop_daemon)
+            menu.append(&daemon_toggle)
                 .map_err(|error| format!("unable to append tray menu item: {error}"))?;
             menu.append(&refresh_daemon)
                 .map_err(|error| format!("unable to append tray menu item: {error}"))?;
@@ -187,8 +183,7 @@ mod desktop_shell {
                 play_resume,
                 pause,
                 stop,
-                start_daemon,
-                stop_daemon,
+                daemon_toggle_id: daemon_toggle.id().clone(),
                 refresh_daemon_id: refresh_daemon.id().clone(),
                 quit_id: quit.id().clone(),
             })
@@ -198,21 +193,6 @@ mod desktop_shell {
             let _ = self.play_resume.set_enabled(view.can_play_resume);
             let _ = self.pause.set_enabled(view.can_pause);
             let _ = self.stop.set_enabled(view.can_stop);
-
-            match view.daemon_status {
-                Some(DaemonStatus::Running) => {
-                    let _ = self.start_daemon.set_enabled(false);
-                    let _ = self.stop_daemon.set_enabled(true);
-                }
-                Some(DaemonStatus::NotInstalled) => {
-                    let _ = self.start_daemon.set_enabled(false);
-                    let _ = self.stop_daemon.set_enabled(false);
-                }
-                Some(DaemonStatus::Stopped(_)) | None => {
-                    let _ = self.start_daemon.set_enabled(true);
-                    let _ = self.stop_daemon.set_enabled(false);
-                }
-            }
 
             let tooltip = format!(
                 "Retaia Agent | state={:?} | daemon={}",
@@ -226,6 +206,7 @@ mod desktop_shell {
     enum TrayCommand {
         OpenWindow,
         Gui(GuiMenuAction),
+        ToggleDaemon,
         Quit,
     }
 
@@ -288,11 +269,8 @@ mod desktop_shell {
             if event.id == *tray.stop.id() {
                 return Some(TrayCommand::Gui(GuiMenuAction::Stop));
             }
-            if event.id == *tray.start_daemon.id() {
-                return Some(TrayCommand::Gui(GuiMenuAction::StartDaemon));
-            }
-            if event.id == *tray.stop_daemon.id() {
-                return Some(TrayCommand::Gui(GuiMenuAction::StopDaemon));
+            if event.id == tray.daemon_toggle_id {
+                return Some(TrayCommand::ToggleDaemon);
             }
             if event.id == tray.refresh_daemon_id {
                 return Some(TrayCommand::Gui(GuiMenuAction::RefreshDaemonStatus));
@@ -317,7 +295,7 @@ mod desktop_shell {
     impl DesktopShellBridge for WindowBridge {
         fn render_menu(&mut self, view: &GuiMenuView) {
             let title = format!(
-                "Retaia Agent | state={:?} daemon={} | [S]tatus [C]prefs [P]lay [A]pause [X]stop [D]startd [E]stopd [R]refresh [W]indow [Q]quit",
+                "Retaia Agent | state={:?} daemon={} | [S]tatus [C]prefs [P]lay [A]pause [X]stop [D]toggle daemon [R]refresh [W]indow [Q]quit",
                 view.run_state,
                 daemon_status_label(view.daemon_status.as_ref())
             );
@@ -390,6 +368,13 @@ mod desktop_shell {
             match command {
                 TrayCommand::OpenWindow => self.bridge.show_window(),
                 TrayCommand::Gui(action) => self.handle_gui_action(event_loop, action),
+                TrayCommand::ToggleDaemon => {
+                    let action = match self.controller.daemon_status() {
+                        Some(DaemonStatus::Running) => GuiMenuAction::StopDaemon,
+                        _ => GuiMenuAction::StartDaemon,
+                    };
+                    self.handle_gui_action(event_loop, action);
+                }
                 TrayCommand::Quit => event_loop.exit(),
             }
         }
@@ -442,8 +427,13 @@ mod desktop_shell {
                         PhysicalKey::Code(KeyCode::KeyP) => Some(GuiMenuAction::PlayResume),
                         PhysicalKey::Code(KeyCode::KeyA) => Some(GuiMenuAction::Pause),
                         PhysicalKey::Code(KeyCode::KeyX) => Some(GuiMenuAction::Stop),
-                        PhysicalKey::Code(KeyCode::KeyD) => Some(GuiMenuAction::StartDaemon),
-                        PhysicalKey::Code(KeyCode::KeyE) => Some(GuiMenuAction::StopDaemon),
+                        PhysicalKey::Code(KeyCode::KeyD) => {
+                            let action = match self.controller.daemon_status() {
+                                Some(DaemonStatus::Running) => GuiMenuAction::StopDaemon,
+                                _ => GuiMenuAction::StartDaemon,
+                            };
+                            Some(action)
+                        }
                         PhysicalKey::Code(KeyCode::KeyR) => {
                             Some(GuiMenuAction::RefreshDaemonStatus)
                         }
@@ -526,7 +516,7 @@ mod desktop_shell {
         let event_loop = EventLoop::new().map_err(|error| error.to_string())?;
         let mut app = DesktopRuntimeApp::new(settings)?;
         println!(
-            "Desktop shell active (tray + window). Window close hides to tray. Controls: tray menu or keys [S] status [C] prefs [P] play [A] pause [X] stop [D] start daemon [E] stop daemon [R] refresh daemon [W] show window [Q] quit"
+            "Desktop shell active (tray + window). Window close hides to tray. Controls: tray menu or keys [S] status [C] prefs [P] play [A] pause [X] stop [D] toggle daemon [R] refresh daemon [W] show window [Q] quit"
         );
         event_loop
             .run_app(&mut app)
