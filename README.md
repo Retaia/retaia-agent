@@ -68,13 +68,26 @@ cargo run --bin agent-runtime
 
 Supported commands: `menu`, `status`, `settings`, `play`, `pause`, `stop`, `quit`.
 
-Desktop shell (minimal real GUI, feature-gated):
+Desktop shell (tray + window GUI, feature-gated):
 
 ```bash
 cargo run --features desktop-shell --bin agent-desktop-shell
 ```
 
-Window shortcuts: `S` status, `C` settings, `P` play/resume, `A` pause, `X` stop, `D` start daemon, `E` stop daemon, `R` refresh daemon status, `Q` quit.
+The app starts a system tray and a window. Closing the window keeps the tray active (`hide to tray`).
+
+Tray entries:
+- `Open Window`
+- `Open Status`
+- `Open Preferences`
+- `Play/Resume`
+- `Pause`
+- `Stop`
+- `Start/Stop Daemon`
+- `Refresh Daemon Status`
+- `Quit`
+
+Window shortcuts (same runtime controls as tray): `S` status, `C` preferences, `P` play/resume, `A` pause, `X` stop, `D` start/stop daemon (toggle), `R` refresh daemon status, `W` show window, `Q` quit.
 
 Daemon management (shared service for CLI/GUI):
 

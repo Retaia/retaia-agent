@@ -13,6 +13,11 @@
 
 - Toggle `Play/Resume` / `Pause`
 - `Stop`
+- Toggle `Start/Stop Daemon` (selon état service)
+- `Refresh Daemon Status`
+- `Open Window`
+- `Open Status`
+- `Open Preferences`
 - `Quit`
 
 Règle toggle:
@@ -23,11 +28,20 @@ Règle toggle:
 ## Minimal Status Window
 
 - Visible depuis la GUI.
+- Fermeture fenêtre: doit masquer la fenêtre et laisser le tray actif (`hide to tray`).
 - Doit afficher le job en cours:
   - progression `%`
   - étape active (`claim`, `processing`, `upload`, `submit`)
   - `job_id` / `asset_uuid`
   - message de statut court
+
+## Window Controls
+
+- La fenêtre desktop expose les mêmes contrôles runtime que le tray (équivalent raccourcis):
+  - play/resume, pause, stop,
+  - start/stop/refresh daemon,
+  - open status, open preferences,
+  - quit.
 
 ## Architecture Rule
 
