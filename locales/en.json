@@ -2,6 +2,7 @@
   "desktop.feature_required": "agent-desktop-shell requires --features desktop-shell",
   "runtime.feature_required": "agent-runtime requires daemon mode; run `agent-runtime daemon`.",
   "runtime.invalid_config": "invalid runtime config",
+  "runtime.load_config_failed": "unable to load config",
   "runtime.interactive_disabled": "interactive mode is disabled; run `agent-runtime daemon` and control it with `agentctl daemon ...`",
   "runtime.history_store_unavailable": "history store unavailable; continuing without sqlite history",
   "runtime.daemon_started": "runtime daemon started",

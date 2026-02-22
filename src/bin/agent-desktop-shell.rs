@@ -1,6 +1,7 @@
 #[cfg(not(feature = "desktop-shell"))]
 fn main() {
-    eprintln!("agent-desktop-shell requires --features desktop-shell");
+    let lang = retaia_agent::detect_language();
+    eprintln!("{}", retaia_agent::t(lang, "desktop.feature_required"));
     std::process::exit(1);
 }
 

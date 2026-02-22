@@ -55,13 +55,14 @@ impl From<TargetArg> for ClientRuntimeTarget {
 }
 
 fn load_settings(config_path: Option<PathBuf>) -> Result<AgentRuntimeConfig, String> {
+    let lang = detect_language();
     match config_path {
         Some(path) => FileConfigRepository::new(path)
             .load()
-            .map_err(|error| format!("unable to load config: {error}")),
+            .map_err(|error| format!("{}: {error}", t(lang, "runtime.load_config_failed"))),
         None => SystemConfigRepository
             .load()
-            .map_err(|error| format!("unable to load config: {error}")),
+            .map_err(|error| format!("{}: {error}", t(lang, "runtime.load_config_failed"))),
     }
 }
 

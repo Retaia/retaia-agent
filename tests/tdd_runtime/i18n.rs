@@ -18,6 +18,13 @@ fn tdd_i18n_translation_switches_by_language() {
     assert_eq!(t(Language::Fr, "daemon.started"), "Daemon démarré.");
 }
 
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "missing i18n key")]
+fn tdd_i18n_missing_key_panics_in_debug_to_guard_ci() {
+    let _ = t(Language::En, "missing.key");
+}
+
 #[test]
 fn tdd_i18n_locales_have_same_keys_and_non_empty_values() {
     let en = parse_locale(include_str!("../../locales/en.json"));

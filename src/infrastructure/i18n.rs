@@ -35,7 +35,14 @@ pub fn parse_language(raw: &str) -> Option<Language> {
 }
 
 pub fn t(lang: Language, key: &str) -> &'static str {
-    locale(lang).get(key).map(String::as_str).unwrap_or("")
+    let localized = locale(lang).get(key);
+    let fallback = match lang {
+        Language::Fr => locale(Language::En).get(key),
+        Language::En => None,
+    };
+    let resolved = localized.or(fallback);
+    debug_assert!(resolved.is_some(), "missing i18n key: {key}");
+    resolved.map(String::as_str).unwrap_or("")
 }
 
 fn locale(lang: Language) -> &'static LocaleMap {
