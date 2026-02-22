@@ -1,6 +1,6 @@
 # Pre-v1 Implementation Status
 
-Last updated: 2026-02-16
+Last updated: 2026-02-22
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 - Push traité comme hint non autoritatif.
 - CLI obligatoire, GUI optionnelle, même moteur runtime.
 - Parité de contrat de configuration GUI/CLI, y compris headless.
-- Gates CI bloquants: TDD, BDD, E2E, coverage >= 80%.
+- Gates CI bloquants: TDD, BDD, E2E, coverage globale agrégée >= 80%.
 
 ## Status Summary
 
@@ -85,7 +85,8 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `tests/e2e_authz_capabilities.rs`
     - `tests/e2e_configuration.rs`
     - `tests/e2e_runtime_behavior.rs`
-  - CI bloquante avec jobs dédiés + gate coverage >= 80%.
+  - CI bloquante avec jobs dédiés + gate coverage globale agrégée >= 80% (TDD+BDD+E2E).
+  - Génération des rapports de coverage par suite (TDD/BDD/E2E) conservée pour diagnostic non bloquant.
   - Coverage mesurée: 89.90% (dernier run local).
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
@@ -94,6 +95,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - renforcement executor dérivés pour `audio.waveform@1` (manifest compatible/incompatible),
     - cas négatifs photo proxy sans médias externes (inputs invalides, fallback decoder, conversions, write path).
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
+  - Préparer le corpus fixture externe versionné (checksums + attentes) pour valider la preview RAW réelle sans rendu complet.
   - Ajouter des scénarios photo proxy pre-v1 avec fixtures:
     - happy path RAW par marque/modèle (Canon/Nikon/Sony),
     - RAW non supporté (erreur contrôlée, sans panic),
@@ -101,6 +103,12 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - incohérence extension/contenu (comportement déterministe),
     - lot mixte (`jpg/png/tiff/webp/raw`) avec rapport succès/échecs,
     - smoke perf preview sur RAW volumineux (borne temps large).
+  - Ajouter/maintenir des tests photo proxy faisables sans fixtures externes:
+    - source JPEG/PNG/TIFF/WEBP valides -> proxy JPEG/WEBP généré avec dimensions bornées,
+    - fichier inexistant/illisible -> erreur contrôlée,
+    - extension trompeuse (ex: `.cr2` avec contenu texte) -> échec déterministe,
+    - fichier vide/tronqué -> échec contrôlé sans panic,
+    - paramètres invalides (qualité/dimensions) -> validation explicite.
   - Ajouter des fixtures vidéo/audio réelles pour proxy generation:
     - vidéo: H264/H265, CFR/VFR, présence/absence de piste audio,
     - audio: WAV/MP3/AAC, sample rates atypiques, mono/stéréo.
@@ -132,13 +140,24 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 2. Intégration shell GUI finale des adapters de notification selon cible (desktop/headless).
 3. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
    - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.
-4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté).
-5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf).
+4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté) et checksums.
+5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
 6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
 7. Renforcer la couverture capability `audio.waveform@1` (production waveform, absence non bloquante, cohérence submit/manifest).
 8. Ajouter des tests de mapping d’erreurs et payloads pour les adapters OpenAPI (`jobs`, `derived upload`, `agent registration`) avec réponses HTTP réalistes.
 9. Ajouter des tests de robustesse runtime daemon sur séquences longues (success/throttle/unauthorized) avec vérification de déduplication notifications.
 10. Revue finale de conformité v1 contre `specs/` avant freeze.
+
+## Fixture Roadmap (Pre-v1)
+
+- Faisable sans fichiers externes (à implémenter/maintenir en priorité):
+  - Cas unitaires et intégration sur formats déjà présents dans le repo (JPEG/PNG/TIFF/WEBP).
+  - Cas d’erreur structurels (fichier absent, vide, tronqué, permissions, extension incohérente).
+  - Validation des invariants de sortie (format proxy, bornes dimensions, erreurs stables).
+- Dépendant de fixtures externes (à onboarder avant freeze v1):
+  - RAW Canon (`CR2/CR3`), Nikon (`NEF/NRW`), Sony (`ARW`) pour vérifier extraction preview embarquée.
+  - Vidéo/audio représentatifs pour `media.proxies.video@1`, `media.proxies.audio@1` et `audio.waveform@1`.
+  - Matrice d’attendus documentée (succès/échec contrôlé, timings de smoke perf, checksums).
 
 ## Operational Reference
 

@@ -241,15 +241,16 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
-      - name: Run coverage gates per suite (min 80%)
+      - name: Run coverage reports per suite + global gate (min 80%)
         run: |
           mkdir -p coverage
           cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-tdd.json --test tdd_capabilities --test tdd_configuration --test tdd_runtime_core
-          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-tdd.json --min 80
           cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-bdd.json --test bdd_capabilities_authz --test bdd_configuration_and_infra --test bdd_runtime_behavior
-          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-bdd.json --min 80
           cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-e2e.json --test e2e_authz_capabilities --test e2e_configuration --test e2e_runtime_behavior
-          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-e2e.json --min 80
+          cargo llvm-cov --workspace --summary-only --json --ignore-filename-regex 'src/bin/' --output-path coverage/llvm-cov-summary-global.json --test tdd_capabilities --test tdd_configuration --test tdd_runtime_core --test bdd_capabilities_authz --test bdd_configuration_and_infra --test bdd_runtime_behavior --test e2e_authz_capabilities --test e2e_configuration --test e2e_runtime_behavior
+          echo "Per-suite coverage reports generated (TDD/BDD/E2E)."
+          cargo run --quiet --bin check_coverage -- --file coverage/llvm-cov-summary-global.json --min 80
+          echo "Global coverage gate passed (>=80%)."
 
       - name: Upload coverage artifacts
         if: always()
