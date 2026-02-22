@@ -14,6 +14,7 @@ directories = "5.0"
 genai = "0.4.0-alpha.7"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tiff", "webp"] }
 notify-rust = "4.12"
+rawloader = "0.37.1"
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "rustls"] }
 retaia_core_client = { path = "crates/retaia-core-client", optional = true }
 rfd = { version = "0.15", optional = true }

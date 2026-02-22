@@ -32,6 +32,8 @@ mod runtime_specs_flow;
 mod runtime_status_flow;
 #[path = "e2e_flow/runtime_sync_flow.rs"]
 mod runtime_sync_flow;
+#[path = "e2e_flow/rust_photo_proxy_generator_flow.rs"]
+mod rust_photo_proxy_generator_flow;
 #[path = "e2e_flow/spec_compatible_coverage_flow.rs"]
 mod spec_compatible_coverage_flow;
 #[path = "e2e_flow/spec_runtime_behavior_complement.rs"]
