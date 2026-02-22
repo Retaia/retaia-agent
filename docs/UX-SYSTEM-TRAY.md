@@ -35,6 +35,17 @@ Règle toggle:
   - `job_id` / `asset_uuid`
   - message de statut court
 
+## Control Center Window
+
+- Fenêtre desktop interactive (au-delà d'un simple popup statut) avec:
+  - boutons cliquables alignés sur le tray (`Play/Resume`, `Pause`, `Stop`, toggle daemon, `Refresh Daemon Status`),
+  - actions rapides (`Open Status`, `Open Preferences`, `Hide to Tray`, `Quit`),
+  - bloc stats runtime:
+    - job courant (`job_id`, `asset_uuid`, `%`, `stage`, `status`),
+    - dernier job observé,
+    - durée du dernier job observé,
+    - uptime de l'application.
+
 ## Window Controls
 
 - La fenêtre desktop expose les mêmes contrôles runtime que le tray (équivalent raccourcis):
