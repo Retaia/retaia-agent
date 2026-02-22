@@ -2,6 +2,7 @@ use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::{Command, Stdio};
 
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::application::daemon_manager::{
@@ -11,6 +12,7 @@ use crate::infrastructure::runtime_history_store::{
     CompletedJobEntry, DaemonCycleEntry, RuntimeHistoryStore,
 };
 use crate::infrastructure::runtime_stats_store::{DaemonRuntimeStats, load_runtime_stats};
+use crate::{AgentRuntimeConfig, AuthMode, LogLevel};
 
 pub const DEFAULT_DAEMON_LABEL: &str = "io.retaia.agent";
 
@@ -26,6 +28,44 @@ pub struct DaemonDiagnosticsSnapshot {
 pub struct BugReportMarkdown {
     pub title: String,
     pub body: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RedactedRuntimeConfig {
+    pub core_api_url: String,
+    pub ollama_url: String,
+    pub auth_mode: String,
+    pub technical_client_id: String,
+    pub technical_secret_key_set: bool,
+    pub max_parallel_jobs: u16,
+    pub log_level: String,
+}
+
+pub fn redacted_runtime_config_from(settings: &AgentRuntimeConfig) -> RedactedRuntimeConfig {
+    let auth_mode = match settings.auth_mode {
+        AuthMode::Interactive => "interactive",
+        AuthMode::Technical => "technical",
+    };
+    let log_level = match settings.log_level {
+        LogLevel::Error => "error",
+        LogLevel::Warn => "warn",
+        LogLevel::Info => "info",
+        LogLevel::Debug => "debug",
+        LogLevel::Trace => "trace",
+    };
+    RedactedRuntimeConfig {
+        core_api_url: settings.core_api_url.clone(),
+        ollama_url: settings.ollama_url.clone(),
+        auth_mode: auth_mode.to_string(),
+        technical_client_id: settings
+            .technical_auth
+            .as_ref()
+            .map(|value| value.client_id.clone())
+            .unwrap_or_else(|| "-".to_string()),
+        technical_secret_key_set: settings.technical_auth.is_some(),
+        max_parallel_jobs: settings.max_parallel_jobs,
+        log_level: log_level.to_string(),
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -255,6 +295,65 @@ pub fn render_daemon_inspect(
     out
 }
 
+pub fn render_daemon_inspect_json(
+    snapshot: &DaemonDiagnosticsSnapshot,
+    history_db_path: Option<&str>,
+    redacted_config: Option<&RedactedRuntimeConfig>,
+) -> String {
+    #[derive(Serialize)]
+    struct DaemonInspectJson<'a> {
+        daemon_status: &'a str,
+        stats_file: &'a str,
+        history_db_path: &'a str,
+        stats: Option<&'a DaemonRuntimeStats>,
+        completed_jobs_count: usize,
+        completed_jobs: &'a [CompletedJobEntry],
+        cycles_count: usize,
+        cycles: &'a [DaemonCycleEntry],
+        redacted_config: Option<&'a RedactedRuntimeConfig>,
+    }
+
+    let payload = DaemonInspectJson {
+        daemon_status: daemon_status_as_label(snapshot.daemon_status.as_ref()),
+        stats_file: crate::DAEMON_STATS_FILE_NAME,
+        history_db_path: history_db_path.unwrap_or("unavailable"),
+        stats: snapshot.stats.as_ref(),
+        completed_jobs_count: snapshot.completed_jobs.len(),
+        completed_jobs: snapshot.completed_jobs.as_slice(),
+        cycles_count: snapshot.cycles.len(),
+        cycles: snapshot.cycles.as_slice(),
+        redacted_config,
+    };
+
+    serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+}
+
+pub fn append_redacted_config_markdown(
+    body: &mut String,
+    redacted_config: Option<&RedactedRuntimeConfig>,
+) {
+    let _ = writeln!(body, "\n## Redacted Runtime Config");
+    if let Some(config) = redacted_config {
+        let _ = writeln!(body, "- core_api_url: `{}`", config.core_api_url);
+        let _ = writeln!(body, "- ollama_url: `{}`", config.ollama_url);
+        let _ = writeln!(body, "- auth_mode: `{}`", config.auth_mode);
+        let _ = writeln!(
+            body,
+            "- technical_client_id: `{}`",
+            config.technical_client_id
+        );
+        let _ = writeln!(
+            body,
+            "- technical_secret_key_set: `{}`",
+            config.technical_secret_key_set
+        );
+        let _ = writeln!(body, "- max_parallel_jobs: `{}`", config.max_parallel_jobs);
+        let _ = writeln!(body, "- log_level: `{}`", config.log_level);
+    } else {
+        let _ = writeln!(body, "- unavailable");
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ClipboardCopyError {
     #[error("clipboard command failed: {0}")]
@@ -332,7 +431,11 @@ mod tests {
         infrastructure::runtime_stats_store::{DaemonCurrentJobStats, DaemonLastJobStats},
     };
 
-    use super::{DaemonDiagnosticsSnapshot, build_bug_report_markdown, render_daemon_inspect};
+    use super::{
+        DaemonDiagnosticsSnapshot, append_redacted_config_markdown, build_bug_report_markdown,
+        redacted_runtime_config_from, render_daemon_inspect, render_daemon_inspect_json,
+    };
+    use crate::{AgentRuntimeConfig, AuthMode, LogLevel, TechnicalAuthConfig};
 
     #[test]
     fn tdd_render_daemon_inspect_includes_counts() {
@@ -392,5 +495,38 @@ mod tests {
         let markdown = build_bug_report_markdown(&snapshot, None, "daemon-stats.json", None);
         assert_eq!(markdown.title, "Retaia agent daemon bug report");
         assert!(markdown.body.contains("## Context"));
+    }
+
+    #[test]
+    fn tdd_render_daemon_inspect_json_includes_redacted_config() {
+        let snapshot = DaemonDiagnosticsSnapshot {
+            daemon_status: None,
+            stats: None,
+            completed_jobs: Vec::new(),
+            cycles: Vec::new(),
+        };
+        let config = redacted_runtime_config_from(&AgentRuntimeConfig {
+            core_api_url: "https://core.example".to_string(),
+            ollama_url: "http://localhost:11434".to_string(),
+            auth_mode: AuthMode::Technical,
+            technical_auth: Some(TechnicalAuthConfig {
+                client_id: "client".to_string(),
+                secret_key: "secret".to_string(),
+            }),
+            max_parallel_jobs: 4,
+            log_level: LogLevel::Info,
+        });
+        let rendered = render_daemon_inspect_json(&snapshot, Some("/tmp/h.sqlite3"), Some(&config));
+        assert!(rendered.contains("\"history_db_path\": \"/tmp/h.sqlite3\""));
+        assert!(rendered.contains("\"redacted_config\""));
+        assert!(rendered.contains("\"technical_secret_key_set\": true"));
+    }
+
+    #[test]
+    fn tdd_append_redacted_config_markdown_marks_unavailable() {
+        let mut body = String::new();
+        append_redacted_config_markdown(&mut body, None);
+        assert!(body.contains("## Redacted Runtime Config"));
+        assert!(body.contains("- unavailable"));
     }
 }

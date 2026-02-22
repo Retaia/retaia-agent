@@ -14,9 +14,10 @@ use retaia_agent::{
     DaemonLevel, DaemonManager, DaemonManagerError, DaemonStatus, DiagnosticsLimits,
     FileConfigRepository, LogLevel, RuntimeConfigUpdate, RuntimeHistoryStore,
     RuntimeHistoryStoreError, RuntimeStatsStoreError, SystemConfigRepository, TechnicalAuthConfig,
-    apply_config_update, build_bug_report_markdown, collect_daemon_diagnostics,
-    compact_validation_reason, copy_to_clipboard, detect_language, load_runtime_stats,
-    normalize_core_api_url, render_daemon_inspect, runtime_history_db_path, t, validate_config,
+    append_redacted_config_markdown, apply_config_update, build_bug_report_markdown,
+    collect_daemon_diagnostics, compact_validation_reason, copy_to_clipboard, detect_language,
+    load_runtime_stats, normalize_core_api_url, redacted_runtime_config_from,
+    render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path, t, validate_config,
 };
 use service_manager::{
     ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx,
@@ -92,6 +93,8 @@ struct DaemonReportArgs {
     cycles_limit: usize,
     #[arg(long = "no-copy", default_value_t = false)]
     no_copy: bool,
+    #[arg(long = "include-redacted-config", default_value_t = false)]
+    include_redacted_config: bool,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -100,6 +103,8 @@ struct DaemonInspectArgs {
     history_limit: usize,
     #[arg(long = "cycles-limit", default_value_t = 120)]
     cycles_limit: usize,
+    #[arg(long = "json", default_value_t = false)]
+    json: bool,
 }
 
 impl ConfigCommand {
@@ -810,7 +815,11 @@ fn run_daemon_command<M: DaemonManager>(
             let history_db = runtime_history_db_path()
                 .ok()
                 .map(|path| path.display().to_string());
-            let rendered = render_daemon_inspect(&diagnostics, history_db.as_deref());
+            let rendered = if args.json {
+                render_daemon_inspect_json(&diagnostics, history_db.as_deref(), None)
+            } else {
+                render_daemon_inspect(&diagnostics, history_db.as_deref())
+            };
             print!("{rendered}");
             Ok(())
         }
@@ -825,12 +834,19 @@ fn run_daemon_command<M: DaemonManager>(
             let history_db = runtime_history_db_path()
                 .ok()
                 .map(|path| path.display().to_string());
-            let markdown = build_bug_report_markdown(
+            let mut markdown = build_bug_report_markdown(
                 &diagnostics,
                 args.title.as_deref(),
                 DAEMON_STATS_FILE_NAME,
                 history_db.as_deref(),
             );
+            if args.include_redacted_config {
+                let redacted_config = SystemConfigRepository
+                    .load()
+                    .ok()
+                    .map(|settings| redacted_runtime_config_from(&settings));
+                append_redacted_config_markdown(&mut markdown.body, redacted_config.as_ref());
+            }
             let title = markdown.title;
             let body = markdown.body;
             let should_copy = !args.no_copy;
@@ -1082,6 +1098,7 @@ mod tests {
             "--cycles-limit",
             "40",
             "--no-copy",
+            "--include-redacted-config",
         ])
         .expect("daemon report parse should succeed");
 
@@ -1094,6 +1111,7 @@ mod tests {
                 assert_eq!(args.history_limit, 20);
                 assert_eq!(args.cycles_limit, 40);
                 assert!(args.no_copy);
+                assert!(args.include_redacted_config);
             }
             _ => panic!("unexpected parse result"),
         }
@@ -1109,6 +1127,7 @@ mod tests {
             "12",
             "--cycles-limit",
             "34",
+            "--json",
         ])
         .expect("daemon inspect parse should succeed");
 
@@ -1118,6 +1137,7 @@ mod tests {
             } => {
                 assert_eq!(args.history_limit, 12);
                 assert_eq!(args.cycles_limit, 34);
+                assert!(args.json);
             }
             _ => panic!("unexpected parse result"),
         }

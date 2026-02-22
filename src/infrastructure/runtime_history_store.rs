@@ -2,13 +2,14 @@ use std::path::{Path, PathBuf};
 use std::{fs, io};
 
 use rusqlite::{Connection, OptionalExtension, params};
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::infrastructure::config_store::{ConfigStoreError, system_config_file_path};
 
 pub const DAEMON_HISTORY_DB_FILE_NAME: &str = "daemon-history.sqlite3";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DaemonCycleEntry {
     pub ts_unix_ms: u64,
     pub tick: u64,
@@ -21,7 +22,7 @@ pub struct DaemonCycleEntry {
     pub short_status: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CompletedJobEntry {
     pub completed_at_unix_ms: u64,
     pub job_id: String,
