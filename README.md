@@ -103,6 +103,7 @@ cargo run --bin agentctl -- daemon history --limit 200
 cargo run --bin agentctl -- daemon cycles --limit 500
 cargo run --bin agentctl -- daemon report --provider github --repo owner/repo
 cargo run --bin agentctl -- daemon report --provider jira
+cargo run --bin agentctl -- daemon report --provider github --repo owner/repo --copy
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
@@ -125,6 +126,7 @@ Persistence model:
 
 Bug report workflow:
 - `agentctl daemon report` outputs a copy-paste bug report payload (Markdown),
+- optional `--copy` copies the generated payload to clipboard (`pbcopy`/`wl-copy`/`xclip`/`clip`),
 - no automatic issue creation is performed by the agent CLI.
 
 With `core-api-client` enabled, daemon polling uses `GET /jobs` and can attach bearer auth from `RETAIA_AGENT_BEARER_TOKEN`.

@@ -42,6 +42,7 @@ cargo run --bin agentctl -- daemon history --limit 200
 cargo run --bin agentctl -- daemon cycles --limit 500
 cargo run --bin agentctl -- daemon report --provider github --repo owner/repo
 cargo run --bin agentctl -- daemon report --provider jira
+cargo run --bin agentctl -- daemon report --provider github --repo owner/repo --copy
 cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
@@ -89,6 +90,7 @@ Garde-fous perfs:
 Bug report:
 
 - `agentctl daemon report` agrège snapshot + historique et imprime un contenu prêt à copier-coller.
+- option `--copy`: copie ce contenu dans le presse-papiers système.
 - Aucun ticket n'est créé automatiquement (GitHub/Jira restent actionnés manuellement côté opérateur).
 
 Auth bearer pour polling API (build avec feature `core-api-client`):

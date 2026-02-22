@@ -1,6 +1,7 @@
 use std::fmt::Write as _;
+use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::exit;
+use std::process::{Command, Stdio, exit};
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -88,6 +89,8 @@ struct DaemonReportArgs {
     history_limit: usize,
     #[arg(long = "cycles-limit", default_value_t = 120)]
     cycles_limit: usize,
+    #[arg(long = "copy", default_value_t = false)]
+    copy: bool,
 }
 
 impl ConfigCommand {
@@ -264,6 +267,8 @@ enum AgentCtlError {
     DaemonStats(RuntimeStatsStoreError),
     #[error("unable to load daemon history: {0}")]
     DaemonHistory(RuntimeHistoryStoreError),
+    #[error("clipboard copy failed: {0}")]
+    Clipboard(String),
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -772,6 +777,68 @@ fn build_bug_report_markdown<M: DaemonManager>(
     Ok((title, body))
 }
 
+fn copy_to_clipboard(content: &str) -> Result<(), AgentCtlError> {
+    #[cfg(target_os = "macos")]
+    {
+        run_clipboard_command("pbcopy", &[], content)?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        run_clipboard_command("clip", &[], content)?;
+        return Ok(());
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        let wayland = run_clipboard_command("wl-copy", &[], content);
+        if wayland.is_ok() {
+            return Ok(());
+        }
+        let xclip = run_clipboard_command("xclip", &["-selection", "clipboard"], content);
+        if xclip.is_ok() {
+            return Ok(());
+        }
+        return Err(AgentCtlError::Clipboard(
+            "no clipboard command available (tried wl-copy, xclip)".to_string(),
+        ));
+    }
+
+    #[allow(unreachable_code)]
+    Err(AgentCtlError::Clipboard(
+        "clipboard copy is not supported on this platform".to_string(),
+    ))
+}
+
+fn run_clipboard_command(program: &str, args: &[&str], content: &str) -> Result<(), AgentCtlError> {
+    let mut child = Command::new(program)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| AgentCtlError::Clipboard(format!("{program}: {error}")))?;
+
+    if let Some(stdin) = child.stdin.as_mut() {
+        stdin
+            .write_all(content.as_bytes())
+            .map_err(|error| AgentCtlError::Clipboard(format!("{program}: {error}")))?;
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| AgentCtlError::Clipboard(format!("{program}: {error}")))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(AgentCtlError::Clipboard(format!(
+            "{program} exited with status {}",
+            output.status
+        )))
+    }
+}
+
 fn run_daemon_command<M: DaemonManager>(
     manager: &M,
     command: DaemonCommand,
@@ -902,6 +969,11 @@ fn run_daemon_command<M: DaemonManager>(
             let (title, body) = build_bug_report_markdown(manager, &args)?;
             match args.provider {
                 ReportProviderArg::Github => {
+                    let payload = format!("title={title}\n\n{body}");
+                    if args.copy {
+                        copy_to_clipboard(&payload)?;
+                        println!("copied_to_clipboard=true");
+                    }
                     println!("provider=github");
                     println!("title={title}");
                     println!("\n--- COPY BODY BELOW ---\n{body}\n--- END BODY ---\n");
@@ -916,6 +988,11 @@ fn run_daemon_command<M: DaemonManager>(
                     }
                 }
                 ReportProviderArg::Jira => {
+                    let payload = format!("summary={title}\n\n{body}");
+                    if args.copy {
+                        copy_to_clipboard(&payload)?;
+                        println!("copied_to_clipboard=true");
+                    }
                     println!("provider=jira");
                     println!("summary={title}");
                     println!("\n--- COPY DESCRIPTION BELOW ---\n{body}\n--- END DESCRIPTION ---\n");
@@ -1125,6 +1202,7 @@ mod tests {
             "20",
             "--cycles-limit",
             "40",
+            "--copy",
         ])
         .expect("daemon report parse should succeed");
 
@@ -1136,6 +1214,7 @@ mod tests {
                 assert_eq!(args.title.as_deref(), Some("Bug report"));
                 assert_eq!(args.history_limit, 20);
                 assert_eq!(args.cycles_limit, 40);
+                assert!(args.copy);
             }
             _ => panic!("unexpected parse result"),
         }
