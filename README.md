@@ -84,11 +84,11 @@ Tray entries:
 - `Refresh Daemon Status`
 - `Quit`
 
-Window shortcuts (same controls as tray): `S` status, `C` preferences, `D` start/stop daemon (toggle), `R` refresh daemon status, `Q` quit.
+Window shortcuts: `S` status, `C` preferences, `D` start/stop daemon (toggle), `R` refresh daemon status, `B` copy bug report, `Q` quit.
 
 Control center includes:
 - daemon controls (`Start/Stop daemon`, `Refresh Daemon Status`)
-- quick actions (`Open Status`, `Open Preferences`, `Hide to Tray`, `Quit`)
+- quick actions (`Open Status`, `Copy Bug Report`, `Open Preferences`, `Hide to Tray`, `Quit`)
 - runtime stats from daemon store (`current job`, stage/progress/status, last observed job id and duration, UI uptime)
 
 Daemon management (shared service for CLI/GUI):
@@ -101,6 +101,7 @@ cargo run --bin agentctl -- daemon install
 cargo run --bin agentctl -- daemon start
 cargo run --bin agentctl -- daemon status
 cargo run --bin agentctl -- daemon stats
+cargo run --bin agentctl -- daemon inspect
 cargo run --bin agentctl -- daemon history --limit 200
 cargo run --bin agentctl -- daemon cycles --limit 500
 cargo run --bin agentctl -- daemon report --provider github --repo owner/repo
@@ -131,6 +132,7 @@ Bug report workflow:
 - `agentctl daemon report` outputs a copy-paste bug report payload (Markdown),
 - payload is copied to clipboard by default (`pbcopy`/`wl-copy`/`xclip`/`clip`),
 - use `--no-copy` to disable clipboard copy,
+- desktop control center also exposes `Copy Bug Report` (same payload as `agentctl daemon report --provider github`),
 - no automatic issue creation is performed by the agent CLI.
 
 With `core-api-client` enabled, daemon polling uses `GET /jobs` and can attach bearer auth from `RETAIA_AGENT_BEARER_TOKEN`.

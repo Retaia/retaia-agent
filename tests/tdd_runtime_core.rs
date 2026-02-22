@@ -2,6 +2,8 @@
 mod application;
 #[path = "tdd_runtime/core_api_gateway.rs"]
 mod core_api_gateway;
+#[path = "tdd_runtime/daemon_diagnostics.rs"]
+mod daemon_diagnostics;
 #[path = "tdd_runtime/derived_job_executor.rs"]
 mod derived_job_executor;
 #[path = "tdd_runtime/derived_processing_gateway.rs"]

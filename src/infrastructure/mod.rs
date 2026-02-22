@@ -1,5 +1,6 @@
 pub mod config_repository;
 pub mod config_store;
+pub mod daemon_diagnostics;
 pub mod ffmpeg_proxy_generator;
 pub mod i18n;
 pub mod notification_sink;

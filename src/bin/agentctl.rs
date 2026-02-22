@@ -1,7 +1,5 @@
-use std::fmt::Write as _;
-use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::{Command, Stdio, exit};
+use std::process::exit;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -12,11 +10,13 @@ use genai::resolver::{Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget, WebConfig};
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigInterface, ConfigRepository, ConfigRepositoryError,
-    ConfigValidationError, DaemonInstallRequest, DaemonLabelRequest, DaemonLevel, DaemonManager,
-    DaemonManagerError, DaemonStatus, FileConfigRepository, LogLevel, RuntimeConfigUpdate,
-    RuntimeHistoryStore, RuntimeHistoryStoreError, RuntimeStatsStoreError, SystemConfigRepository,
-    TechnicalAuthConfig, apply_config_update, compact_validation_reason, detect_language,
-    load_runtime_stats, normalize_core_api_url, runtime_history_db_path, t, validate_config,
+    ConfigValidationError, DAEMON_STATS_FILE_NAME, DaemonInstallRequest, DaemonLabelRequest,
+    DaemonLevel, DaemonManager, DaemonManagerError, DaemonStatus, DiagnosticsLimits,
+    FileConfigRepository, LogLevel, RuntimeConfigUpdate, RuntimeHistoryStore,
+    RuntimeHistoryStoreError, RuntimeStatsStoreError, SystemConfigRepository, TechnicalAuthConfig,
+    apply_config_update, build_bug_report_markdown, collect_daemon_diagnostics,
+    compact_validation_reason, copy_to_clipboard, detect_language, load_runtime_stats,
+    normalize_core_api_url, render_daemon_inspect, runtime_history_db_path, t, validate_config,
 };
 use service_manager::{
     ServiceInstallCtx, ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx,
@@ -62,6 +62,7 @@ enum DaemonCommand {
     Stats,
     History(DaemonHistoryArgs),
     Cycles(DaemonHistoryArgs),
+    Inspect(DaemonInspectArgs),
     Report(DaemonReportArgs),
 }
 
@@ -91,6 +92,14 @@ struct DaemonReportArgs {
     cycles_limit: usize,
     #[arg(long = "no-copy", default_value_t = false)]
     no_copy: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+struct DaemonInspectArgs {
+    #[arg(long = "history-limit", default_value_t = 50)]
+    history_limit: usize,
+    #[arg(long = "cycles-limit", default_value_t = 120)]
+    cycles_limit: usize,
 }
 
 impl ConfigCommand {
@@ -663,182 +672,6 @@ fn print_daemon_status(status: DaemonStatus) {
     }
 }
 
-fn daemon_status_as_label(status: Option<DaemonStatus>) -> &'static str {
-    match status {
-        Some(DaemonStatus::Running) => "running",
-        Some(DaemonStatus::NotInstalled) => "not_installed",
-        Some(DaemonStatus::Stopped(_)) => "stopped",
-        None => "unknown",
-    }
-}
-
-fn build_bug_report_markdown<M: DaemonManager>(
-    manager: &M,
-    args: &DaemonReportArgs,
-) -> Result<(String, String), AgentCtlError> {
-    let daemon_status = manager
-        .status(DaemonLabelRequest {
-            label: "io.retaia.agent".to_string(),
-            level: DaemonLevel::User,
-        })
-        .ok();
-    let stats = load_runtime_stats().ok();
-    let history_store = RuntimeHistoryStore::open_default().ok();
-    let completed = match history_store.as_ref() {
-        Some(store) => store
-            .recent_completed_jobs(args.history_limit.max(1))
-            .map_err(AgentCtlError::DaemonHistory)?,
-        None => Vec::new(),
-    };
-    let cycles = match history_store.as_ref() {
-        Some(store) => store
-            .recent_cycles(args.cycles_limit.max(1))
-            .map_err(AgentCtlError::DaemonHistory)?,
-        None => Vec::new(),
-    };
-
-    let title = args
-        .title
-        .clone()
-        .unwrap_or_else(|| "Retaia agent daemon bug report".to_string());
-
-    let mut body = String::new();
-    let _ = writeln!(body, "## Context");
-    let _ = writeln!(
-        body,
-        "- daemon_status: `{}`",
-        daemon_status_as_label(daemon_status.clone())
-    );
-    let _ = writeln!(
-        body,
-        "- stats_file: `{}`",
-        retaia_agent::DAEMON_STATS_FILE_NAME
-    );
-    let _ = writeln!(
-        body,
-        "- history_db: `{}`",
-        retaia_agent::runtime_history_db_path()
-            .ok()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| "unavailable".to_string())
-    );
-    if let Some(stats) = stats.as_ref() {
-        let _ = writeln!(body, "- run_state: `{}`", stats.run_state);
-        let _ = writeln!(body, "- daemon_tick: `{}`", stats.tick);
-        if let Some(job) = stats.current_job.as_ref() {
-            let _ = writeln!(body, "- current_job_id: `{}`", job.job_id);
-            let _ = writeln!(body, "- current_asset_uuid: `{}`", job.asset_uuid);
-            let _ = writeln!(body, "- current_progress: `{}`", job.progress_percent);
-            let _ = writeln!(body, "- current_stage: `{}`", job.stage);
-        }
-        if let Some(last) = stats.last_job.as_ref() {
-            let _ = writeln!(body, "- last_job_id: `{}`", last.job_id);
-            let _ = writeln!(body, "- last_job_duration_ms: `{}`", last.duration_ms);
-        }
-    }
-
-    let _ = writeln!(body, "\n## Recent Completed Jobs");
-    if completed.is_empty() {
-        let _ = writeln!(body, "- none");
-    } else {
-        for row in completed {
-            let _ = writeln!(
-                body,
-                "- completed_at={} job_id=`{}` duration_ms={}",
-                row.completed_at_unix_ms, row.job_id, row.duration_ms
-            );
-        }
-    }
-
-    let _ = writeln!(body, "\n## Recent Runtime Cycles");
-    if cycles.is_empty() {
-        let _ = writeln!(body, "- none");
-    } else {
-        for row in cycles {
-            let _ = writeln!(
-                body,
-                "- ts={} tick={} outcome=`{}` run_state=`{}` job_id=`{}` progress=`{}` stage=`{}`",
-                row.ts_unix_ms,
-                row.tick,
-                row.outcome,
-                row.run_state,
-                row.job_id.as_deref().unwrap_or("-"),
-                row.progress_percent
-                    .map(|v| v.to_string())
-                    .unwrap_or_else(|| "-".to_string()),
-                row.stage.as_deref().unwrap_or("-"),
-            );
-        }
-    }
-
-    let _ = writeln!(body, "\n## Notes");
-    let _ = writeln!(body, "- Attach steps to reproduce and expected behavior.");
-
-    Ok((title, body))
-}
-
-fn copy_to_clipboard(content: &str) -> Result<(), AgentCtlError> {
-    #[cfg(target_os = "macos")]
-    {
-        run_clipboard_command("pbcopy", &[], content)?;
-        return Ok(());
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        run_clipboard_command("clip", &[], content)?;
-        return Ok(());
-    }
-
-    #[cfg(all(unix, not(target_os = "macos")))]
-    {
-        let wayland = run_clipboard_command("wl-copy", &[], content);
-        if wayland.is_ok() {
-            return Ok(());
-        }
-        let xclip = run_clipboard_command("xclip", &["-selection", "clipboard"], content);
-        if xclip.is_ok() {
-            return Ok(());
-        }
-        return Err(AgentCtlError::Clipboard(
-            "no clipboard command available (tried wl-copy, xclip)".to_string(),
-        ));
-    }
-
-    #[allow(unreachable_code)]
-    Err(AgentCtlError::Clipboard(
-        "clipboard copy is not supported on this platform".to_string(),
-    ))
-}
-
-fn run_clipboard_command(program: &str, args: &[&str], content: &str) -> Result<(), AgentCtlError> {
-    let mut child = Command::new(program)
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| AgentCtlError::Clipboard(format!("{program}: {error}")))?;
-
-    if let Some(stdin) = child.stdin.as_mut() {
-        stdin
-            .write_all(content.as_bytes())
-            .map_err(|error| AgentCtlError::Clipboard(format!("{program}: {error}")))?;
-    }
-
-    let output = child
-        .wait_with_output()
-        .map_err(|error| AgentCtlError::Clipboard(format!("{program}: {error}")))?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(AgentCtlError::Clipboard(format!(
-            "{program} exited with status {}",
-            output.status
-        )))
-    }
-}
-
 fn run_daemon_command<M: DaemonManager>(
     manager: &M,
     command: DaemonCommand,
@@ -966,14 +799,47 @@ fn run_daemon_command<M: DaemonManager>(
             }
             Ok(())
         }
+        DaemonCommand::Inspect(args) => {
+            let diagnostics = collect_daemon_diagnostics(
+                manager,
+                DiagnosticsLimits {
+                    history_limit: args.history_limit,
+                    cycles_limit: args.cycles_limit,
+                },
+            );
+            let history_db = runtime_history_db_path()
+                .ok()
+                .map(|path| path.display().to_string());
+            let rendered = render_daemon_inspect(&diagnostics, history_db.as_deref());
+            print!("{rendered}");
+            Ok(())
+        }
         DaemonCommand::Report(args) => {
-            let (title, body) = build_bug_report_markdown(manager, &args)?;
+            let diagnostics = collect_daemon_diagnostics(
+                manager,
+                DiagnosticsLimits {
+                    history_limit: args.history_limit,
+                    cycles_limit: args.cycles_limit,
+                },
+            );
+            let history_db = runtime_history_db_path()
+                .ok()
+                .map(|path| path.display().to_string());
+            let markdown = build_bug_report_markdown(
+                &diagnostics,
+                args.title.as_deref(),
+                DAEMON_STATS_FILE_NAME,
+                history_db.as_deref(),
+            );
+            let title = markdown.title;
+            let body = markdown.body;
             let should_copy = !args.no_copy;
             match args.provider {
                 ReportProviderArg::Github => {
                     let payload = format!("title={title}\n\n{body}");
                     if should_copy {
-                        copy_to_clipboard(&payload)?;
+                        copy_to_clipboard(&payload)
+                            .map_err(|error| AgentCtlError::Clipboard(error.to_string()))?;
                         println!("copied_to_clipboard=true");
                     }
                     println!("provider=github");
@@ -996,7 +862,8 @@ fn run_daemon_command<M: DaemonManager>(
                 ReportProviderArg::Jira => {
                     let payload = format!("summary={title}\n\n{body}");
                     if should_copy {
-                        copy_to_clipboard(&payload)?;
+                        copy_to_clipboard(&payload)
+                            .map_err(|error| AgentCtlError::Clipboard(error.to_string()))?;
                         println!("copied_to_clipboard=true");
                     }
                     println!("provider=jira");
@@ -1227,6 +1094,30 @@ mod tests {
                 assert_eq!(args.history_limit, 20);
                 assert_eq!(args.cycles_limit, 40);
                 assert!(args.no_copy);
+            }
+            _ => panic!("unexpected parse result"),
+        }
+    }
+
+    #[test]
+    fn tdd_clap_parses_daemon_inspect_args() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "daemon",
+            "inspect",
+            "--history-limit",
+            "12",
+            "--cycles-limit",
+            "34",
+        ])
+        .expect("daemon inspect parse should succeed");
+
+        match cli.command {
+            RootCommand::Daemon {
+                command: DaemonCommand::Inspect(args),
+            } => {
+                assert_eq!(args.history_limit, 12);
+                assert_eq!(args.cycles_limit, 34);
             }
             _ => panic!("unexpected parse result"),
         }
