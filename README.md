@@ -68,6 +68,14 @@ cargo run --bin agent-runtime
 
 Supported commands: `menu`, `status`, `settings`, `play`, `pause`, `stop`, `quit`.
 
+Desktop shell (minimal real GUI, feature-gated):
+
+```bash
+cargo run --features desktop-shell --bin agent-desktop-shell
+```
+
+Window shortcuts: `S` status, `C` settings, `P` play/resume, `A` pause, `X` stop, `D` start daemon, `E` stop daemon, `R` refresh daemon status, `Q` quit.
+
 Daemon management (shared service for CLI/GUI):
 
 ```bash
