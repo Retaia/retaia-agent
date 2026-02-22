@@ -97,6 +97,20 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - incohérence extension/contenu (comportement déterministe),
     - lot mixte (`jpg/png/tiff/webp/raw`) avec rapport succès/échecs,
     - smoke perf preview sur RAW volumineux (borne temps large).
+  - Ajouter des fixtures vidéo/audio réelles pour proxy generation:
+    - vidéo: H264/H265, CFR/VFR, présence/absence de piste audio,
+    - audio: WAV/MP3/AAC, sample rates atypiques, mono/stéréo.
+  - Ajouter des scénarios waveform orientés capability `audio.waveform@1`:
+    - waveform produite,
+    - waveform absente mais job non bloquant,
+    - format/manifest cohérent côté submit.
+  - Ajouter des tests d’adapters OpenAPI avec payloads/réponses réelles:
+    - mapping des erreurs HTTP (`401/429/422/5xx`),
+    - payloads incomplets/invalides sur jobs et derived upload.
+  - Ajouter des scénarios runtime de robustesse:
+    - enchaînements multi-ticks success/throttle/unauthorized,
+    - stabilité notifications (pas de répétition parasite),
+    - cohérence des transitions état runtime en mode daemon.
 
 ### Engineering Baseline
 
@@ -116,7 +130,11 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
    - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.
 4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté).
 5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf).
-6. Revue finale de conformité v1 contre `specs/` avant freeze.
+6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
+7. Renforcer la couverture capability `audio.waveform@1` (production waveform, absence non bloquante, cohérence submit/manifest).
+8. Ajouter des tests de mapping d’erreurs et payloads pour les adapters OpenAPI (`jobs`, `derived upload`, `agent registration`) avec réponses HTTP réalistes.
+9. Ajouter des tests de robustesse runtime daemon sur séquences longues (success/throttle/unauthorized) avec vérification de déduplication notifications.
+10. Revue finale de conformité v1 contre `specs/` avant freeze.
 
 ## Operational Reference
 
