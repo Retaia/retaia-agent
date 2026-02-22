@@ -89,6 +89,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Coverage mesurée: 89.90% (dernier run local).
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
+  - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
 
 ### Engineering Baseline
 
@@ -106,7 +107,8 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 2. Intégration shell GUI finale des adapters de notification selon cible (desktop/headless).
 3. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
    - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.
-4. Revue finale de conformité v1 contre `specs/` avant freeze.
+4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté).
+5. Revue finale de conformité v1 contre `specs/` avant freeze.
 
 ## Operational Reference
 
