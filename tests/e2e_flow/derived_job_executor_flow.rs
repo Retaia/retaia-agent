@@ -196,3 +196,109 @@ fn e2e_derived_job_executor_flow_rejects_submit_manifest_kind_not_compatible_wit
         }
     );
 }
+
+#[derive(Default)]
+struct WaveformOptionalGateway {
+    calls: Mutex<Vec<String>>,
+}
+
+impl WaveformOptionalGateway {
+    fn calls(&self) -> Vec<String> {
+        self.calls.lock().expect("calls").clone()
+    }
+}
+
+impl DerivedProcessingGateway for WaveformOptionalGateway {
+    fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("claim:{job_id}"));
+        Ok(ClaimedDerivedJob {
+            job_id: job_id.to_string(),
+            asset_uuid: "asset-wave-opt-1".to_string(),
+            lock_token: "lock-wave-opt-1".to_string(),
+            job_type: DerivedJobType::GenerateAudioWaveform,
+        })
+    }
+
+    fn heartbeat(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+    ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("heartbeat:{job_id}"));
+        Ok(HeartbeatReceipt { locked_until: None })
+    }
+
+    fn submit_derived(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+        _idempotency_key: &str,
+        _payload: &SubmitDerivedPayload,
+    ) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("submit:{job_id}"));
+        Ok(())
+    }
+
+    fn upload_init(&self, _request: &DerivedUploadInit) -> Result<(), DerivedProcessingError> {
+        panic!("waveform optional flow should not upload");
+    }
+
+    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+        panic!("waveform optional flow should not upload");
+    }
+
+    fn upload_complete(
+        &self,
+        _request: &DerivedUploadComplete,
+    ) -> Result<(), DerivedProcessingError> {
+        panic!("waveform optional flow should not upload");
+    }
+}
+
+struct WaveformOptionalPlanner;
+
+impl DerivedExecutionPlanner for WaveformOptionalPlanner {
+    fn plan_for_claimed_job(
+        &self,
+        claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![],
+            submit: SubmitDerivedPayload {
+                job_type: claimed.job_type,
+                manifest: vec![],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-wave-opt-submit".to_string(),
+        })
+    }
+}
+
+#[test]
+fn e2e_derived_job_executor_flow_allows_audio_waveform_submit_without_output_artifact() {
+    let gateway = WaveformOptionalGateway::default();
+    let report = execute_derived_job_once(&gateway, &WaveformOptionalPlanner, "job-wave-opt-1")
+        .expect("optional waveform flow should succeed");
+
+    assert_eq!(report.job_id, "job-wave-opt-1");
+    assert_eq!(report.asset_uuid, "asset-wave-opt-1");
+    assert_eq!(report.upload_count, 0);
+    assert_eq!(
+        gateway.calls(),
+        vec![
+            "claim:job-wave-opt-1".to_string(),
+            "heartbeat:job-wave-opt-1".to_string(),
+            "submit:job-wave-opt-1".to_string(),
+        ]
+    );
+}
