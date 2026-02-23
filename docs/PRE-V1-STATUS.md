@@ -101,6 +101,10 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - enchaînement `success/throttle/unauthorized/transport/success`,
     - vérification de déduplication notifications (`auth`, `disconnect/reconnecting`),
     - vérification de ré-émission `disconnect/reconnecting` après recovery vers `connected`.
+  - Observabilité runtime daemon renforcée sur variantes erreurs API:
+    - séquences `5xx -> 429 -> 5xx -> success` couvertes en TDD/E2E,
+    - vérification explicite de la dédup `disconnect/reconnecting`,
+    - vérification du signal de replanification/backoff sur tick `429`.
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
   - Scénarios sans fixtures externes ajoutés:
@@ -129,7 +133,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - waveform absente mais job non bloquant,
     - format/manifest cohérent côté submit.
   - Étendre les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes supplémentaires:
-    - variantes 5xx et retry/backoff observabilité côté runtime daemon.
+    - variantes payload additionnelles selon endpoints futurs.
   - Étendre les scénarios runtime de robustesse:
     - ajouter des volumes de ticks plus élevés et variations de patterns d'erreurs,
     - compléter la vérification de cohérence des transitions état runtime en mode daemon.

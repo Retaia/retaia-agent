@@ -268,3 +268,45 @@ fn tdd_runtime_poll_cycle_disconnect_notification_is_re_emitted_after_recovery_t
         ]
     );
 }
+
+#[test]
+fn tdd_runtime_poll_cycle_5xx_then_429_then_5xx_keeps_backoff_and_disconnect_observable() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let gateway = SequenceGateway::new(vec![
+        Err(CoreApiGatewayError::UnexpectedStatus(503)),
+        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::UnexpectedStatus(502)),
+        Ok(vec![]),
+    ]);
+    let sink = RecordingSink::default();
+
+    let first =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 11);
+    let second =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 12);
+    let third =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 13);
+    let fourth =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 14);
+
+    assert_eq!(first.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(second.status, RuntimePollCycleStatus::Throttled);
+    assert_eq!(third.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(fourth.status, RuntimePollCycleStatus::Success);
+
+    assert_eq!(first.report.expect("first report").dispatch.delivered, 1);
+    assert!(second.report.is_none());
+    assert_eq!(third.report.expect("third report").dispatch.delivered, 0);
+    assert_eq!(fourth.report.expect("fourth report").dispatch.delivered, 0);
+
+    // 429 remains the only signal producing explicit backoff scheduling.
+    assert!(format!("{:?}", second.plan).contains("SchedulePoll"));
+    assert!(format!("{:?}", first.plan).contains("SchedulePoll"));
+    assert!(format!("{:?}", third.plan).contains("SchedulePoll"));
+
+    let recorded = sink.notifications.borrow();
+    assert_eq!(
+        recorded.as_slice(),
+        &[SystemNotification::AgentDisconnectedOrReconnecting]
+    );
+}
