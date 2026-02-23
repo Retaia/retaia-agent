@@ -332,3 +332,74 @@ fn map_status_error<T>(error: OpenApiError<T>) -> DerivedProcessingError {
         OpenApiError::Io(err) => DerivedProcessingError::Transport(err.to_string()),
     }
 }
+
+#[cfg(all(test, feature = "core-api-client"))]
+mod tests {
+    use super::{build_derived_patch, map_job_type, map_status_error};
+    use crate::{DerivedKind, DerivedManifestItem, DerivedProcessingError};
+    use reqwest::StatusCode;
+    use retaia_core_client::apis::{Error as OpenApiError, ResponseContent};
+    use retaia_core_client::models::job::JobType;
+
+    fn response_error(status: u16) -> OpenApiError<()> {
+        OpenApiError::ResponseError(ResponseContent {
+            status: StatusCode::from_u16(status).expect("valid status"),
+            content: String::new(),
+            entity: None,
+        })
+    }
+
+    #[test]
+    fn tdd_openapi_derived_gateway_maps_expected_http_statuses() {
+        assert_eq!(
+            map_status_error(response_error(401)),
+            DerivedProcessingError::Unauthorized
+        );
+        assert_eq!(
+            map_status_error(response_error(429)),
+            DerivedProcessingError::Throttled
+        );
+        assert_eq!(
+            map_status_error(response_error(422)),
+            DerivedProcessingError::UnexpectedStatus(422)
+        );
+        assert_eq!(
+            map_status_error(response_error(503)),
+            DerivedProcessingError::UnexpectedStatus(503)
+        );
+    }
+
+    #[test]
+    fn tdd_openapi_derived_gateway_maps_transport_errors() {
+        let error = map_status_error::<()>(OpenApiError::Io(std::io::Error::other("timeout")));
+        match error {
+            DerivedProcessingError::Transport(message) => assert!(message.contains("timeout")),
+            other => panic!("unexpected error variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn tdd_openapi_derived_gateway_rejects_non_derived_job_type() {
+        let error = map_job_type(JobType::ExtractFacts).expect_err("must reject non-derived type");
+        assert_eq!(
+            error,
+            DerivedProcessingError::NotDerivedJobType("extract_facts".to_string())
+        );
+    }
+
+    #[test]
+    fn tdd_openapi_derived_gateway_rejects_manifest_size_overflow() {
+        let manifest = vec![DerivedManifestItem {
+            kind: DerivedKind::ProxyPhoto,
+            reference: "s3://bucket/proxy.jpg".to_string(),
+            size_bytes: Some(i32::MAX as u64 + 1),
+            sha256: None,
+        }];
+
+        let error = build_derived_patch(&manifest).expect_err("must reject overflow");
+        assert_eq!(
+            error,
+            DerivedProcessingError::NumericOverflow("manifest.size_bytes > i32::MAX".to_string())
+        );
+    }
+}

@@ -89,6 +89,10 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - CI bloquante avec jobs dédiés + gate coverage globale agrégée >= 80% (TDD+BDD+E2E).
   - Génération des rapports de coverage par suite (TDD/BDD/E2E) conservée pour diagnostic non bloquant.
   - Coverage mesurée: 89.90% (dernier run local).
+  - Couverture adapters OpenAPI renforcée (sans fixtures externes) via tests unitaires des mappings d'erreurs:
+    - `jobs`: `401/429/422/5xx` + transport -> `CoreApiGatewayError`,
+    - `derived`: `401/429/422/5xx` + transport + garde non-derived/overflow manifest -> `DerivedProcessingError`,
+    - `agent registration`: `401/426/422/5xx` + transport -> `AgentRegistrationError`.
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
   - Scénarios sans fixtures externes ajoutés:
@@ -117,8 +121,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - waveform produite,
     - waveform absente mais job non bloquant,
     - format/manifest cohérent côté submit.
-  - Ajouter des tests d’adapters OpenAPI avec payloads/réponses réelles:
-    - mapping des erreurs HTTP (`401/429/422/5xx`),
+  - Compléter les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes end-to-end:
     - payloads incomplets/invalides sur jobs et derived upload.
   - Ajouter des scénarios runtime de robustesse:
     - enchaînements multi-ticks success/throttle/unauthorized,
@@ -145,7 +148,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
 6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
 7. Renforcer la couverture capability `audio.waveform@1` (production waveform, absence non bloquante, cohérence submit/manifest).
-8. Ajouter des tests de mapping d’erreurs et payloads pour les adapters OpenAPI (`jobs`, `derived upload`, `agent registration`) avec réponses HTTP réalistes.
+8. Compléter les tests payloads/réponses HTTP réalistes pour les adapters OpenAPI (`jobs`, `derived upload`, `agent registration`) au-delà des mappings d’erreurs unitaires déjà couverts.
 9. Ajouter des tests de robustesse runtime daemon sur séquences longues (success/throttle/unauthorized) avec vérification de déduplication notifications.
 10. Revue finale de conformité v1 contre `specs/` avant freeze.
 

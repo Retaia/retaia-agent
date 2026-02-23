@@ -78,3 +78,52 @@ fn map_openapi_register_error(
         OpenApiError::Io(err) => AgentRegistrationError::Transport(err.to_string()),
     }
 }
+
+#[cfg(all(test, feature = "core-api-client"))]
+mod tests {
+    use super::map_openapi_register_error;
+    use crate::AgentRegistrationError;
+    use reqwest::StatusCode;
+    use retaia_core_client::apis::agents_api::AgentsRegisterPostError;
+    use retaia_core_client::apis::{Error as OpenApiError, ResponseContent};
+
+    fn response_error(status: u16) -> OpenApiError<AgentsRegisterPostError> {
+        OpenApiError::ResponseError(ResponseContent {
+            status: StatusCode::from_u16(status).expect("valid status"),
+            content: String::new(),
+            entity: None,
+        })
+    }
+
+    #[test]
+    fn tdd_openapi_agent_registration_gateway_maps_expected_http_statuses() {
+        assert_eq!(
+            map_openapi_register_error(response_error(401)),
+            AgentRegistrationError::Unauthorized
+        );
+        assert_eq!(
+            map_openapi_register_error(response_error(426)),
+            AgentRegistrationError::UpgradeRequired
+        );
+        assert_eq!(
+            map_openapi_register_error(response_error(422)),
+            AgentRegistrationError::UnexpectedStatus(422)
+        );
+        assert_eq!(
+            map_openapi_register_error(response_error(500)),
+            AgentRegistrationError::UnexpectedStatus(500)
+        );
+    }
+
+    #[test]
+    fn tdd_openapi_agent_registration_gateway_maps_transport_errors() {
+        let error =
+            map_openapi_register_error(OpenApiError::Io(std::io::Error::other("connection reset")));
+        match error {
+            AgentRegistrationError::Transport(message) => {
+                assert!(message.contains("connection reset"))
+            }
+            other => panic!("unexpected error variant: {other:?}"),
+        }
+    }
+}
