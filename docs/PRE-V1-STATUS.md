@@ -105,11 +105,15 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - séquences `5xx -> 429 -> 5xx -> success` couvertes en TDD/E2E,
     - vérification explicite de la dédup `disconnect/reconnecting`,
     - vérification du signal de replanification/backoff sur tick `429`.
+  - Cas négatifs photo proxy renforcés sans fixtures externes:
+    - validation explicite `output_path` vide et `max_height=0`,
+    - source inexistante -> erreur contrôlée,
+    - extension RAW trompeuse (`.cr2/.nef` avec contenu texte) -> échec déterministe contrôlé.
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
   - Scénarios sans fixtures externes ajoutés:
     - renforcement executor dérivés pour `audio.waveform@1` (manifest compatible/incompatible),
-    - cas négatifs photo proxy sans médias externes (inputs invalides, fallback decoder, conversions, write path).
+    - compléter des cas photo proxy sans médias externes restant sur corpus mixte volumique.
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
   - Préparer le corpus fixture externe versionné (checksums + attentes) pour valider la preview RAW réelle sans rendu complet.
   - Ajouter des scénarios photo proxy pre-v1 avec fixtures:

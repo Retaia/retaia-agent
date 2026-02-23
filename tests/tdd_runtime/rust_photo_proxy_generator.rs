@@ -98,3 +98,84 @@ fn tdd_rust_photo_proxy_generator_rejects_zero_dimensions() {
 
     assert!(matches!(error, ProxyGenerationError::InvalidRequest(_)));
 }
+
+#[test]
+fn tdd_rust_photo_proxy_generator_rejects_empty_output_path() {
+    let generator = RustPhotoProxyGenerator::default();
+
+    let error = generator
+        .generate_photo_proxy(&PhotoProxyRequest {
+            input_path: "/tmp/source.png".to_string(),
+            output_path: String::new(),
+            format: PhotoProxyFormat::Jpeg,
+            max_width: 640,
+            max_height: 360,
+        })
+        .expect_err("empty output path should fail");
+
+    assert!(matches!(error, ProxyGenerationError::InvalidRequest(_)));
+}
+
+#[test]
+fn tdd_rust_photo_proxy_generator_rejects_zero_max_height() {
+    let generator = RustPhotoProxyGenerator::default();
+
+    let error = generator
+        .generate_photo_proxy(&PhotoProxyRequest {
+            input_path: "/tmp/source.png".to_string(),
+            output_path: "/tmp/proxy.jpg".to_string(),
+            format: PhotoProxyFormat::Jpeg,
+            max_width: 640,
+            max_height: 0,
+        })
+        .expect_err("zero max_height should fail");
+
+    assert!(matches!(error, ProxyGenerationError::InvalidRequest(_)));
+}
+
+#[test]
+fn tdd_rust_photo_proxy_generator_missing_input_path_returns_process_error() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let input = temp.path().join("missing-source.jpg");
+    let output = temp.path().join("proxy.jpg");
+
+    let generator = RustPhotoProxyGenerator::default();
+    let error = generator
+        .generate_photo_proxy(&PhotoProxyRequest {
+            input_path: input.display().to_string(),
+            output_path: output.display().to_string(),
+            format: PhotoProxyFormat::Jpeg,
+            max_width: 320,
+            max_height: 200,
+        })
+        .expect_err("missing input should fail");
+
+    assert!(matches!(error, ProxyGenerationError::Process(_)));
+}
+
+#[test]
+fn tdd_rust_photo_proxy_generator_mismatched_raw_extension_with_text_content_fails_deterministically()
+ {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let input = temp.path().join("fake.cr2");
+    let output = temp.path().join("proxy.webp");
+    std::fs::write(&input, b"this is not a raw image").expect("write fake raw");
+
+    let generator = RustPhotoProxyGenerator::default();
+    let error = generator
+        .generate_photo_proxy(&PhotoProxyRequest {
+            input_path: input.display().to_string(),
+            output_path: output.display().to_string(),
+            format: PhotoProxyFormat::Webp,
+            max_width: 320,
+            max_height: 200,
+        })
+        .expect_err("fake raw should fail");
+
+    match error {
+        ProxyGenerationError::Process(message) => {
+            assert!(message.contains("unable to decode photo source"))
+        }
+        other => panic!("unexpected error variant: {other:?}"),
+    }
+}
