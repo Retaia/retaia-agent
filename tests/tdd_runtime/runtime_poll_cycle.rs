@@ -310,3 +310,183 @@ fn tdd_runtime_poll_cycle_5xx_then_429_then_5xx_keeps_backoff_and_disconnect_obs
         &[SystemNotification::AgentDisconnectedOrReconnecting]
     );
 }
+
+#[test]
+fn tdd_runtime_poll_cycle_high_volume_mixed_pattern_re_emits_only_on_real_transitions() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let gateway = SequenceGateway::new(vec![
+        Err(CoreApiGatewayError::Unauthorized),
+        Err(CoreApiGatewayError::Unauthorized),
+        Ok(vec![]),
+        Err(CoreApiGatewayError::Transport("offline-1".to_string())),
+        Err(CoreApiGatewayError::Transport("offline-2".to_string())),
+        Ok(vec![]),
+        Err(CoreApiGatewayError::Unauthorized),
+        Ok(vec![]),
+        Err(CoreApiGatewayError::UnexpectedStatus(503)),
+        Err(CoreApiGatewayError::Throttled),
+        Ok(vec![]),
+    ]);
+    let sink = RecordingSink::default();
+
+    let outcomes = vec![
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            101,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            102,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            103,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            104,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            105,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            106,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            107,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            108,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            109,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            110,
+        ),
+        run_runtime_poll_cycle(
+            &mut session,
+            &gateway,
+            &sink,
+            PollEndpoint::Jobs,
+            5_000,
+            111,
+        ),
+    ];
+
+    assert_eq!(outcomes[0].status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(outcomes[1].status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(outcomes[2].status, RuntimePollCycleStatus::Success);
+    assert_eq!(outcomes[3].status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(outcomes[4].status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(outcomes[5].status, RuntimePollCycleStatus::Success);
+    assert_eq!(outcomes[6].status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(outcomes[7].status, RuntimePollCycleStatus::Success);
+    assert_eq!(outcomes[8].status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(outcomes[9].status, RuntimePollCycleStatus::Throttled);
+    assert_eq!(outcomes[10].status, RuntimePollCycleStatus::Success);
+
+    assert_eq!(
+        outcomes[0].report.as_ref().expect("r1").dispatch.delivered,
+        1
+    );
+    assert_eq!(
+        outcomes[1].report.as_ref().expect("r2").dispatch.delivered,
+        0
+    );
+    assert_eq!(
+        outcomes[2].report.as_ref().expect("r3").dispatch.delivered,
+        0
+    );
+    assert_eq!(
+        outcomes[3].report.as_ref().expect("r4").dispatch.delivered,
+        1
+    );
+    assert_eq!(
+        outcomes[4].report.as_ref().expect("r5").dispatch.delivered,
+        0
+    );
+    assert_eq!(
+        outcomes[5].report.as_ref().expect("r6").dispatch.delivered,
+        0
+    );
+    assert_eq!(
+        outcomes[6].report.as_ref().expect("r7").dispatch.delivered,
+        1
+    );
+    assert_eq!(
+        outcomes[7].report.as_ref().expect("r8").dispatch.delivered,
+        0
+    );
+    assert_eq!(
+        outcomes[8].report.as_ref().expect("r9").dispatch.delivered,
+        1
+    );
+    assert!(outcomes[9].report.is_none());
+    assert_eq!(
+        outcomes[10]
+            .report
+            .as_ref()
+            .expect("r11")
+            .dispatch
+            .delivered,
+        0
+    );
+
+    let recorded = sink.notifications.borrow();
+    assert_eq!(
+        recorded.as_slice(),
+        &[
+            SystemNotification::AuthExpiredReauthRequired,
+            SystemNotification::AgentDisconnectedOrReconnecting,
+            SystemNotification::AuthExpiredReauthRequired,
+            SystemNotification::AgentDisconnectedOrReconnecting
+        ]
+    );
+}

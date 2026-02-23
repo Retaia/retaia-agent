@@ -225,3 +225,37 @@ fn e2e_rust_photo_proxy_generator_flow_mixed_batch_has_expected_success_failure_
     assert_eq!(success, 4);
     assert_eq!(failures, 2);
 }
+
+#[test]
+fn e2e_rust_photo_proxy_generator_flow_high_volume_batch_is_stable_without_external_fixtures() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let generator = RustPhotoProxyGenerator::default();
+
+    for index in 0..24usize {
+        let input = match index % 4 {
+            0 => temp.path().join(format!("stable-{index}.jpg")),
+            1 => temp.path().join(format!("stable-{index}.png")),
+            2 => temp.path().join(format!("stable-{index}.tiff")),
+            _ => temp.path().join(format!("stable-{index}.webp")),
+        };
+        let output = temp.path().join(format!("stable-proxy-{index}.jpg"));
+        DynamicImage::new_rgb8(900, 600)
+            .save(&input)
+            .expect("save source");
+
+        generator
+            .generate_photo_proxy(&PhotoProxyRequest {
+                input_path: input.display().to_string(),
+                output_path: output.display().to_string(),
+                format: PhotoProxyFormat::Jpeg,
+                max_width: 320,
+                max_height: 180,
+            })
+            .expect("volume generation should succeed");
+
+        let produced = image::open(&output).expect("open output");
+        let (w, h) = produced.dimensions();
+        assert!(w <= 320);
+        assert!(h <= 180);
+    }
+}
