@@ -86,6 +86,10 @@ fn run() -> Result<(), String> {
 }
 
 fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), String> {
+    const COMPACTION_INTERVAL_TICKS: u64 = 600;
+    const KEEP_LAST_CYCLES: usize = 250_000;
+    const KEEP_LAST_COMPLETED_JOBS: usize = 150_000;
+
     let lang = detect_language();
     let gateway = build_gateway(session.settings());
     let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
@@ -261,10 +265,13 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                     last_persisted_cycle_tick = tick;
                 }
             }
-            if tick % 600 == 0
-                && let Err(error) = store.compact_old_cycles(250_000)
-            {
-                warn!(tick, error = %error, "{}", t(lang, "runtime.compact_failed"));
+            if tick % COMPACTION_INTERVAL_TICKS == 0 {
+                if let Err(error) = store.compact_old_cycles(KEEP_LAST_CYCLES) {
+                    warn!(tick, error = %error, "{}", t(lang, "runtime.compact_failed"));
+                }
+                if let Err(error) = store.compact_old_completed_jobs(KEEP_LAST_COMPLETED_JOBS) {
+                    warn!(tick, error = %error, "{}", t(lang, "runtime.compact_failed"));
+                }
             }
         }
         std::thread::sleep(sleep_duration);

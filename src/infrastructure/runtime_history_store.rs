@@ -178,32 +178,14 @@ impl RuntimeHistoryStore {
         &mut self,
         keep_last: usize,
     ) -> Result<usize, RuntimeHistoryStoreError> {
-        if keep_last == 0 {
-            let deleted = self
-                .conn
-                .execute("DELETE FROM daemon_cycles", [])
-                .map_err(RuntimeHistoryStoreError::Sql)?;
-            return Ok(deleted);
-        }
-        let cutoff_id: Option<i64> = self
-            .conn
-            .query_row(
-                "SELECT id FROM daemon_cycles ORDER BY id DESC LIMIT 1 OFFSET ?1",
-                [(keep_last.saturating_sub(1)) as i64],
-                |row| row.get(0),
-            )
-            .optional()
-            .map_err(RuntimeHistoryStoreError::Sql)?;
+        compact_old_rows(&self.conn, "daemon_cycles", keep_last)
+    }
 
-        let Some(cutoff_id) = cutoff_id else {
-            return Ok(0);
-        };
-
-        let deleted = self
-            .conn
-            .execute("DELETE FROM daemon_cycles WHERE id < ?1", [cutoff_id])
-            .map_err(RuntimeHistoryStoreError::Sql)?;
-        Ok(deleted)
+    pub fn compact_old_completed_jobs(
+        &mut self,
+        keep_last: usize,
+    ) -> Result<usize, RuntimeHistoryStoreError> {
+        compact_old_rows(&self.conn, "completed_jobs", keep_last)
     }
 }
 
@@ -243,4 +225,38 @@ fn init_schema(conn: &Connection) -> Result<(), RuntimeHistoryStoreError> {
     )
     .map_err(RuntimeHistoryStoreError::Sql)?;
     Ok(())
+}
+
+fn compact_old_rows(
+    conn: &Connection,
+    table: &str,
+    keep_last: usize,
+) -> Result<usize, RuntimeHistoryStoreError> {
+    if keep_last == 0 {
+        let sql = format!("DELETE FROM {table}");
+        let deleted = conn
+            .execute(&sql, [])
+            .map_err(RuntimeHistoryStoreError::Sql)?;
+        return Ok(deleted);
+    }
+
+    let select_cutoff_sql = format!("SELECT id FROM {table} ORDER BY id DESC LIMIT 1 OFFSET ?1");
+    let cutoff_id: Option<i64> = conn
+        .query_row(
+            &select_cutoff_sql,
+            [(keep_last.saturating_sub(1)) as i64],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(RuntimeHistoryStoreError::Sql)?;
+
+    let Some(cutoff_id) = cutoff_id else {
+        return Ok(0);
+    };
+
+    let delete_sql = format!("DELETE FROM {table} WHERE id < ?1");
+    let deleted = conn
+        .execute(&delete_sql, [cutoff_id])
+        .map_err(RuntimeHistoryStoreError::Sql)?;
+    Ok(deleted)
 }

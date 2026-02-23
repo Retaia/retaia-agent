@@ -105,6 +105,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - séquences `5xx -> 429 -> 5xx -> success` couvertes en TDD/E2E,
     - vérification explicite de la dédup `disconnect/reconnecting`,
     - vérification du signal de replanification/backoff sur tick `429`.
+  - Robustesse stockage historique daemon renforcée pour long-run:
+    - compaction périodique des deux tables SQLite (`daemon_cycles` + `completed_jobs`) avec seuils dédiés,
+    - tests TDD volumiques (`1000` insertions) validant ordre, rétention et fenêtres récentes après compaction.
   - Cas négatifs photo proxy renforcés sans fixtures externes:
     - validation explicite `output_path` vide et `max_height=0`,
     - source inexistante -> erreur contrôlée,
@@ -157,6 +160,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 2. Intégration shell GUI finale des adapters de notification selon cible (desktop/headless).
 3. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
    - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.
+   - Fait: rétention/compaction SQLite long-run sur cycles + jobs complétés.
 4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté) et checksums.
 5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
 6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
