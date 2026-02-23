@@ -116,7 +116,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
   - Scénarios sans fixtures externes ajoutés:
-    - compléter des cas photo proxy sans médias externes restant sur corpus mixte volumique.
+    - compléter des cas photo proxy sans médias externes restant sur robustesse/perf volumique.
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
   - Préparer le corpus fixture externe versionné (checksums + attentes) pour valider la preview RAW réelle sans rendu complet.
   - Ajouter des scénarios photo proxy pre-v1 avec fixtures:
@@ -131,6 +131,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - fichier inexistant/illisible -> erreur contrôlée,
     - extension trompeuse (ex: `.cr2` avec contenu texte) -> échec déterministe,
     - fichier vide/tronqué -> échec contrôlé sans panic,
+    - lot mixte local (`jpg/png/tiff/webp/fake-raw/empty`) avec comptage succès/échecs déterministe,
     - paramètres invalides (qualité/dimensions) -> validation explicite.
   - Ajouter des fixtures vidéo/audio réelles pour proxy generation:
     - vidéo: H264/H265, CFR/VFR, présence/absence de piste audio,
