@@ -179,3 +179,53 @@ fn tdd_rust_photo_proxy_generator_mismatched_raw_extension_with_text_content_fai
         other => panic!("unexpected error variant: {other:?}"),
     }
 }
+
+#[test]
+fn tdd_rust_photo_proxy_generator_mixed_batch_reports_success_and_failure_counts() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let jpg = temp.path().join("source.jpg");
+    let png = temp.path().join("source.png");
+    let tiff = temp.path().join("source.tiff");
+    let webp = temp.path().join("source.webp");
+    let fake_raw = temp.path().join("fake.cr2");
+    let empty_file = temp.path().join("empty.jpg");
+
+    DynamicImage::new_rgb8(640, 360)
+        .save(&jpg)
+        .expect("save jpg source");
+    DynamicImage::new_rgb8(640, 360)
+        .save(&png)
+        .expect("save png source");
+    DynamicImage::new_rgb8(640, 360)
+        .save(&tiff)
+        .expect("save tiff source");
+    DynamicImage::new_rgb8(640, 360)
+        .save(&webp)
+        .expect("save webp source");
+    std::fs::write(&fake_raw, b"not-a-real-raw").expect("write fake raw");
+    std::fs::write(&empty_file, b"").expect("write empty file");
+
+    let entries = vec![jpg, png, tiff, webp, fake_raw, empty_file];
+    let generator = RustPhotoProxyGenerator::default();
+    let mut success = 0usize;
+    let mut failed = 0usize;
+
+    for (index, input) in entries.iter().enumerate() {
+        let output = temp.path().join(format!("proxy-{index}.webp"));
+        let result = generator.generate_photo_proxy(&PhotoProxyRequest {
+            input_path: input.display().to_string(),
+            output_path: output.display().to_string(),
+            format: PhotoProxyFormat::Webp,
+            max_width: 320,
+            max_height: 180,
+        });
+        match result {
+            Ok(()) => success += 1,
+            Err(ProxyGenerationError::Process(_)) => failed += 1,
+            Err(other) => panic!("unexpected error variant in mixed batch: {other:?}"),
+        }
+    }
+
+    assert_eq!(success, 4);
+    assert_eq!(failed, 2);
+}

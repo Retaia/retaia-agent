@@ -175,3 +175,53 @@ fn e2e_rust_photo_proxy_generator_flow_covers_missing_input_and_fake_raw_extensi
         .expect_err("fake raw must fail");
     assert!(matches!(fake_err, ProxyGenerationError::Process(_)));
 }
+
+#[test]
+fn e2e_rust_photo_proxy_generator_flow_mixed_batch_has_expected_success_failure_ratio() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let jpg = temp.path().join("batch-source.jpg");
+    let png = temp.path().join("batch-source.png");
+    let tiff = temp.path().join("batch-source.tiff");
+    let webp = temp.path().join("batch-source.webp");
+    let fake_raw = temp.path().join("batch-fake.nef");
+    let empty = temp.path().join("batch-empty.jpg");
+
+    DynamicImage::new_rgb8(800, 600)
+        .save(&jpg)
+        .expect("save jpg source");
+    DynamicImage::new_rgb8(800, 600)
+        .save(&png)
+        .expect("save png source");
+    DynamicImage::new_rgb8(800, 600)
+        .save(&tiff)
+        .expect("save tiff source");
+    DynamicImage::new_rgb8(800, 600)
+        .save(&webp)
+        .expect("save webp source");
+    std::fs::write(&fake_raw, b"invalid raw payload").expect("write fake raw");
+    std::fs::write(&empty, b"").expect("write empty source");
+
+    let inputs = vec![jpg, png, tiff, webp, fake_raw, empty];
+    let generator = RustPhotoProxyGenerator::default();
+    let mut success = 0usize;
+    let mut failures = 0usize;
+
+    for (index, input) in inputs.iter().enumerate() {
+        let output = temp.path().join(format!("batch-proxy-{index}.jpg"));
+        let result = generator.generate_photo_proxy(&PhotoProxyRequest {
+            input_path: input.display().to_string(),
+            output_path: output.display().to_string(),
+            format: PhotoProxyFormat::Jpeg,
+            max_width: 300,
+            max_height: 300,
+        });
+        match result {
+            Ok(()) => success += 1,
+            Err(ProxyGenerationError::Process(_)) => failures += 1,
+            Err(other) => panic!("unexpected error variant in mixed batch: {other:?}"),
+        }
+    }
+
+    assert_eq!(success, 4);
+    assert_eq!(failures, 2);
+}
