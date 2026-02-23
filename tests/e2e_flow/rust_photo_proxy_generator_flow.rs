@@ -142,3 +142,36 @@ fn e2e_rust_photo_proxy_generator_flow_rejects_audio_video_paths_on_photo_genera
         Err(ProxyGenerationError::InvalidRequest(_))
     ));
 }
+
+#[test]
+fn e2e_rust_photo_proxy_generator_flow_covers_missing_input_and_fake_raw_extension_errors() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let missing = temp.path().join("missing.jpg");
+    let fake_raw = temp.path().join("bad.nef");
+    let output = temp.path().join("proxy.webp");
+    std::fs::write(&fake_raw, b"not a real raw payload").expect("write fake raw");
+
+    let generator = RustPhotoProxyGenerator::default();
+
+    let missing_err = generator
+        .generate_photo_proxy(&PhotoProxyRequest {
+            input_path: missing.display().to_string(),
+            output_path: output.display().to_string(),
+            format: PhotoProxyFormat::Webp,
+            max_width: 200,
+            max_height: 120,
+        })
+        .expect_err("missing path must fail");
+    assert!(matches!(missing_err, ProxyGenerationError::Process(_)));
+
+    let fake_err = generator
+        .generate_photo_proxy(&PhotoProxyRequest {
+            input_path: fake_raw.display().to_string(),
+            output_path: output.display().to_string(),
+            format: PhotoProxyFormat::Webp,
+            max_width: 200,
+            max_height: 120,
+        })
+        .expect_err("fake raw must fail");
+    assert!(matches!(fake_err, ProxyGenerationError::Process(_)));
+}
