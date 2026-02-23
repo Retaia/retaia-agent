@@ -6,9 +6,11 @@ use std::thread;
 
 use retaia_agent::{
     AgentRegistrationCommand, AgentRegistrationError, AgentRegistrationGateway, AgentRuntimeConfig,
-    AuthMode, CoreApiGateway, CoreApiGatewayError, DerivedKind, DerivedProcessingError,
-    DerivedProcessingGateway, DerivedUploadInit, LogLevel, OpenApiAgentRegistrationGateway,
-    OpenApiDerivedProcessingGateway, OpenApiJobsGateway, build_core_api_client,
+    AuthMode, CoreApiGateway, CoreApiGatewayError, DerivedJobType, DerivedKind,
+    DerivedManifestItem, DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete,
+    DerivedUploadInit, DerivedUploadPart, LogLevel, OpenApiAgentRegistrationGateway,
+    OpenApiDerivedProcessingGateway, OpenApiJobsGateway, SubmitDerivedPayload,
+    build_core_api_client,
 };
 
 struct MockExchange {
@@ -193,6 +195,141 @@ fn e2e_openapi_agent_registration_gateway_maps_426_from_real_http_response() {
         .register_agent(&command)
         .expect_err("must fail on 426");
     assert_eq!(error, AgentRegistrationError::UpgradeRequired);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_heartbeat_maps_500_from_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-2/heartbeat",
+        status: 500,
+        content_type: "application/json",
+        body: r#"{"code":"INTERNAL_ERROR"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let error = gateway
+        .heartbeat("job-2", "lock-2")
+        .expect_err("must fail on 500");
+    assert_eq!(error, DerivedProcessingError::UnexpectedStatus(500));
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_submit_maps_401_from_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-3/submit",
+        status: 401,
+        content_type: "application/json",
+        body: r#"{"code":"UNAUTHORIZED"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let payload = SubmitDerivedPayload {
+        job_type: DerivedJobType::GenerateProxy,
+        manifest: vec![DerivedManifestItem {
+            kind: DerivedKind::ProxyPhoto,
+            reference: "s3://bucket/proxy.webp".to_string(),
+            size_bytes: Some(12),
+            sha256: None,
+        }],
+        warnings: None,
+        metrics: None,
+    };
+    let error = gateway
+        .submit_derived("job-3", "lock-3", "idem-3", &payload)
+        .expect_err("must fail on 401");
+    assert_eq!(error, DerivedProcessingError::Unauthorized);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_upload_part_maps_429_from_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/assets/asset-2/derived/upload/part",
+        status: 429,
+        content_type: "application/json",
+        body: r#"{"code":"TOO_MANY_REQUESTS"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let request = DerivedUploadPart {
+        asset_uuid: "asset-2".to_string(),
+        upload_id: "upload-2".to_string(),
+        part_number: 1,
+    };
+    let error = gateway
+        .upload_part(&request)
+        .expect_err("must fail on throttling");
+    assert_eq!(error, DerivedProcessingError::Throttled);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_upload_complete_maps_500_from_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/assets/asset-2/derived/upload/complete",
+        status: 500,
+        content_type: "application/json",
+        body: r#"{"code":"UPLOAD_STORE_DOWN"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let request = DerivedUploadComplete {
+        asset_uuid: "asset-2".to_string(),
+        upload_id: "upload-2".to_string(),
+        idempotency_key: "idem-2".to_string(),
+        parts: None,
+    };
+    let error = gateway
+        .upload_complete(&request)
+        .expect_err("must fail on 500");
+    assert_eq!(error, DerivedProcessingError::UnexpectedStatus(500));
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_agent_registration_gateway_maps_invalid_success_payload_to_transport_error() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/agents/register",
+        status: 200,
+        content_type: "application/json",
+        body: r#"["unexpected","array"]"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiAgentRegistrationGateway::new(client);
+    let command = AgentRegistrationCommand {
+        agent_name: "retaia-agent".to_string(),
+        agent_version: "1.0.0".to_string(),
+        platform: Some("linux".to_string()),
+        capabilities: vec!["media.facts@1".to_string()],
+        client_feature_flags_contract_version: Some("v1".to_string()),
+        max_parallel_jobs: Some(2),
+    };
+    let error = gateway
+        .register_agent(&command)
+        .expect_err("must fail on invalid payload");
+    match error {
+        AgentRegistrationError::Transport(message) => {
+            assert!(message.contains("invalid type") || message.contains("expected"))
+        }
+        other => panic!("unexpected error variant: {other:?}"),
+    }
 
     server.join().expect("server thread");
 }
