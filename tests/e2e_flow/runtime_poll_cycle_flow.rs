@@ -146,3 +146,40 @@ fn e2e_runtime_poll_cycle_long_sequence_keeps_notification_dedup_stable() {
         ]
     );
 }
+
+#[test]
+fn e2e_runtime_poll_cycle_5xx_and_429_flow_keeps_disconnect_dedup_and_backoff_signal() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let gateway = SequenceGateway::new(vec![
+        Err(CoreApiGatewayError::UnexpectedStatus(503)),
+        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::UnexpectedStatus(500)),
+        Ok(vec![]),
+    ]);
+    let sink = MemorySink::default();
+
+    let first =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 21);
+    let second =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 22);
+    let third =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 23);
+    let fourth =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 24);
+
+    assert_eq!(first.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(second.status, RuntimePollCycleStatus::Throttled);
+    assert_eq!(third.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(fourth.status, RuntimePollCycleStatus::Success);
+
+    assert_eq!(first.report.expect("first report").dispatch.delivered, 1);
+    assert!(second.report.is_none());
+    assert_eq!(third.report.expect("third report").dispatch.delivered, 0);
+    assert_eq!(fourth.report.expect("fourth report").dispatch.delivered, 0);
+
+    assert!(format!("{:?}", second.plan).contains("SchedulePoll"));
+    assert_eq!(
+        sink.events(),
+        vec![SystemNotification::AgentDisconnectedOrReconnecting]
+    );
+}
