@@ -124,6 +124,29 @@ fn e2e_openapi_jobs_gateway_maps_invalid_payload_to_transport_error() {
 }
 
 #[test]
+fn e2e_openapi_jobs_gateway_maps_text_success_payload_to_transport_error() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "GET",
+        path: "/api/v1/jobs",
+        status: 200,
+        content_type: "text/plain",
+        body: "ok-but-not-json",
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiJobsGateway::new(client);
+    let error = gateway
+        .poll_jobs()
+        .expect_err("text payload should be rejected");
+    match error {
+        CoreApiGatewayError::Transport(message) => assert!(message.contains("text/plain")),
+        other => panic!("unexpected error variant: {other:?}"),
+    }
+
+    server.join().expect("server thread");
+}
+
+#[test]
 fn e2e_openapi_derived_gateway_claim_rejects_missing_lock_token_from_http_payload() {
     let (server, base_url) = spawn_mock_server(vec![MockExchange {
         method: "POST",
@@ -139,6 +162,29 @@ fn e2e_openapi_derived_gateway_claim_rejects_missing_lock_token_from_http_payloa
         .claim_job("job-1")
         .expect_err("must fail when lock token is missing");
     assert_eq!(error, DerivedProcessingError::MissingLockToken);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_claim_rejects_non_derived_job_type_from_http_payload() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-nd/claim",
+        status: 200,
+        content_type: "application/json",
+        body: r#"{"job_id":"job-nd","job_type":"extract_facts","status":"claimed","asset_uuid":"asset-nd","required_capabilities":["media.facts@1"],"lock_token":"lock-nd"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let error = gateway
+        .claim_job("job-nd")
+        .expect_err("non-derived job type must fail");
+    assert_eq!(
+        error,
+        DerivedProcessingError::NotDerivedJobType("extract_facts".to_string())
+    );
 
     server.join().expect("server thread");
 }
@@ -215,6 +261,29 @@ fn e2e_openapi_derived_gateway_heartbeat_maps_500_from_http_response() {
         .heartbeat("job-2", "lock-2")
         .expect_err("must fail on 500");
     assert_eq!(error, DerivedProcessingError::UnexpectedStatus(500));
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_heartbeat_maps_invalid_success_payload_to_transport_error() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-hb/heartbeat",
+        status: 200,
+        content_type: "application/json",
+        body: r#"{"locked_until":"unterminated""#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let error = gateway
+        .heartbeat("job-hb", "lock-hb")
+        .expect_err("invalid payload must fail");
+    match error {
+        DerivedProcessingError::Transport(message) => assert!(!message.is_empty()),
+        other => panic!("unexpected error variant: {other:?}"),
+    }
 
     server.join().expect("server thread");
 }

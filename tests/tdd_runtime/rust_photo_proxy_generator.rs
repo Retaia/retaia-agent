@@ -229,3 +229,38 @@ fn tdd_rust_photo_proxy_generator_mixed_batch_reports_success_and_failure_counts
     assert_eq!(success, 4);
     assert_eq!(failed, 2);
 }
+
+#[test]
+fn tdd_rust_photo_proxy_generator_high_volume_local_batch_all_succeed() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let generator = RustPhotoProxyGenerator::default();
+    let mut success = 0usize;
+
+    for index in 0..30usize {
+        let input = temp.path().join(format!("volume-{index}.jpg"));
+        let output = temp.path().join(format!("volume-proxy-{index}.webp"));
+        let width = 300 + (index as u32 % 5) * 50;
+        let height = 220 + (index as u32 % 4) * 40;
+        DynamicImage::new_rgb8(width, height)
+            .save(&input)
+            .expect("save source");
+
+        generator
+            .generate_photo_proxy(&PhotoProxyRequest {
+                input_path: input.display().to_string(),
+                output_path: output.display().to_string(),
+                format: PhotoProxyFormat::Webp,
+                max_width: 160,
+                max_height: 120,
+            })
+            .expect("volume proxy generation should succeed");
+
+        let produced = image::open(&output).expect("open output");
+        let (out_w, out_h) = produced.dimensions();
+        assert!(out_w <= 160);
+        assert!(out_h <= 120);
+        success += 1;
+    }
+
+    assert_eq!(success, 30);
+}

@@ -94,8 +94,8 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `derived`: `401/429/422/5xx` + transport + garde non-derived/overflow manifest -> `DerivedProcessingError`,
     - `agent registration`: `401/426/422/5xx` + transport -> `AgentRegistrationError`.
   - Couverture OpenAPI adapter renforcée par scénarios HTTP réels locaux (serveur mock):
-    - `jobs`: `422` et payload JSON invalide,
-    - `derived`: `claim` avec payload incomplet (lock token absent), `heartbeat` en `500`, `submit` en `401`, `upload init` en `422`, `upload part` en `429`, `upload complete` en `500`,
+    - `jobs`: `422`, payload JSON invalide et payload `text/plain` invalide,
+    - `derived`: `claim` avec payload incomplet (lock token absent) + `job_type` non dérivé, `heartbeat` en `500` + payload `200` invalide, `submit` en `401`, `upload init` en `422`, `upload part` en `429`, `upload complete` en `500`,
     - `agent registration`: `426 upgrade required` + payload `200` invalide.
   - Robustesse runtime daemon renforcée (sans fixtures externes) sur séquences longues multi-ticks:
     - enchaînement `success/throttle/unauthorized/transport/success`,
@@ -109,14 +109,16 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - validation explicite `output_path` vide et `max_height=0`,
     - source inexistante -> erreur contrôlée,
     - extension RAW trompeuse (`.cr2/.nef` avec contenu texte) -> échec déterministe contrôlé.
+  - Robustesse photo proxy sans fixtures externes étendue avec lots volumiques locaux:
+    - TDD/E2E: batchs volumétriques (`24+` médias locaux générés à la volée) validant stabilité de génération et bornes dimensions de sortie.
+  - Robustesse runtime daemon sans fixtures externes étendue avec pattern mixte long:
+    - TDD/E2E: séquence étendue `unauthorized/transport/5xx/429/success` avec vérification de dédup/ré-émission sur transitions réelles.
   - Couverture capability `audio.waveform@1` renforcée sans fixtures externes:
     - waveform produite (`manifest` + upload) validée,
     - waveform absente mais job non bloquant (`manifest` vide, submit direct) validée,
     - cohérence `job_type`/`manifest`/uploads verrouillée en TDD/BDD/E2E.
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
-  - Scénarios sans fixtures externes ajoutés:
-    - compléter des cas photo proxy sans médias externes restant sur robustesse/perf volumique.
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
   - Préparer le corpus fixture externe versionné (checksums + attentes) pour valider la preview RAW réelle sans rendu complet.
   - Ajouter des scénarios photo proxy pre-v1 avec fixtures:
@@ -138,9 +140,6 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - audio: WAV/MP3/AAC, sample rates atypiques, mono/stéréo.
   - Étendre les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes supplémentaires:
     - variantes payload additionnelles selon endpoints futurs.
-  - Étendre les scénarios runtime de robustesse:
-    - ajouter des volumes de ticks plus élevés et variations de patterns d'erreurs,
-    - compléter la vérification de cohérence des transitions état runtime en mode daemon.
 
 ### Engineering Baseline
 
