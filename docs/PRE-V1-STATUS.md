@@ -109,10 +109,13 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - validation explicite `output_path` vide et `max_height=0`,
     - source inexistante -> erreur contrôlée,
     - extension RAW trompeuse (`.cr2/.nef` avec contenu texte) -> échec déterministe contrôlé.
+  - Couverture capability `audio.waveform@1` renforcée sans fixtures externes:
+    - waveform produite (`manifest` + upload) validée,
+    - waveform absente mais job non bloquant (`manifest` vide, submit direct) validée,
+    - cohérence `job_type`/`manifest`/uploads verrouillée en TDD/BDD/E2E.
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
   - Scénarios sans fixtures externes ajoutés:
-    - renforcement executor dérivés pour `audio.waveform@1` (manifest compatible/incompatible),
     - compléter des cas photo proxy sans médias externes restant sur corpus mixte volumique.
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
   - Préparer le corpus fixture externe versionné (checksums + attentes) pour valider la preview RAW réelle sans rendu complet.
@@ -132,10 +135,6 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Ajouter des fixtures vidéo/audio réelles pour proxy generation:
     - vidéo: H264/H265, CFR/VFR, présence/absence de piste audio,
     - audio: WAV/MP3/AAC, sample rates atypiques, mono/stéréo.
-  - Ajouter des scénarios waveform orientés capability `audio.waveform@1`:
-    - waveform produite,
-    - waveform absente mais job non bloquant,
-    - format/manifest cohérent côté submit.
   - Étendre les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes supplémentaires:
     - variantes payload additionnelles selon endpoints futurs.
   - Étendre les scénarios runtime de robustesse:
@@ -161,8 +160,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté) et checksums.
 5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
 6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
-7. Renforcer la couverture capability `audio.waveform@1` (production waveform, absence non bloquante, cohérence submit/manifest).
-8. Revue finale de conformité v1 contre `specs/` avant freeze.
+7. Revue finale de conformité v1 contre `specs/` avant freeze.
 
 ## Fixture Roadmap (Pre-v1)
 

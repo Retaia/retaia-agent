@@ -249,6 +249,12 @@ impl Default for WaveformGateway {
     }
 }
 
+impl WaveformGateway {
+    fn calls(&self) -> Vec<String> {
+        self.calls.lock().expect("calls").clone()
+    }
+}
+
 impl DerivedProcessingGateway for WaveformGateway {
     fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
         self.calls
@@ -358,6 +364,26 @@ impl DerivedExecutionPlanner for ValidWaveformPlanner {
                 metrics: None,
             },
             submit_idempotency_key: "idem-wave-submit".to_string(),
+        })
+    }
+}
+
+struct EmptyWaveformPlanner;
+
+impl DerivedExecutionPlanner for EmptyWaveformPlanner {
+    fn plan_for_claimed_job(
+        &self,
+        claimed: &ClaimedDerivedJob,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        Ok(DerivedExecutionPlan {
+            uploads: vec![],
+            submit: SubmitDerivedPayload {
+                job_type: claimed.job_type,
+                manifest: vec![],
+                warnings: None,
+                metrics: None,
+            },
+            submit_idempotency_key: "idem-wave-empty-submit".to_string(),
         })
     }
 }
@@ -478,5 +504,23 @@ fn tdd_execute_derived_job_once_rejects_non_waveform_manifest_for_waveform_job_t
             job_type: DerivedJobType::GenerateAudioWaveform,
             kind: DerivedKind::ProxyAudio,
         }
+    );
+}
+
+#[test]
+fn tdd_execute_derived_job_once_allows_waveform_job_without_waveform_output_and_skips_uploads() {
+    let gateway = WaveformGateway::default();
+    let report = execute_derived_job_once(&gateway, &EmptyWaveformPlanner, "job-wave-3")
+        .expect("empty waveform submit should remain valid");
+
+    assert_eq!(report.job_id, "job-wave-3");
+    assert_eq!(report.upload_count, 0);
+    assert_eq!(
+        gateway.calls(),
+        vec![
+            "claim:job-wave-3".to_string(),
+            "heartbeat:job-wave-3".to_string(),
+            "submit:job-wave-3".to_string(),
+        ]
     );
 }
