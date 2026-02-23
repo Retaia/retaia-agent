@@ -93,3 +93,56 @@ fn e2e_runtime_poll_cycle_handles_transport_then_successful_claimed_job_transiti
     }));
     assert!(events.contains(&SystemNotification::AllJobsDone));
 }
+
+#[test]
+fn e2e_runtime_poll_cycle_long_sequence_keeps_notification_dedup_stable() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let gateway = SequenceGateway::new(vec![
+        Ok(vec![]),
+        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Unauthorized),
+        Err(CoreApiGatewayError::Unauthorized),
+        Err(CoreApiGatewayError::Transport("offline".to_string())),
+        Err(CoreApiGatewayError::Transport("still-offline".to_string())),
+        Ok(vec![]),
+    ]);
+    let sink = MemorySink::default();
+
+    let first = run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 1);
+    let second =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 2);
+    let third = run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 3);
+    let fourth =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 4);
+    let fifth = run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 5);
+    let sixth = run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 6);
+    let seventh =
+        run_runtime_poll_cycle(&mut session, &gateway, &sink, PollEndpoint::Jobs, 5_000, 7);
+
+    assert_eq!(first.status, RuntimePollCycleStatus::Success);
+    assert_eq!(second.status, RuntimePollCycleStatus::Throttled);
+    assert_eq!(third.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(fourth.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(fifth.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(sixth.status, RuntimePollCycleStatus::Degraded);
+    assert_eq!(seventh.status, RuntimePollCycleStatus::Success);
+
+    assert_eq!(first.report.expect("first report").dispatch.delivered, 0);
+    assert!(second.report.is_none());
+    assert_eq!(third.report.expect("third report").dispatch.delivered, 1);
+    assert_eq!(fourth.report.expect("fourth report").dispatch.delivered, 0);
+    assert_eq!(fifth.report.expect("fifth report").dispatch.delivered, 1);
+    assert_eq!(sixth.report.expect("sixth report").dispatch.delivered, 0);
+    assert_eq!(
+        seventh.report.expect("seventh report").dispatch.delivered,
+        0
+    );
+
+    assert_eq!(
+        sink.events(),
+        vec![
+            SystemNotification::AuthExpiredReauthRequired,
+            SystemNotification::AgentDisconnectedOrReconnecting
+        ]
+    );
+}

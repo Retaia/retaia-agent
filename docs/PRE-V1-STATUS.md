@@ -93,10 +93,13 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `jobs`: `401/429/422/5xx` + transport -> `CoreApiGatewayError`,
     - `derived`: `401/429/422/5xx` + transport + garde non-derived/overflow manifest -> `DerivedProcessingError`,
     - `agent registration`: `401/426/422/5xx` + transport -> `AgentRegistrationError`.
+  - Robustesse runtime daemon renforcée (sans fixtures externes) sur séquences longues multi-ticks:
+    - enchaînement `success/throttle/unauthorized/transport/success`,
+    - vérification de déduplication notifications (`auth`, `disconnect/reconnecting`),
+    - vérification de ré-émission `disconnect/reconnecting` après recovery vers `connected`.
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
   - Scénarios sans fixtures externes ajoutés:
-    - robustesse runtime multi-ticks (`success/throttle/unauthorized`) + dédup notifications,
     - renforcement executor dérivés pour `audio.waveform@1` (manifest compatible/incompatible),
     - cas négatifs photo proxy sans médias externes (inputs invalides, fallback decoder, conversions, write path).
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
@@ -123,10 +126,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - format/manifest cohérent côté submit.
   - Compléter les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes end-to-end:
     - payloads incomplets/invalides sur jobs et derived upload.
-  - Ajouter des scénarios runtime de robustesse:
-    - enchaînements multi-ticks success/throttle/unauthorized,
-    - stabilité notifications (pas de répétition parasite),
-    - cohérence des transitions état runtime en mode daemon.
+  - Étendre les scénarios runtime de robustesse:
+    - ajouter des volumes de ticks plus élevés et variations de patterns d'erreurs,
+    - compléter la vérification de cohérence des transitions état runtime en mode daemon.
 
 ### Engineering Baseline
 
@@ -149,8 +151,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
 7. Renforcer la couverture capability `audio.waveform@1` (production waveform, absence non bloquante, cohérence submit/manifest).
 8. Compléter les tests payloads/réponses HTTP réalistes pour les adapters OpenAPI (`jobs`, `derived upload`, `agent registration`) au-delà des mappings d’erreurs unitaires déjà couverts.
-9. Ajouter des tests de robustesse runtime daemon sur séquences longues (success/throttle/unauthorized) avec vérification de déduplication notifications.
-10. Revue finale de conformité v1 contre `specs/` avant freeze.
+9. Revue finale de conformité v1 contre `specs/` avant freeze.
 
 ## Fixture Roadmap (Pre-v1)
 
