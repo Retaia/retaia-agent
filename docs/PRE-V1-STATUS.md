@@ -94,9 +94,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `derived`: `401/429/422/5xx` + transport + garde non-derived/overflow manifest -> `DerivedProcessingError`,
     - `agent registration`: `401/426/422/5xx` + transport -> `AgentRegistrationError`.
   - Couverture OpenAPI adapter renforcée par scénarios HTTP réels locaux (serveur mock):
-    - `jobs`: `422`, payload JSON invalide et payload `text/plain` invalide,
-    - `derived`: `claim` avec payload incomplet (lock token absent) + `job_type` non dérivé, `heartbeat` en `500` + payload `200` invalide, `submit` en `401`, `upload init` en `422`, `upload part` en `429`, `upload complete` en `500`,
-    - `agent registration`: `426 upgrade required` + payload `200` invalide.
+    - `jobs`: `401/422/429`, payload JSON invalide et payload `text/plain` invalide,
+    - `derived`: `claim` en `401` + payload incomplet (lock token absent) + `job_type` non dérivé, `heartbeat` en `500` + payload `200` invalide, `submit` en `401`, `upload init` en `422`, `upload part` en `429`, `upload complete` en `500`,
+    - `agent registration`: `401/426/500` + payload `200` invalide.
   - Robustesse runtime daemon renforcée (sans fixtures externes) sur séquences longues multi-ticks:
     - enchaînement `success/throttle/unauthorized/transport/success`,
     - vérification de déduplication notifications (`auth`, `disconnect/reconnecting`),
