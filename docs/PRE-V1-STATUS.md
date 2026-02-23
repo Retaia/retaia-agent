@@ -95,8 +95,8 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `agent registration`: `401/426/422/5xx` + transport -> `AgentRegistrationError`.
   - Couverture OpenAPI adapter renforcée par scénarios HTTP réels locaux (serveur mock):
     - `jobs`: `422` et payload JSON invalide,
-    - `derived`: `claim` avec payload incomplet (lock token absent), `upload init` en `422`,
-    - `agent registration`: `426 upgrade required`.
+    - `derived`: `claim` avec payload incomplet (lock token absent), `heartbeat` en `500`, `submit` en `401`, `upload init` en `422`, `upload part` en `429`, `upload complete` en `500`,
+    - `agent registration`: `426 upgrade required` + payload `200` invalide.
   - Robustesse runtime daemon renforcée (sans fixtures externes) sur séquences longues multi-ticks:
     - enchaînement `success/throttle/unauthorized/transport/success`,
     - vérification de déduplication notifications (`auth`, `disconnect/reconnecting`),
@@ -129,7 +129,6 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - waveform absente mais job non bloquant,
     - format/manifest cohérent côté submit.
   - Étendre les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes supplémentaires:
-    - cas incomplets/invalides additionnels sur `heartbeat/submit/upload-part/upload-complete`,
     - variantes 5xx et retry/backoff observabilité côté runtime daemon.
   - Étendre les scénarios runtime de robustesse:
     - ajouter des volumes de ticks plus élevés et variations de patterns d'erreurs,
