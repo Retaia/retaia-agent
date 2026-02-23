@@ -17,6 +17,9 @@ These libraries are widely used in Rust projects and stable for system config pe
 - File name: `config.toml`
 - Runtime model persisted: `AgentRuntimeConfig`
 - Validation before save and after load: same domain rules (`validate_config`)
+- Runtime diagnostics files in same app directory:
+  - `daemon-stats.json` (snapshot courant),
+  - `daemon-history.sqlite3` (historique cycles + jobs complétés, avec compaction périodique).
 
 ## System Location
 

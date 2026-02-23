@@ -85,7 +85,9 @@ Garde-fous perfs:
   - sur changement d'état/job/stage/progress,
   - sur tick non-success (`throttled`/`degraded`),
   - heartbeat périodique (1/60 ticks).
-- Compaction périodique côté daemon (conservation des dernières lignes cycles).
+- Compaction périodique côté daemon:
+  - `daemon_cycles`: conservation des `250_000` dernières lignes,
+  - `completed_jobs`: conservation des `150_000` dernières lignes.
 
 Bug report:
 
