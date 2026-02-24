@@ -99,6 +99,42 @@ fn e2e_openapi_jobs_gateway_maps_422_from_real_http_response() {
 }
 
 #[test]
+fn e2e_openapi_jobs_gateway_maps_401_from_real_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "GET",
+        path: "/api/v1/jobs",
+        status: 401,
+        content_type: "application/json",
+        body: r#"{"code":"UNAUTHORIZED"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiJobsGateway::new(client);
+    let error = gateway.poll_jobs().expect_err("must fail on 401");
+    assert_eq!(error, CoreApiGatewayError::Unauthorized);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_jobs_gateway_maps_429_from_real_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "GET",
+        path: "/api/v1/jobs",
+        status: 429,
+        content_type: "application/json",
+        body: r#"{"code":"TOO_MANY_REQUESTS"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiJobsGateway::new(client);
+    let error = gateway.poll_jobs().expect_err("must fail on 429");
+    assert_eq!(error, CoreApiGatewayError::Throttled);
+
+    server.join().expect("server thread");
+}
+
+#[test]
 fn e2e_openapi_jobs_gateway_maps_invalid_payload_to_transport_error() {
     let (server, base_url) = spawn_mock_server(vec![MockExchange {
         method: "GET",
@@ -162,6 +198,26 @@ fn e2e_openapi_derived_gateway_claim_rejects_missing_lock_token_from_http_payloa
         .claim_job("job-1")
         .expect_err("must fail when lock token is missing");
     assert_eq!(error, DerivedProcessingError::MissingLockToken);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_claim_maps_401_from_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-401/claim",
+        status: 401,
+        content_type: "application/json",
+        body: r#"{"code":"UNAUTHORIZED"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let error = gateway
+        .claim_job("job-401")
+        .expect_err("claim must fail on 401");
+    assert_eq!(error, DerivedProcessingError::Unauthorized);
 
     server.join().expect("server thread");
 }
@@ -241,6 +297,62 @@ fn e2e_openapi_agent_registration_gateway_maps_426_from_real_http_response() {
         .register_agent(&command)
         .expect_err("must fail on 426");
     assert_eq!(error, AgentRegistrationError::UpgradeRequired);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_agent_registration_gateway_maps_401_from_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/agents/register",
+        status: 401,
+        content_type: "application/json",
+        body: r#"{"code":"UNAUTHORIZED"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiAgentRegistrationGateway::new(client);
+    let command = AgentRegistrationCommand {
+        agent_name: "retaia-agent".to_string(),
+        agent_version: "1.0.0".to_string(),
+        platform: Some("linux".to_string()),
+        capabilities: vec!["media.facts@1".to_string()],
+        client_feature_flags_contract_version: Some("v1".to_string()),
+        max_parallel_jobs: Some(2),
+    };
+    let error = gateway
+        .register_agent(&command)
+        .expect_err("must fail on 401");
+    assert_eq!(error, AgentRegistrationError::Unauthorized);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_agent_registration_gateway_maps_500_from_http_response() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/agents/register",
+        status: 500,
+        content_type: "application/json",
+        body: r#"{"code":"INTERNAL_ERROR"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiAgentRegistrationGateway::new(client);
+    let command = AgentRegistrationCommand {
+        agent_name: "retaia-agent".to_string(),
+        agent_version: "1.0.0".to_string(),
+        platform: Some("linux".to_string()),
+        capabilities: vec!["media.facts@1".to_string()],
+        client_feature_flags_contract_version: Some("v1".to_string()),
+        max_parallel_jobs: Some(2),
+    };
+    let error = gateway
+        .register_agent(&command)
+        .expect_err("must fail on 500");
+    assert_eq!(error, AgentRegistrationError::UnexpectedStatus(500));
 
     server.join().expect("server thread");
 }
