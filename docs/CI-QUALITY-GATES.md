@@ -19,6 +19,14 @@
 - Coverage minimal bloquant: `80%` (line coverage) sur la **couverture globale agrégée** des suites TDD+BDD+E2E.
 - Les résumés de coverage par suite (`TDD`, `BDD`, `E2E`) restent générés et publiés comme artefacts CI pour diagnostiquer les zones faibles, mais ne bloquent plus individuellement.
 
+## CI Perf Profile
+
+- Pipeline préserve les mêmes gates, mais avec exécution plus courte:
+  - `commitlint` ne bloque plus derrière `branch-up-to-date` (jobs parallélisés).
+  - jobs `rust-build-cache` / `test-*` / `coverage-gate` utilisent checkout shallow par défaut (`fetch-depth=1`).
+  - checkout de submodules supprimé des jobs tests/coverage (non requis au runtime CI agent).
+- Build Rust CI forcé en non-incremental (`CARGO_INCREMENTAL=0`) pour réduire le coût compile sur runners éphémères.
+
 ## Local Hooks
 
 - `pre-commit`: bloque commit sur `master`.
