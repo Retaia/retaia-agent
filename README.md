@@ -177,6 +177,19 @@ cargo test --features core-api-client
 
 - `branch-up-to-date`
 
+## GitHub Release (tag-driven)
+
+GitHub Actions publie automatiquement une release quand un tag `v*` est poussé.
+
+Exemple:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Le workflow build les binaires (`agentctl`, `agent-runtime`, `agent-desktop-shell`) sur Linux/macOS/Windows et les attache a la GitHub Release.
+
 ## Contributing
 
 See:
