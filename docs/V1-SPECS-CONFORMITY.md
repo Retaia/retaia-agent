@@ -10,7 +10,6 @@ Statuts:
 - `Covered`: implémenté et couvert par tests.
 - `Covered (doc/runtime)`: implémenté et documenté, sans endpoint direct côté agent.
 - `Planned v1.1+`: explicitement hors périmètre v1.
-- `Pending external fixtures`: dépend d'un corpus externe (RAW/AV réels) non versionné dans ce repo.
 
 ## Matrix
 
@@ -27,15 +26,15 @@ Statuts:
 | `specs/tests/TEST-PLAN.md` | CLI obligatoire, GUI optionnelle, même moteur runtime | Covered | `src/bin/agentctl.rs`, `src/bin/agent-runtime.rs`, `src/bin/agent-desktop-shell.rs`, `tests/e2e_flow/runtime_gui_shell_flow.rs`, `tests/e2e_flow/runtime_desktop_shell_controller_flow.rs` |
 | `specs/policies/I18N-LOCALIZATION.md` | `en`/`fr`, fallback, parité des clés, pas de logique métier sur labels | Covered | `locales/en.json`, `locales/fr.json`, `tests/tdd_runtime/i18n.rs`, `src/infrastructure/i18n.rs` |
 | `specs/api/OBSERVABILITY-CONTRACT.md` + `specs/workflows/AGENT-PROTOCOL.md` | Logs structurés + corrélation job + historique debug long-run | Covered (doc/runtime) | `src/bin/agent-runtime.rs`, `src/infrastructure/runtime_history_store.rs`, `src/infrastructure/daemon_diagnostics.rs`, `docs/DAEMON-MODE.md` |
-| `specs/tests/TEST-PLAN.md` (derived format compliance - proxy photo) | Validation preview RAW multi-marques sur corpus réel | Pending external fixtures | `docs/PRE-V1-STATUS.md` (roadmap fixtures RAW) |
-| `specs/tests/TEST-PLAN.md` (derived format compliance - audio/video) | Validation AV réelle (H264/H265, WAV/MP3/AAC, VFR/CFR) | Pending external fixtures | `docs/PRE-V1-STATUS.md` (roadmap fixtures AV) |
+| `specs/tests/TEST-PLAN.md` (derived format compliance - proxy photo) | Validation preview RAW multi-marques sur corpus réel | Covered | `fixtures/external/manifest.tsv`, `tests/bdd_specs/external_fixtures_photo_proxy.rs`, `tests/bdd_runtime_behavior.rs` |
+| `specs/tests/TEST-PLAN.md` (derived format compliance - audio/video) | Validation AV réelle (H264/H265, WAV/MP3/AAC, VFR/CFR) | Covered | `fixtures/external/manifest.tsv`, `tests/e2e_flow/external_fixtures_av_flow.rs`, `tests/e2e_runtime_behavior.rs` |
 | `specs/api/API-CONTRACTS.md` (rollout) | Features AI/transcription/providers | Planned v1.1+ | Hors scope v1 dans `specs/api/API-CONTRACTS.md` |
 | `specs/workflows/AGENT-PROTOCOL.md` + `specs/api/API-CONTRACTS.md` | Push mobile (`FCM/APNs/EPNS`) | Planned v1.2 | Hors scope v1 dans `specs/api/API-CONTRACTS.md` |
 
 ## Conclusion v1
 
 - Le socle v1 agent est conforme sur runtime, authz/capabilities, OpenAPI transport mapping, i18n, observabilité opératoire et tests gates.
-- Les écarts restants sont limités aux validations média sur corpus externe (RAW/vidéo/audio réels), déjà identifiées comme pré-freeze.
+- Les écarts restants portent surtout sur le durcissement CI du corpus externe et la publication du run final de freeze.
 
 ## V1 Freeze Checklist
 
@@ -45,7 +44,7 @@ Statuts:
 - [x] Parité config + modèle daemon (`CLI === GUI`) validée.
 - [x] i18n v1 (`en`/`fr`, fallback, parité de clés) validé.
 - [x] Observabilité opérationnelle daemon (stats + history + bug report) validée.
-- [ ] Corpus RAW réel onboardé et validé (`CR2/CR3/NEF/NRW/ARW`).
-- [ ] Corpus vidéo/audio réel onboardé et validé (`H264/H265`, `WAV/MP3/AAC`, `CFR/VFR`).
-- [ ] Checksums + attentes du corpus externe versionnés dans le repo.
+- [x] Corpus RAW réel onboardé et validé (`CR2/CR3/NEF/NRW/ARW`).
+- [x] Corpus vidéo/audio réel onboardé et validé (`H264/H265`, `WAV/MP3/AAC`, `CFR/VFR`).
+- [x] Checksums + attentes du corpus externe versionnés dans le repo.
 - [ ] Re-run final des gates CI avec corpus externe et publication du rapport de freeze.
