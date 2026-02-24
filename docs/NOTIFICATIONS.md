@@ -29,6 +29,12 @@
 
 - `Updates available`
   - émission lors de la détection d'une nouvelle version agent
+- `Daemon started`
+  - émission sur action GUI/tray de démarrage daemon réussie
+- `Daemon stopped`
+  - émission sur action GUI/tray d'arrêt daemon réussie
+- `Daemon status refreshed`
+  - émission après rafraîchissement explicite du statut daemon depuis GUI/tray
 
 ## Bridge DDD
 
@@ -43,4 +49,5 @@
   - `UI_WEB`/`UI_MOBILE` => profil `DesktopSystem` (`SystemNotificationSink`)
 - Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
 - Façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)` pour enchaîner projection + dispatch dans le flux agent.
+- Intégration shell desktop (`agent-desktop-shell`): dispatch via `dispatch_notifications(...)` + `select_notification_sink(notification_sink_profile_for_target(UI_WEB))`.
 - Règle: la déduplication reste dans le domaine (`AgentUiRuntime`), le bridge ne doit pas réintroduire de logique métier.

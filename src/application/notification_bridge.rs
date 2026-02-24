@@ -49,6 +49,18 @@ pub fn notification_message(notification: &SystemNotification) -> NotificationMe
             title: "Auth expired / re-auth required".to_string(),
             body: "Runtime authentication is no longer valid.".to_string(),
         },
+        SystemNotification::DaemonStarted => NotificationMessage {
+            title: "Daemon started".to_string(),
+            body: "Background runtime has been started.".to_string(),
+        },
+        SystemNotification::DaemonStopped => NotificationMessage {
+            title: "Daemon stopped".to_string(),
+            body: "Background runtime has been stopped.".to_string(),
+        },
+        SystemNotification::DaemonStatusRefreshed { status } => NotificationMessage {
+            title: "Daemon status refreshed".to_string(),
+            body: format!("Current daemon status: {status}."),
+        },
         SystemNotification::SettingsSaved => NotificationMessage {
             title: "Settings saved".to_string(),
             body: "Configuration has been persisted.".to_string(),

@@ -53,8 +53,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Bridge applicatif de dispatch (`NotificationSink` + `dispatch_notifications`) + adaptateurs `SystemNotificationSink` (OS si supporté, résultat strict OK/NOK), `StdoutNotificationSink` et `TauriNotificationSink` (feature `tauri-notifications`).
   - Politique de sélection runtime des adapters (`notification_sink_profile_for_target` + `select_notification_sink`) pour router headless vs desktop sans logique dupliquée.
   - Intégration façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)`.
-- Pending:
-  - Brancher `TauriNotificationSink` dans le shell GUI toolkit final (policy headless/desktop déjà branchée côté runtime).
+  - Intégration shell desktop (`agent-desktop-shell`) du dispatch notifications via policy runtime (`UI_WEB` => desktop sink) pour actions daemon GUI/tray (`start/stop/refresh`).
 
 ### Configuration (GUI/CLI parity + headless)
 
@@ -160,13 +159,12 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
    - menu système (controller app prêt, intégration toolkit desktop pending),
    - fenêtre statut job en cours (controller app prêt, intégration toolkit desktop pending),
    - accès settings (controller app prêt, intégration toolkit desktop pending).
-2. Intégration shell GUI finale des adapters de notification selon cible (desktop/headless).
-3. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
+2. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
    - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.
    - Fait: rétention/compaction SQLite long-run sur cycles + jobs complétés.
-4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté) et checksums.
-5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
-6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
+3. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté) et checksums.
+4. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
+5. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
 
 ## Fixture Roadmap (Pre-v1)
 
