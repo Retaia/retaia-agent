@@ -107,7 +107,6 @@ cargo run --bin agentctl -- daemon history --limit 200
 cargo run --bin agentctl -- daemon cycles --limit 500
 cargo run --bin agentctl -- daemon report --provider github --repo owner/repo
 cargo run --bin agentctl -- daemon report --provider jira
-cargo run --bin agentctl -- daemon report --provider github --repo owner/repo
 cargo run --bin agentctl -- daemon report --provider github --repo owner/repo --no-copy
 cargo run --bin agentctl -- daemon report --provider github --repo owner/repo --include-redacted-config
 cargo run --bin agentctl -- daemon stop
