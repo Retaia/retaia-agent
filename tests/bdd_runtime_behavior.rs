@@ -4,6 +4,10 @@ mod application_runtime;
 mod derived_job_executor;
 #[path = "bdd_specs/derived_processing_gateway.rs"]
 mod derived_processing_gateway;
+#[path = "support/external_fixtures.rs"]
+mod external_fixtures;
+#[path = "bdd_specs/external_fixtures_photo_proxy.rs"]
+mod external_fixtures_photo_proxy;
 #[path = "bdd_specs/notification_bridge.rs"]
 mod notification_bridge;
 #[path = "bdd_specs/notification_sink.rs"]
