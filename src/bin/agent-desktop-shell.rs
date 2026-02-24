@@ -161,6 +161,7 @@ mod desktop_shell {
                 .with_tooltip("Retaia Agent")
                 .with_menu(Box::new(menu))
                 .with_icon(icon)
+                .with_icon_as_template(cfg!(target_os = "macos"))
                 .build()
                 .map_err(|error| format!("unable to create tray icon: {error}"))?;
 
@@ -751,7 +752,11 @@ mod desktop_shell {
     }
 
     fn default_tray_icon() -> Result<Icon, String> {
-        const TRAY_ICON_BYTES: &[u8] = include_bytes!("../../assets/icon/retaia-logo-32.png");
+        #[cfg(target_os = "macos")]
+        const TRAY_ICON_BYTES: &[u8] =
+            include_bytes!("../../assets/icon/retaia-tray-macos-template.png");
+        #[cfg(not(target_os = "macos"))]
+        const TRAY_ICON_BYTES: &[u8] = include_bytes!("../../assets/icon/retaia-tray-default.png");
         if let Ok(decoded) = image::load_from_memory(TRAY_ICON_BYTES) {
             let rgba = decoded.into_rgba8();
             return Icon::from_rgba(rgba.to_vec(), rgba.width(), rgba.height())
