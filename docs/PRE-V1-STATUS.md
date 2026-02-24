@@ -114,10 +114,11 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - matrice normative source -> implémentation/tests: `docs/V1-SPECS-CONFORMITY.md`.
 ### Freeze Blockers (Pre-v1)
 
-- Contrat de fixtures externes en place (`fixtures/external/manifest.tsv` + `scripts/validate_external_fixtures.sh`), reste à onboarder le corpus réel.
-- Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy.
-- Ajouter une matrice de fixtures vidéo/audio réelles (`H264/H265`, `CFR/VFR`, `WAV/MP3/AAC`, mono/stéréo, sample rates atypiques).
-- Publier le corpus externe versionné (checksums + attentes) et valider la matrice de résultats (supporté/non supporté, échec contrôlé).
+- Corpus externe onboardé et versionné (`fixtures/external/manifest.tsv` + checksums + attentes).
+- Validation corpus externe branchée dans les suites:
+  - BDD photo RAW: `tests/bdd_specs/external_fixtures_photo_proxy.rs`
+  - E2E audio/vidéo: `tests/e2e_flow/external_fixtures_av_flow.rs`
+- Prochaine étape de freeze: ajouter une gate CI dédiée au corpus externe (validation manifest + scénarios externes ciblés).
 
 ### Non-blocking Backlog
 
@@ -135,9 +136,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 
 ## Remaining Pre-v1 Work (Priority)
 
-1. Finaliser la matrice RAW réelle (`CR2/CR3/NEF/NRW/ARW`) avec résultats attendus documentés (supporté/non supporté).
-2. Finaliser la matrice vidéo/audio réelle (`H264/H265`, `CFR/VFR`, `WAV/MP3/AAC`, mono/stéréo, sample rates atypiques).
-3. Versionner le corpus externe (checksums) et valider la robustesse négative/perf smoke sur ce corpus.
+1. Ajouter une gate CI dédiée au corpus externe (`scripts/validate_external_fixtures.sh` + tests externes ciblés).
+2. Re-run final des gates CI pré-v1 avec publication du rapport de freeze.
+3. Compléter progressivement la matrice externe (nouveaux cas négatifs et variantes codecs) sans régression de temps pipeline.
 
 ## Fixture Roadmap (Pre-v1)
 
@@ -146,9 +147,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Cas d’erreur structurels (fichier absent, vide, tronqué, permissions, extension incohérente).
   - Validation des invariants de sortie (format proxy, bornes dimensions, erreurs stables).
 - Dépendant de fixtures externes (à onboarder avant freeze v1):
-  - RAW Canon (`CR2/CR3`), Nikon (`NEF/NRW`), Sony (`ARW`) pour vérifier extraction preview embarquée.
-  - Vidéo/audio représentatifs pour `media.proxies.video@1`, `media.proxies.audio@1` et `audio.waveform@1`.
-  - Matrice d’attendus documentée (succès/échec contrôlé, timings de smoke perf, checksums).
+  - Étendre la matrice existante RAW Canon (`CR2/CR3`), Nikon (`NEF/NRW`), Sony (`ARW`) avec variantes supplémentaires.
+  - Étendre la matrice existante vidéo/audio (`media.proxies.video@1`, `media.proxies.audio@1`, `audio.waveform@1`) avec nouveaux cas limites.
+  - Maintenir la matrice d’attendus (succès/échec contrôlé, timings de smoke perf, checksums) à chaque ajout de corpus.
 
 ## Operational Reference
 
