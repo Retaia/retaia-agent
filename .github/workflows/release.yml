@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_HUSKY_DONT_INSTALL_HOOKS: "1"
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  build-release-assets:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_suffix: linux
+          - os: macos-latest
+            artifact_suffix: macos
+          - os: windows-latest
+            artifact_suffix: windows
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Linux desktop build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --locked --bin agentctl --bin agent-runtime
+          cargo build --release --locked --features desktop-shell --bin agent-desktop-shell
+
+      - name: Package release archive (Unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          ARCH="$(echo "${RUNNER_ARCH}" | tr '[:upper:]' '[:lower:]')"
+          OUT_DIR="release-assets"
+          BIN_DIR="target/release"
+          PACKAGE="retaia-agent-${TAG}-${{ matrix.artifact_suffix }}-${ARCH}"
+          mkdir -p "${OUT_DIR}/${PACKAGE}"
+          cp "${BIN_DIR}/agentctl" "${OUT_DIR}/${PACKAGE}/"
+          cp "${BIN_DIR}/agent-runtime" "${OUT_DIR}/${PACKAGE}/"
+          cp "${BIN_DIR}/agent-desktop-shell" "${OUT_DIR}/${PACKAGE}/"
+          tar -C "${OUT_DIR}" -czf "${OUT_DIR}/${PACKAGE}.tar.gz" "${PACKAGE}"
+
+      - name: Package release archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $arch = $env:RUNNER_ARCH.ToLowerInvariant()
+          $outDir = "release-assets"
+          $binDir = "target/release"
+          $package = "retaia-agent-$tag-${{ matrix.artifact_suffix }}-$arch"
+          New-Item -ItemType Directory -Path "$outDir/$package" -Force | Out-Null
+          Copy-Item "$binDir/agentctl.exe" "$outDir/$package/"
+          Copy-Item "$binDir/agent-runtime.exe" "$outDir/$package/"
+          Copy-Item "$binDir/agent-desktop-shell.exe" "$outDir/$package/"
+          Compress-Archive -Path "$outDir/$package/*" -DestinationPath "$outDir/$package.zip" -Force
+
+      - name: Upload release assets artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.artifact_suffix }}
+          retention-days: 14
+          path: |
+            release-assets/*.tar.gz
+            release-assets/*.zip
+
+  create-github-release:
+    name: Publish GitHub Release
+    needs: build-release-assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release-assets/*.tar.gz
+            release-assets/*.zip
