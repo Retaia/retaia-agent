@@ -20,8 +20,10 @@ esac
 
 PKG_NAME="retaia-agent"
 OUT_DIR="release-assets"
+WORKSPACE_DIR="${PWD}"
 TOPDIR="${PWD}/${OUT_DIR}/rpmbuild"
-ICON_SRC="assets/icon/retaia-logo-512.png"
+BIN_DIR="${WORKSPACE_DIR}/target/release"
+ICON_SRC="${WORKSPACE_DIR}/assets/icon/retaia-logo-512.png"
 
 rm -rf "${TOPDIR}"
 mkdir -p \
@@ -45,9 +47,9 @@ Retaia Agent runtime, CLI and desktop shell.
 
 %install
 mkdir -p %{buildroot}/usr/local/bin
-install -m 0755 target/release/agentctl %{buildroot}/usr/local/bin/agentctl
-install -m 0755 target/release/agent-runtime %{buildroot}/usr/local/bin/agent-runtime
-install -m 0755 target/release/agent-desktop-shell %{buildroot}/usr/local/bin/agent-desktop-shell
+install -m 0755 ${BIN_DIR}/agentctl %{buildroot}/usr/local/bin/agentctl
+install -m 0755 ${BIN_DIR}/agent-runtime %{buildroot}/usr/local/bin/agent-runtime
+install -m 0755 ${BIN_DIR}/agent-desktop-shell %{buildroot}/usr/local/bin/agent-desktop-shell
 
 mkdir -p %{buildroot}/usr/share/icons/hicolor/512x512/apps
 install -m 0644 ${ICON_SRC} %{buildroot}/usr/share/icons/hicolor/512x512/apps/retaia-agent.png
