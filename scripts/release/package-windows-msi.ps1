@@ -38,7 +38,7 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
     UpgradeCode="8B4AEE21-A9C4-45E8-B2A2-86A1272AE947">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="$wixPlatform" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of Retaia Agent is already installed." />
-    <MediaTemplate />
+    <MediaTemplate EmbedCab="yes" />
     <Icon Id="retaiaAppIcon" SourceFile="$iconPath" />
     <Property Id="ARPPRODUCTICON" Value="retaiaAppIcon" />
 
