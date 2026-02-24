@@ -5,6 +5,7 @@ Hub documentaire local, organisé par sujet.
 ## Sujets
 
 - Statut d'implémentation pré-v1: `PRE-V1-STATUS.md`
+- Matrice de conformité v1 vs `specs/`: `V1-SPECS-CONFORMITY.md`
 - Runtime et contraintes: `RUNTIME-CONSTRAINTS.md`
 - Client HTTP API (OpenAPI v1): `API-CLIENT.md`
 - UX menu système (tray): `UX-SYSTEM-TRAY.md`

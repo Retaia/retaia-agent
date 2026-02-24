@@ -1,6 +1,6 @@
 # Pre-v1 Implementation Status
 
-Last updated: 2026-02-22
+Last updated: 2026-02-24
 
 ## Purpose
 
@@ -120,6 +120,8 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - waveform produite (`manifest` + upload) validée,
     - waveform absente mais job non bloquant (`manifest` vide, submit direct) validée,
     - cohérence `job_type`/`manifest`/uploads verrouillée en TDD/BDD/E2E.
+  - Revue finale de conformité v1 contre `specs/` documentée et traçable:
+    - matrice normative source -> implémentation/tests: `docs/V1-SPECS-CONFORMITY.md`.
 - In progress:
   - Optimisations de temps CI itératives (cache, filtres, prebuild).
   - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
@@ -164,7 +166,6 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 4. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté) et checksums.
 5. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
 6. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
-7. Revue finale de conformité v1 contre `specs/` avant freeze.
 
 ## Fixture Roadmap (Pre-v1)
 
