@@ -28,16 +28,8 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Port applicatif `DerivedProcessingGateway` (claim/heartbeat/submit + upload init/part/complete) + validation v1 des couples `derived kind`/`content_type`.
   - Socle capabilities v1: déclaration agent `media.facts@1`, `media.proxies.*@1`, `media.thumbnails@1`, `audio.waveform@1` + garde défensive de compatibilité (`required_capabilities ⊆ capabilities déclarées`) avant projection runtime.
   - Use-case d'enregistrement agent (`register_agent`) + port DDD `AgentRegistrationGateway` + adapter OpenAPI `POST /agents/register` publiant explicitement les capabilities déclarées.
-- In progress:
-  - Intégration shell GUI réelle sur cette base (menu/tray + fenêtre statut/préférences).
-  - Contrat applicatif shell GUI minimal implémenté (`runtime_gui_shell`): actions menu (`play/pause/stop/open status/open settings`), rendu statut/settings, contrôle daemon (`start/stop/status`) via port partagé `DaemonManager`.
-  - Contrôleur desktop applicatif (`DesktopShellController`) implémenté pour relier bridge toolkit GUI et moteur partagé (`RuntimeSession`) avec orchestration menu/statut/settings/quit.
-  - Shell desktop réel ajouté sous feature `desktop-shell` (`agent-desktop-shell`) avec tray natif, fenêtre masquable (`hide to tray`), raccourcis clavier et actions runtime/daemon synchronisées.
-  - Fenêtre desktop "control center" branchée (boutons cliquables + stats runtime + dernier job/durée observée) tout en gardant le tray comme point d'entrée principal.
-  - Shell runtime CLI interactif (`agent-runtime`) ajouté comme miroir headless du menu système.
+  - Shell GUI/CLI branchés au même moteur runtime partagé et au même daemon.
   - Boucle daemon branchée sur cycle poll runtime (`run_runtime_poll_cycle`) avec projection d'état dégradé (unauthorized/connectivité) et notifications associées.
-- Pending:
-  - Enrichissement UX desktop (fenêtre contrôles persistants + historique jobs/metrics détaillées).
 
 ### Notifications
 
@@ -69,8 +61,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - `config set`
     - `daemon install/start/stop/status/uninstall` (service manager natif via port partagé)
   - Parsing CLI migré vers `clap`.
-- Pending:
-  - Écran/panneau GUI branché sur les mêmes services en production app.
+  - GUI branchée sur les mêmes services de config/daemon que la CLI.
 
 ### Test Strategy & CI Gates
 
@@ -121,29 +112,17 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - cohérence `job_type`/`manifest`/uploads verrouillée en TDD/BDD/E2E.
   - Revue finale de conformité v1 contre `specs/` documentée et traçable:
     - matrice normative source -> implémentation/tests: `docs/V1-SPECS-CONFORMITY.md`.
-- In progress:
-  - Optimisations de temps CI itératives (cache, filtres, prebuild).
-  - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy pour valider la compatibilité preview pre-v1.
-  - Préparer le corpus fixture externe versionné (checksums + attentes) pour valider la preview RAW réelle sans rendu complet.
-  - Ajouter des scénarios photo proxy pre-v1 avec fixtures:
-    - happy path RAW par marque/modèle (Canon/Nikon/Sony),
-    - RAW non supporté (erreur contrôlée, sans panic),
-    - RAW corrompu/tronqué (échec contrôlé),
-    - incohérence extension/contenu (comportement déterministe),
-    - lot mixte (`jpg/png/tiff/webp/raw`) avec rapport succès/échecs,
-    - smoke perf preview sur RAW volumineux (borne temps large).
-  - Ajouter/maintenir des tests photo proxy faisables sans fixtures externes:
-    - source JPEG/PNG/TIFF/WEBP valides -> proxy JPEG/WEBP généré avec dimensions bornées,
-    - fichier inexistant/illisible -> erreur contrôlée,
-    - extension trompeuse (ex: `.cr2` avec contenu texte) -> échec déterministe,
-    - fichier vide/tronqué -> échec contrôlé sans panic,
-    - lot mixte local (`jpg/png/tiff/webp/fake-raw/empty`) avec comptage succès/échecs déterministe,
-    - paramètres invalides (qualité/dimensions) -> validation explicite.
-  - Ajouter des fixtures vidéo/audio réelles pour proxy generation:
-    - vidéo: H264/H265, CFR/VFR, présence/absence de piste audio,
-    - audio: WAV/MP3/AAC, sample rates atypiques, mono/stéréo.
-  - Étendre les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes supplémentaires:
-    - variantes payload additionnelles selon endpoints futurs.
+### Freeze Blockers (Pre-v1)
+
+- Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy.
+- Ajouter une matrice de fixtures vidéo/audio réelles (`H264/H265`, `CFR/VFR`, `WAV/MP3/AAC`, mono/stéréo, sample rates atypiques).
+- Publier le corpus externe versionné (checksums + attentes) et valider la matrice de résultats (supporté/non supporté, échec contrôlé).
+
+### Non-blocking Backlog
+
+- Optimisations de temps CI itératives (cache, filtres, prebuild).
+- Enrichissement UX desktop (fenêtre contrôles persistants + historique jobs/metrics détaillées).
+- Étendre les tests d’adapters OpenAPI avec payloads/réponses HTTP réalistes supplémentaires selon endpoints futurs.
 
 ### Engineering Baseline
 
@@ -155,16 +134,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 
 ## Remaining Pre-v1 Work (Priority)
 
-1. Shell GUI minimal branché sur le runtime partagé:
-   - menu système (controller app prêt, intégration toolkit desktop pending),
-   - fenêtre statut job en cours (controller app prêt, intégration toolkit desktop pending),
-   - accès settings (controller app prêt, intégration toolkit desktop pending).
-2. Hardening opérationnel (observabilité runtime et erreurs d’intégration API réelles).
-   - Partiellement démarré: logs structurés par cycle daemon + corrélation `job_id/asset_uuid` quand disponible.
-   - Fait: rétention/compaction SQLite long-run sur cycles + jobs complétés.
-3. Ajouter une matrice de tests avec fixtures RAW réelles pour photo proxy preview (Canon/Nikon/Sony), avec résultats attendus documentés (supporté/non supporté) et checksums.
-4. Couvrir explicitement les cas négatifs et robustesse photo proxy (RAW non supporté, fichier corrompu, extension/contenu incohérents, batch mixte, smoke perf) sur corpus réel.
-5. Ajouter une matrice de fixtures vidéo/audio pour `media.proxies.video@1` et `media.proxies.audio@1` (H264/H265, CFR/VFR, WAV/MP3/AAC, mono/stéréo, edge sample rates).
+1. Finaliser la matrice RAW réelle (`CR2/CR3/NEF/NRW/ARW`) avec résultats attendus documentés (supporté/non supporté).
+2. Finaliser la matrice vidéo/audio réelle (`H264/H265`, `CFR/VFR`, `WAV/MP3/AAC`, mono/stéréo, sample rates atypiques).
+3. Versionner le corpus externe (checksums) et valider la robustesse négative/perf smoke sur ce corpus.
 
 ## Fixture Roadmap (Pre-v1)
 

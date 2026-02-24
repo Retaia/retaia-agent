@@ -36,3 +36,16 @@ Statuts:
 
 - Le socle v1 agent est conforme sur runtime, authz/capabilities, OpenAPI transport mapping, i18n, observabilité opératoire et tests gates.
 - Les écarts restants sont limités aux validations média sur corpus externe (RAW/vidéo/audio réels), déjà identifiées comme pré-freeze.
+
+## V1 Freeze Checklist
+
+- [x] Runtime status-driven / polling contractuel validé en TDD/BDD/E2E.
+- [x] Mapping authz/capabilities agent (`AGENT` vs `MCP`) validé.
+- [x] Mapping transport OpenAPI (`401/429/422/5xx` + payloads invalides) validé.
+- [x] Parité config + modèle daemon (`CLI === GUI`) validée.
+- [x] i18n v1 (`en`/`fr`, fallback, parité de clés) validé.
+- [x] Observabilité opérationnelle daemon (stats + history + bug report) validée.
+- [ ] Corpus RAW réel onboardé et validé (`CR2/CR3/NEF/NRW/ARW`).
+- [ ] Corpus vidéo/audio réel onboardé et validé (`H264/H265`, `WAV/MP3/AAC`, `CFR/VFR`).
+- [ ] Checksums + attentes du corpus externe versionnés dans le repo.
+- [ ] Re-run final des gates CI avec corpus externe et publication du rapport de freeze.
