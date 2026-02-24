@@ -2,7 +2,14 @@
 set -euo pipefail
 
 TAG="${1:?tag required (ex: v1.0.0)}"
-VERSION="${TAG#v}"
+RAW_VERSION="${TAG#v}"
+RPM_VERSION="${RAW_VERSION%%-*}"
+if [[ "${RAW_VERSION}" == *-* ]]; then
+  RPM_SUFFIX="${RAW_VERSION#*-}"
+  RPM_RELEASE="0.${RPM_SUFFIX//-/.}.1"
+else
+  RPM_RELEASE="1"
+fi
 ARCH_RAW="$(echo "${RUNNER_ARCH:-x64}" | tr '[:upper:]' '[:lower:]')"
 
 case "${ARCH_RAW}" in
@@ -27,8 +34,8 @@ mkdir -p \
 
 cat > "${TOPDIR}/SPECS/${PKG_NAME}.spec" <<SPEC
 Name:           ${PKG_NAME}
-Version:        ${VERSION}
-Release:        1%{?dist}
+Version:        ${RPM_VERSION}
+Release:        ${RPM_RELEASE}%{?dist}
 Summary:        Retaia Agent runtime, CLI and desktop shell
 License:        Proprietary
 BuildArch:      ${RPM_ARCH}
@@ -70,7 +77,11 @@ rpmbuild \
   --define "_build_id_links none" \
   -bb "${TOPDIR}/SPECS/${PKG_NAME}.spec"
 
-RPM_PATH="${TOPDIR}/RPMS/${RPM_ARCH}/${PKG_NAME}-${VERSION}-1.${RPM_ARCH}.rpm"
+RPM_PATH="$(find "${TOPDIR}/RPMS/${RPM_ARCH}" -maxdepth 1 -type f -name "${PKG_NAME}-${RPM_VERSION}-*.${RPM_ARCH}.rpm" | head -n1)"
+if [[ -z "${RPM_PATH}" ]]; then
+  echo "unable to locate built rpm in ${TOPDIR}/RPMS/${RPM_ARCH}" >&2
+  exit 1
+fi
 TARGET_PATH="${OUT_DIR}/${PKG_NAME}-${TAG}-linux-${RPM_ARCH}.rpm"
 cp "${RPM_PATH}" "${TARGET_PATH}"
 
