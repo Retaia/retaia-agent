@@ -7,3 +7,13 @@
 # audio/wav/music_sample.wav	<sha256>	proxy_audio	supported	WAV input for audio proxy
 # video/h264/sample_cfr.mp4	<sha256>	proxy_video	supported	H264 CFR
 # video/h265/sample_vfr.mp4	<sha256>	proxy_video	supported	H265 VFR
+raw/canon/sample1.cr2	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	raw_photo	negative	Empty CR2 placeholder should fail deterministically
+raw/nikon/sample1.nef	9b8427deb4d29d220303fa0300c08015644fb11fa03746ff57d3180350f450a2	raw_photo	supported	Nikon NEF sample
+audio/flac/sample1.flac	2865c70c0637ac4eac9e59c102ab87852eb988dfb4f4c0a72153134de8768f7a	proxy_audio	supported	FLAC sample
+audio/flac/sample2.flac	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	proxy_audio	negative	Empty FLAC placeholder
+audio/mp3/sample1.mp3	847f2d4ed5e6fb20463416396c021e8387442690ebb1df99e7b7c7b3bff277db	proxy_audio	supported	MP3 sample
+audio/mp3/sample2.mp3	8816d3ab9cd4c3c5230068eeb9551e4519343c3b884d6798692e6ef61c1a7ea2	proxy_audio	supported	MP3 sample
+audio/aac/sample1.aac	3d198dd8cc139a072a4ee39a6443d3e194a14f9c9f16e2a32569d4985a47edbb	proxy_audio	supported	AAC sample
+audio/aac/sample2.aac	387a3ed59b7c649ff667a3277513a7c8d9f22c91d456524a537989d765e1a12b	proxy_audio	supported	AAC sample
+audio/wav/sample1.wav	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	proxy_audio	negative	Empty WAV placeholder
+audio/wav/sample2.wav	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	proxy_audio	negative	Empty WAV placeholder
