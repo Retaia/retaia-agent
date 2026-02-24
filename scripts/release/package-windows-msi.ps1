@@ -22,6 +22,7 @@ $wxsPath = Join-Path $outDir "retaia-agent.wxs"
 $objPath = Join-Path $outDir "retaia-agent.wixobj"
 $msiPath = Join-Path $outDir "retaia-agent-$Tag-windows-$arch.msi"
 $binDir = (Resolve-Path "target/release").Path
+$iconPath = (Resolve-Path "assets/icon/retaia-logo.ico").Path
 
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
@@ -38,6 +39,8 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="$wixPlatform" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of Retaia Agent is already installed." />
     <MediaTemplate />
+    <Icon Id="retaiaAppIcon" SourceFile="$iconPath" />
+    <Property Id="ARPPRODUCTICON" Value="retaiaAppIcon" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="$programFilesFolder">
