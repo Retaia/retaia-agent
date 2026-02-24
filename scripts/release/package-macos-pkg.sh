@@ -7,13 +7,15 @@ ARCH="$(echo "${RUNNER_ARCH:-x64}" | tr '[:upper:]' '[:lower:]')"
 OUT_DIR="release-assets"
 PKG_ROOT="${OUT_DIR}/pkgroot"
 BIN_DIR="target/release"
+ICON_SRC="assets/icon/retaia-logo.icns"
 
 rm -rf "${PKG_ROOT}"
-mkdir -p "${PKG_ROOT}/usr/local/bin"
+mkdir -p "${PKG_ROOT}/usr/local/bin" "${PKG_ROOT}/usr/local/share/retaia-agent"
 
 install -m 0755 "${BIN_DIR}/agentctl" "${PKG_ROOT}/usr/local/bin/agentctl"
 install -m 0755 "${BIN_DIR}/agent-runtime" "${PKG_ROOT}/usr/local/bin/agent-runtime"
 install -m 0755 "${BIN_DIR}/agent-desktop-shell" "${PKG_ROOT}/usr/local/bin/agent-desktop-shell"
+install -m 0644 "${ICON_SRC}" "${PKG_ROOT}/usr/local/share/retaia-agent/retaia-logo.icns"
 
 pkgbuild \
   --root "${PKG_ROOT}" \
