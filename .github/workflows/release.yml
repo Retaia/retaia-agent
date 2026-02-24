@@ -48,12 +48,17 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
+      - name: Install Windows MSI tooling (WiX)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: choco install wixtoolset --no-progress -y
+
       - name: Build release binaries
         run: |
           cargo build --release --locked --bin agentctl --bin agent-runtime
           cargo build --release --locked --features desktop-shell --bin agent-desktop-shell
 
-      - name: Package release archive (Unix)
+      - name: Package portable archive (Unix)
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
@@ -69,7 +74,7 @@ jobs:
           cp "${BIN_DIR}/agent-desktop-shell" "${OUT_DIR}/${PACKAGE}/"
           tar -C "${OUT_DIR}" -czf "${OUT_DIR}/${PACKAGE}.tar.gz" "${PACKAGE}"
 
-      - name: Package release archive (Windows)
+      - name: Package portable archive (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
@@ -84,6 +89,21 @@ jobs:
           Copy-Item "$binDir/agent-desktop-shell.exe" "$outDir/$package/"
           Compress-Archive -Path "$outDir/$package/*" -DestinationPath "$outDir/$package.zip" -Force
 
+      - name: Build Linux installer (.deb)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: scripts/release/package-linux-deb.sh "${GITHUB_REF_NAME}"
+
+      - name: Build macOS installer (.pkg)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: scripts/release/package-macos-pkg.sh "${GITHUB_REF_NAME}"
+
+      - name: Build Windows installer (.msi)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: scripts/release/package-windows-msi.ps1 -Tag "${env:GITHUB_REF_NAME}"
+
       - name: Upload release assets artifact
         uses: actions/upload-artifact@v4
         with:
@@ -92,6 +112,9 @@ jobs:
           path: |
             release-assets/*.tar.gz
             release-assets/*.zip
+            release-assets/*.deb
+            release-assets/*.pkg
+            release-assets/*.msi
 
   create-github-release:
     name: Publish GitHub Release
@@ -111,3 +134,6 @@ jobs:
           files: |
             release-assets/*.tar.gz
             release-assets/*.zip
+            release-assets/*.deb
+            release-assets/*.pkg
+            release-assets/*.msi
