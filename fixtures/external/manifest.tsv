@@ -1,0 +1,9 @@
+# relative_path	sha256	kind	expected	notes
+# raw/canon/5d2_sample.cr2	<sha256>	raw_photo	supported	Canon CR2 preview extraction
+# raw/nikon/d750_sample.nef	<sha256>	raw_photo	supported	Nikon NEF preview extraction
+# raw/sony/a7_sample.arw	<sha256>	raw_photo	supported	Sony ARW preview extraction
+# raw/nikon/corrupted.nef	<sha256>	raw_photo	negative	Corrupted payload should fail deterministically
+# audio/flac/voice_sample.flac	<sha256>	proxy_audio	supported	FLAC input for audio proxy
+# audio/wav/music_sample.wav	<sha256>	proxy_audio	supported	WAV input for audio proxy
+# video/h264/sample_cfr.mp4	<sha256>	proxy_video	supported	H264 CFR
+# video/h265/sample_vfr.mp4	<sha256>	proxy_video	supported	H265 VFR
