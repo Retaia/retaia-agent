@@ -114,6 +114,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
     - matrice normative source -> implémentation/tests: `docs/V1-SPECS-CONFORMITY.md`.
 ### Freeze Blockers (Pre-v1)
 
+- Contrat de fixtures externes en place (`fixtures/external/manifest.tsv` + `scripts/validate_external_fixtures.sh`), reste à onboarder le corpus réel.
 - Ajouter des fixtures RAW réelles (Canon `CR2/CR3`, Nikon `NEF/NRW`, Sony `ARW`) dans les suites TDD/BDD/E2E photo proxy.
 - Ajouter une matrice de fixtures vidéo/audio réelles (`H264/H265`, `CFR/VFR`, `WAV/MP3/AAC`, mono/stéréo, sample rates atypiques).
 - Publier le corpus externe versionné (checksums + attentes) et valider la matrice de résultats (supporté/non supporté, échec contrôlé).
