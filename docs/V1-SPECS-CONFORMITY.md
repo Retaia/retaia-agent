@@ -34,7 +34,7 @@ Statuts:
 ## Conclusion v1
 
 - Le socle v1 agent est conforme sur runtime, authz/capabilities, OpenAPI transport mapping, i18n, observabilité opératoire et tests gates.
-- Les écarts restants portent surtout sur le durcissement CI du corpus externe et la publication du run final de freeze.
+- Le run final de freeze est validé et publié: `docs/V1-FREEZE-REPORT.md`.
 
 ## V1 Freeze Checklist
 
@@ -47,4 +47,4 @@ Statuts:
 - [x] Corpus RAW réel onboardé et validé (`CR2/CR3/NEF/NRW/ARW`).
 - [x] Corpus vidéo/audio réel onboardé et validé (`H264/H265`, `WAV/MP3/AAC`, `CFR/VFR`).
 - [x] Checksums + attentes du corpus externe versionnés dans le repo.
-- [ ] Re-run final des gates CI avec corpus externe et publication du rapport de freeze.
+- [x] Re-run final des gates CI avec corpus externe et publication du rapport de freeze (`docs/V1-FREEZE-REPORT.md`).

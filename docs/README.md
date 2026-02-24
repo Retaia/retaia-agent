@@ -6,6 +6,7 @@ Hub documentaire local, organisé par sujet.
 
 - Statut d'implémentation pré-v1: `PRE-V1-STATUS.md`
 - Matrice de conformité v1 vs `specs/`: `V1-SPECS-CONFORMITY.md`
+- Rapport final de freeze v1: `V1-FREEZE-REPORT.md`
 - Runtime et contraintes: `RUNTIME-CONSTRAINTS.md`
 - Client HTTP API (OpenAPI v1): `API-CLIENT.md`
 - UX menu système (tray): `UX-SYSTEM-TRAY.md`
