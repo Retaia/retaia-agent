@@ -118,7 +118,8 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 - Validation corpus externe branchée dans les suites:
   - BDD photo RAW: `tests/bdd_specs/external_fixtures_photo_proxy.rs`
   - E2E audio/vidéo: `tests/e2e_flow/external_fixtures_av_flow.rs`
-- Prochaine étape de freeze: ajouter une gate CI dédiée au corpus externe (validation manifest + scénarios externes ciblés).
+- Gate CI dédiée au corpus externe active (`ci(fixtures): add external fixture validation job`).
+- Run final de freeze publié: `docs/V1-FREEZE-REPORT.md`.
 
 ### Non-blocking Backlog
 
@@ -136,9 +137,9 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 
 ## Remaining Pre-v1 Work (Priority)
 
-1. Ajouter une gate CI dédiée au corpus externe (`scripts/validate_external_fixtures.sh` + tests externes ciblés).
-2. Re-run final des gates CI pré-v1 avec publication du rapport de freeze.
-3. Compléter progressivement la matrice externe (nouveaux cas négatifs et variantes codecs) sans régression de temps pipeline.
+1. Maintenir la matrice externe avec nouveaux cas négatifs/variantes codecs sans régression de temps pipeline.
+2. Garder la stabilité de la gate dédiée fixtures externes dans les prochains incréments.
+3. Ouvrir les chantiers v1.1/v1.2 hors scope v1 (AI/transcription/providers, mobile push) selon roadmap specs.
 
 ## Fixture Roadmap (Pre-v1)
 
