@@ -188,7 +188,12 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Le workflow build les binaires (`agentctl`, `agent-runtime`, `agent-desktop-shell`) sur Linux/macOS/Windows et les attache a la GitHub Release.
+Le workflow build les binaires (`agentctl`, `agent-runtime`, `agent-desktop-shell`) sur Linux/macOS/Windows et publie:
+
+- archives portables (`.tar.gz` / `.zip`)
+- installateurs Linux (`.deb`)
+- installateurs macOS (`.pkg`)
+- installateurs Windows (`.msi`)
 
 ## Contributing
 
