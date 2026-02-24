@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run_tests: ${{ steps.filter.outputs.run_tests }}
+      run_external_fixtures: ${{ steps.filter.outputs.run_external_fixtures }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,6 +42,15 @@ jobs:
               - "src/**"
               - "tests/**"
               - ".cargo-husky/hooks/**"
+              - ".github/workflows/ci.yml"
+            run_external_fixtures:
+              - "fixtures/external/**"
+              - "scripts/validate_external_fixtures.sh"
+              - "tests/support/external_fixtures.rs"
+              - "tests/bdd_specs/external_fixtures_photo_proxy.rs"
+              - "tests/e2e_flow/external_fixtures_av_flow.rs"
+              - "tests/bdd_runtime_behavior.rs"
+              - "tests/e2e_runtime_behavior.rs"
               - ".github/workflows/ci.yml"
 
   branch-up-to-date:
@@ -107,7 +117,7 @@ jobs:
 
   rust-build-cache:
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.run_tests == 'true'
+    if: needs.changes.outputs.run_tests == 'true' || needs.changes.outputs.run_external_fixtures == 'true'
     needs:
       - changes
       - commitlint
@@ -204,6 +214,33 @@ jobs:
             --test e2e_configuration \
             --test e2e_runtime_behavior
 
+  test-external-fixtures:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true' || needs.changes.outputs.run_external_fixtures == 'true'
+    needs:
+      - changes
+      - rust-build-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          save-if: false
+
+      - name: Validate external fixtures manifest
+        run: bash scripts/validate_external_fixtures.sh
+
+      - name: Run external fixtures targeted tests
+        run: |
+          cargo test --test bdd_runtime_behavior external_fixture
+          cargo test --test e2e_runtime_behavior external_fixture
+
   coverage-gate:
     runs-on: ubuntu-latest
     if: needs.changes.outputs.run_tests == 'true'
@@ -259,6 +296,7 @@ jobs:
       - test-tdd
       - test-bdd
       - test-e2e
+      - test-external-fixtures
       - coverage-gate
     steps:
       - name: Required CI gate
@@ -270,12 +308,21 @@ jobs:
             [ "${{ needs.test-tdd.result }}" = "success" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "success" ] || exit 1
             [ "${{ needs.test-e2e.result }}" = "success" ] || exit 1
+            [ "${{ needs.test-external-fixtures.result }}" = "success" ] || exit 1
             [ "${{ needs.coverage-gate.result }}" = "success" ] || exit 1
+          elif [ "${{ needs.changes.outputs.run_external_fixtures }}" = "true" ]; then
+            [ "${{ needs.rust-build-cache.result }}" = "success" ] || exit 1
+            [ "${{ needs.test-tdd.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.test-bdd.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.test-e2e.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.test-external-fixtures.result }}" = "success" ] || exit 1
+            [ "${{ needs.coverage-gate.result }}" = "skipped" ] || exit 1
           else
             [ "${{ needs.rust-build-cache.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-tdd.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-e2e.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.test-external-fixtures.result }}" = "skipped" ] || exit 1
             [ "${{ needs.coverage-gate.result }}" = "skipped" ] || exit 1
           fi
           echo "All required CI jobs passed."
