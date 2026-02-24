@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 pub mod _agents_register_post_200_response;
 pub use self::_agents_register_post_200_response::AgentsRegisterPost200Response;
 pub mod _agents_register_post_request;

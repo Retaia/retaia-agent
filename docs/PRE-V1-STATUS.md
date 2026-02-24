@@ -150,6 +150,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
   - Stratégie lib-first sur ce repo: `clap` (CLI parsing) + `thiserror` (types d’erreurs).
   - Client API généré OpenAPI (`reqwest-trait`) branché via adapter infra `OpenApiJobsGateway` (feature `core-api-client`).
   - Adapter infra OpenAPI pour processing dérivés (`OpenApiDerivedProcessingGateway`) sur jobs + derived APIs.
+  - Hardening build baseline: warning cleanup local (`agent-runtime` import conditionnel) + silence ciblé des warnings `non_snake_case` sur modèles OpenAPI générés.
 
 ## Remaining Pre-v1 Work (Priority)
 

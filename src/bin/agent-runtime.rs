@@ -5,13 +5,16 @@ use std::time::{Duration, Instant};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
     AgentRuntimeConfig, ClientRuntimeTarget, CompletedJobEntry, ConfigRepository, CoreApiGateway,
-    CoreApiGatewayError, DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats,
-    DaemonRuntimeStats, FileConfigRepository, LogLevel, RuntimeHistoryStore,
-    RuntimePollCycleStatus, RuntimeSession, SystemConfigRepository, compact_validation_reason,
-    detect_language, notification_sink_profile_for_target, now_unix_ms, run_runtime_poll_cycle,
-    run_state_label, save_runtime_stats, select_notification_sink, t,
+    DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats, DaemonRuntimeStats,
+    FileConfigRepository, LogLevel, RuntimeHistoryStore, RuntimePollCycleStatus, RuntimeSession,
+    SystemConfigRepository, compact_validation_reason, detect_language,
+    notification_sink_profile_for_target, now_unix_ms, run_runtime_poll_cycle, run_state_label,
+    save_runtime_stats, select_notification_sink, t,
 };
 use tracing::{info, warn};
+
+#[cfg(not(feature = "core-api-client"))]
+use retaia_agent::CoreApiGatewayError;
 
 #[derive(Debug, Parser)]
 #[command(name = "agent-runtime", about = "Retaia runtime daemon process")]
