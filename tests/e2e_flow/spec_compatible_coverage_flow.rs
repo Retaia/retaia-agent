@@ -135,6 +135,11 @@ fn e2e_notification_mapping_and_dispatch_covers_runtime_notification_contract() 
         },
         SystemNotification::AgentDisconnectedOrReconnecting,
         SystemNotification::AuthExpiredReauthRequired,
+        SystemNotification::DaemonStarted,
+        SystemNotification::DaemonStopped,
+        SystemNotification::DaemonStatusRefreshed {
+            status: "running".to_string(),
+        },
         SystemNotification::SettingsSaved,
         SystemNotification::SettingsInvalid {
             reason: "invalid ollama url".to_string(),
@@ -156,6 +161,7 @@ fn e2e_notification_mapping_and_dispatch_covers_runtime_notification_contract() 
         .collect::<Vec<_>>();
     assert!(mapped.contains(&"New job received".to_string()));
     assert!(mapped.contains(&"Auth expired / re-auth required".to_string()));
+    assert!(mapped.contains(&"Daemon status refreshed".to_string()));
 }
 
 #[test]

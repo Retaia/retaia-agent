@@ -158,6 +158,11 @@ fn bdd_given_all_runtime_notification_types_when_mapping_then_messages_follow_co
         },
         SystemNotification::AgentDisconnectedOrReconnecting,
         SystemNotification::AuthExpiredReauthRequired,
+        SystemNotification::DaemonStarted,
+        SystemNotification::DaemonStopped,
+        SystemNotification::DaemonStatusRefreshed {
+            status: "running".to_string(),
+        },
         SystemNotification::SettingsSaved,
         SystemNotification::SettingsInvalid {
             reason: "invalid core api url".to_string(),
@@ -184,5 +189,10 @@ fn bdd_given_all_runtime_notification_types_when_mapping_then_messages_follow_co
         sink.delivered_titles
             .borrow()
             .contains(&"Updates available".to_string())
+    );
+    assert!(
+        sink.delivered_titles
+            .borrow()
+            .contains(&"Daemon status refreshed".to_string())
     );
 }

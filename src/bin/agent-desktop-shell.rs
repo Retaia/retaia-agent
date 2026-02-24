@@ -18,9 +18,11 @@ mod desktop_shell {
         AgentRuntimeConfig, AuthMode, ConfigRepository, DAEMON_STATS_FILE_NAME, DaemonLabelRequest,
         DaemonLevel, DaemonManager, DaemonManagerError, DaemonRuntimeStats, DaemonStatus,
         DiagnosticsLimits, FileConfigRepository, Language, LogLevel, RuntimeStatsStoreError,
-        SystemConfigRepository, build_bug_report_markdown, collect_daemon_diagnostics,
-        copy_to_clipboard, detect_language, load_runtime_stats, redacted_runtime_config_from,
-        render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path, t,
+        SystemConfigRepository, SystemNotification, build_bug_report_markdown,
+        collect_daemon_diagnostics, copy_to_clipboard, detect_language, dispatch_notifications,
+        load_runtime_stats, notification_sink_profile_for_target, redacted_runtime_config_from,
+        render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path,
+        select_notification_sink, t,
     };
     use service_manager::{
         ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx, ServiceStopCtx,
@@ -210,6 +212,7 @@ mod desktop_shell {
         info_modal: Option<String>,
         last_error: Option<String>,
         quit_requested: bool,
+        notification_sink: retaia_agent::RuntimeNotificationSink,
     }
 
     impl ControlCenterApp {
@@ -229,6 +232,9 @@ mod desktop_shell {
                 info_modal: None,
                 last_error: None,
                 quit_requested: false,
+                notification_sink: select_notification_sink(notification_sink_profile_for_target(
+                    retaia_agent::ClientRuntimeTarget::UiWeb,
+                )),
             };
             app.refresh_daemon_status();
             app.refresh_stats();
@@ -250,6 +256,13 @@ mod desktop_shell {
             }
         }
 
+        fn notify(&mut self, notification: SystemNotification) {
+            let report = dispatch_notifications(&self.notification_sink, &[notification]);
+            if !report.failed.is_empty() {
+                self.last_error = Some("desktop notification dispatch failed".to_string());
+            }
+        }
+
         fn refresh_stats(&mut self) {
             match load_runtime_stats() {
                 Ok(stats) => self.stats = Some(stats),
@@ -264,12 +277,17 @@ mod desktop_shell {
         }
 
         fn daemon_toggle(&mut self) {
+            let should_stop = matches!(self.daemon_status, Some(DaemonStatus::Running));
             let command = match self.daemon_status {
                 Some(DaemonStatus::Running) => self.manager.stop(Self::daemon_request()),
                 _ => self.manager.start(Self::daemon_request()),
             };
             if let Err(error) = command {
                 self.last_error = Some(error.to_string());
+            } else if should_stop {
+                self.notify(SystemNotification::DaemonStopped);
+            } else {
+                self.notify(SystemNotification::DaemonStarted);
             }
             self.refresh_daemon_status();
             self.refresh_stats();
@@ -308,6 +326,10 @@ mod desktop_shell {
                             self.refresh_daemon_status();
                             self.refresh_stats();
                             self.refresh_tray();
+                            self.notify(SystemNotification::DaemonStatusRefreshed {
+                                status: daemon_status_label(self.daemon_status.as_ref())
+                                    .to_string(),
+                            });
                         }
                         TrayCommand::Quit => self.quit_requested = true,
                     }
@@ -351,6 +373,9 @@ mod desktop_shell {
                 self.refresh_daemon_status();
                 self.refresh_stats();
                 self.refresh_tray();
+                self.notify(SystemNotification::DaemonStatusRefreshed {
+                    status: daemon_status_label(self.daemon_status.as_ref()).to_string(),
+                });
             }
             if ctx.input(|i| i.key_pressed(egui::Key::Q)) {
                 self.quit_requested = true;
@@ -470,6 +495,10 @@ mod desktop_shell {
                             self.refresh_daemon_status();
                             self.refresh_stats();
                             self.refresh_tray();
+                            self.notify(SystemNotification::DaemonStatusRefreshed {
+                                status: daemon_status_label(self.daemon_status.as_ref())
+                                    .to_string(),
+                            });
                         }
                         if ui.button(t(self.lang, "gui.button.open_status")).clicked() {
                             self.open_status();
