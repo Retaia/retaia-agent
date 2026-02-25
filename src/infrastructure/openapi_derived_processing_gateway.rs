@@ -101,6 +101,24 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             .build()
             .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
+        if payload.job_type == DerivedJobType::ExtractFacts {
+            let mut result = models::SubmitExtractFactsResult::new(models::FactsPatch::new());
+            result.warnings = payload.warnings.clone();
+            result.metrics = payload.metrics.clone();
+            let submit = models::SubmitExtractFacts::new(
+                lock_token.to_string(),
+                models::submit_extract_facts::JobType::ExtractFacts,
+                result,
+            );
+            return runtime
+                .block_on(api.jobs_job_id_submit_post(
+                    job_id,
+                    idempotency_key,
+                    models::JobSubmitRequest::SubmitExtractFacts(Box::new(submit)),
+                ))
+                .map_err(map_submit_error);
+        }
+
         let derived_patch = build_derived_patch(&payload.manifest)?;
         let mut result = models::SubmitDerivedResult::new(derived_patch);
         result.warnings = payload.warnings.clone();
@@ -198,18 +216,19 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
 #[cfg(feature = "core-api-client")]
 fn map_job_type(job_type: models::job::JobType) -> Result<DerivedJobType, DerivedProcessingError> {
     match job_type {
+        models::job::JobType::ExtractFacts => Ok(DerivedJobType::ExtractFacts),
         models::job::JobType::GenerateProxy => Ok(DerivedJobType::GenerateProxy),
         models::job::JobType::GenerateThumbnails => Ok(DerivedJobType::GenerateThumbnails),
         models::job::JobType::GenerateAudioWaveform => Ok(DerivedJobType::GenerateAudioWaveform),
-        models::job::JobType::ExtractFacts => Err(DerivedProcessingError::NotDerivedJobType(
-            "extract_facts".to_string(),
-        )),
     }
 }
 
 #[cfg(feature = "core-api-client")]
 fn map_submit_job_type(job_type: DerivedJobType) -> models::submit_derived::JobType {
     match job_type {
+        DerivedJobType::ExtractFacts => {
+            unreachable!("extract_facts must be submitted via SubmitExtractFacts")
+        }
         DerivedJobType::GenerateProxy => models::submit_derived::JobType::GenerateProxy,
         DerivedJobType::GenerateThumbnails => models::submit_derived::JobType::GenerateThumbnails,
         DerivedJobType::GenerateAudioWaveform => {
@@ -382,12 +401,9 @@ mod tests {
     }
 
     #[test]
-    fn tdd_openapi_derived_gateway_rejects_non_derived_job_type() {
-        let error = map_job_type(JobType::ExtractFacts).expect_err("must reject non-derived type");
-        assert_eq!(
-            error,
-            DerivedProcessingError::NotDerivedJobType("extract_facts".to_string())
-        );
+    fn tdd_openapi_derived_gateway_maps_extract_facts_job_type() {
+        let mapped = map_job_type(JobType::ExtractFacts).expect("extract_facts must be supported");
+        assert_eq!(mapped, crate::DerivedJobType::ExtractFacts);
     }
 
     #[test]

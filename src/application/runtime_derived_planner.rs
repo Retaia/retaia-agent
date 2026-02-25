@@ -35,6 +35,9 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
         staged_source_path: Option<&Path>,
     ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
         let mut plan = self.plan_for_claimed_job(claimed)?;
+        if claimed.job_type == DerivedJobType::ExtractFacts {
+            return Ok(plan);
+        }
         let Some(source_path) = staged_source_path else {
             return Ok(plan);
         };
@@ -85,6 +88,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
 
 fn default_manifest_for_job(claimed: &ClaimedDerivedJob) -> Vec<DerivedManifestItem> {
     match claimed.job_type {
+        DerivedJobType::ExtractFacts => Vec::new(),
         DerivedJobType::GenerateProxy => {
             vec![manifest_item_for_kind(claimed, infer_proxy_kind(claimed))]
         }

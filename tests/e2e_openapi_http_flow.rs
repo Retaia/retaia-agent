@@ -250,7 +250,7 @@ fn e2e_openapi_derived_gateway_claim_maps_optional_sidecars_from_http_payload() 
 }
 
 #[test]
-fn e2e_openapi_derived_gateway_claim_rejects_non_derived_job_type_from_http_payload() {
+fn e2e_openapi_derived_gateway_claim_accepts_extract_facts_job_type_from_http_payload() {
     let (server, base_url) = spawn_mock_server(vec![MockExchange {
         method: "POST",
         path: "/api/v1/jobs/job-nd/claim",
@@ -261,13 +261,11 @@ fn e2e_openapi_derived_gateway_claim_rejects_non_derived_job_type_from_http_payl
 
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiDerivedProcessingGateway::new(client);
-    let error = gateway
+    let claimed = gateway
         .claim_job("job-nd")
-        .expect_err("non-derived job type must fail");
-    assert_eq!(
-        error,
-        DerivedProcessingError::NotDerivedJobType("extract_facts".to_string())
-    );
+        .expect("extract_facts claim must pass");
+    assert_eq!(claimed.job_id, "job-nd");
+    assert_eq!(claimed.job_type, DerivedJobType::ExtractFacts);
 
     server.join().expect("server thread");
 }
