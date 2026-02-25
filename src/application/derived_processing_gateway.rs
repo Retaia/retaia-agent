@@ -49,6 +49,7 @@ pub struct ClaimedDerivedJob {
     pub job_type: DerivedJobType,
     pub source_storage_id: String,
     pub source_original_relative: String,
+    pub source_sidecars_relative: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

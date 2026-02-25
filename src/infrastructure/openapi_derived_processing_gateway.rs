@@ -63,6 +63,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             job_type,
             source_storage_id: job.source.storage_id.clone(),
             source_original_relative: job.source.original_relative.clone(),
+            source_sidecars_relative: job.source.sidecars_relative.unwrap_or_default(),
         })
     }
 

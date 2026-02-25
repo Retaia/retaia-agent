@@ -31,6 +31,7 @@ impl DerivedProcessingGateway for RecordingGateway {
             job_type: DerivedJobType::GenerateThumbnails,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 
@@ -151,9 +152,14 @@ fn e2e_derived_job_executor_flow_claims_uploads_and_submits_for_v1_derived_job()
         vec![
             "claim:job-22".to_string(),
             "heartbeat:job-22".to_string(),
+            "heartbeat:job-22".to_string(),
+            "heartbeat:job-22".to_string(),
             "upload_init:asset-22:thumb".to_string(),
+            "heartbeat:job-22".to_string(),
             "upload_part:asset-22:1".to_string(),
+            "heartbeat:job-22".to_string(),
             "upload_complete:asset-22".to_string(),
+            "heartbeat:job-22".to_string(),
             "submit:job-22".to_string(),
         ]
     );
@@ -223,6 +229,7 @@ impl DerivedProcessingGateway for WaveformOptionalGateway {
             job_type: DerivedJobType::GenerateAudioWaveform,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 
@@ -301,6 +308,8 @@ fn e2e_derived_job_executor_flow_allows_audio_waveform_submit_without_output_art
         gateway.calls(),
         vec![
             "claim:job-wave-opt-1".to_string(),
+            "heartbeat:job-wave-opt-1".to_string(),
+            "heartbeat:job-wave-opt-1".to_string(),
             "heartbeat:job-wave-opt-1".to_string(),
             "submit:job-wave-opt-1".to_string(),
         ]

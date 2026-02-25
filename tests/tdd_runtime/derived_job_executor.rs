@@ -32,6 +32,7 @@ impl DerivedProcessingGateway for MemoryGateway {
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 
@@ -271,6 +272,7 @@ impl DerivedProcessingGateway for WaveformGateway {
             job_type: DerivedJobType::GenerateAudioWaveform,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 
@@ -432,9 +434,14 @@ fn tdd_execute_derived_job_once_runs_claim_heartbeat_upload_submit_flow() {
         vec![
             "claim:job-1".to_string(),
             "heartbeat:job-1".to_string(),
+            "heartbeat:job-1".to_string(),
+            "heartbeat:job-1".to_string(),
             "upload_init:asset-1".to_string(),
+            "heartbeat:job-1".to_string(),
             "upload_part:1".to_string(),
+            "heartbeat:job-1".to_string(),
             "upload_complete:asset-1".to_string(),
+            "heartbeat:job-1".to_string(),
             "submit:job-1".to_string(),
         ]
     );
@@ -524,6 +531,8 @@ fn tdd_execute_derived_job_once_allows_waveform_job_without_waveform_output_and_
         gateway.calls(),
         vec![
             "claim:job-wave-3".to_string(),
+            "heartbeat:job-wave-3".to_string(),
+            "heartbeat:job-wave-3".to_string(),
             "heartbeat:job-wave-3".to_string(),
             "submit:job-wave-3".to_string(),
         ]
