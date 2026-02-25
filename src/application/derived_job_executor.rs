@@ -1,3 +1,4 @@
+use std::path::Path;
 use thiserror::Error;
 
 use crate::AgentRuntimeConfig;
@@ -58,6 +59,8 @@ pub enum DerivedJobExecutorError {
     UploadKindNotInSubmitManifest(crate::application::derived_processing_gateway::DerivedKind),
     #[error("source staging failed: {0}")]
     SourceStaging(SourceStagingError),
+    #[error("planner error: {0}")]
+    Planner(String),
 }
 
 pub trait DerivedExecutionPlanner {
@@ -65,6 +68,14 @@ pub trait DerivedExecutionPlanner {
         &self,
         claimed: &ClaimedDerivedJob,
     ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError>;
+
+    fn plan_for_claimed_job_with_source(
+        &self,
+        claimed: &ClaimedDerivedJob,
+        _staged_source_path: Option<&Path>,
+    ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
+        self.plan_for_claimed_job(claimed)
+    }
 }
 
 pub fn execute_derived_job_once<
@@ -103,7 +114,7 @@ fn execute_derived_job_once_internal<
         .claim_job(job_id)
         .map_err(DerivedJobExecutorError::Gateway)?;
     send_heartbeat(gateway, &claimed)?;
-    let _staged_source = if let Some(settings) = settings {
+    let staged_source = if let Some(settings) = settings {
         Some(
             stage_claimed_job_source(settings, &claimed)
                 .map_err(DerivedJobExecutorError::SourceStaging)?,
@@ -113,7 +124,8 @@ fn execute_derived_job_once_internal<
     };
     send_heartbeat(gateway, &claimed)?;
 
-    let plan = planner.plan_for_claimed_job(&claimed)?;
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, staged_source.as_ref().map(|s| s.path()))?;
     if plan.submit_idempotency_key.trim().is_empty() {
         return Err(DerivedJobExecutorError::MissingSubmitIdempotencyKey);
     }
