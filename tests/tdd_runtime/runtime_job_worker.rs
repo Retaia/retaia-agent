@@ -126,8 +126,14 @@ fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
     assert_eq!(report.job_id, "job-1");
     assert_eq!(report.asset_uuid, "asset-1");
     let calls = derived.calls();
-    assert_eq!(calls.first().map(std::string::String::as_str), Some("claim:job-1"));
-    assert_eq!(calls.last().map(std::string::String::as_str), Some("submit:job-1"));
+    assert_eq!(
+        calls.first().map(std::string::String::as_str),
+        Some("claim:job-1")
+    );
+    assert_eq!(
+        calls.last().map(std::string::String::as_str),
+        Some("submit:job-1")
+    );
     assert!(
         calls
             .iter()

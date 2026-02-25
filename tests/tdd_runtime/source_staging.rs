@@ -88,11 +88,17 @@ fn tdd_source_staging_copies_sidecars_to_local_temp_and_cleans_up_on_drop() {
             .iter()
             .map(|path| std::fs::read(path).expect("read staged sidecar"))
             .collect::<Vec<_>>();
-        assert_eq!(staged_payloads, vec![b"xmp-bytes".to_vec(), b"srt-bytes".to_vec()]);
+        assert_eq!(
+            staged_payloads,
+            vec![b"xmp-bytes".to_vec(), b"srt-bytes".to_vec()]
+        );
         (staged.path().to_path_buf(), sidecars)
     };
 
-    assert!(!staged_main.exists(), "staged source should be cleaned on drop");
+    assert!(
+        !staged_main.exists(),
+        "staged source should be cleaned on drop"
+    );
     for path in staged_sidecars {
         assert!(!path.exists(), "staged sidecar should be cleaned on drop");
     }

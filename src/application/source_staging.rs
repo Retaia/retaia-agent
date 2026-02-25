@@ -115,7 +115,9 @@ fn validated_file_size(path: &Path) -> Result<u64, SourceStagingError> {
     let metadata =
         std::fs::metadata(path).map_err(|error| SourceStagingError::SourceIo(error.to_string()))?;
     if !metadata.is_file() {
-        return Err(SourceStagingError::SourceNotFile(path.display().to_string()));
+        return Err(SourceStagingError::SourceNotFile(
+            path.display().to_string(),
+        ));
     }
     Ok(metadata.len())
 }
@@ -127,6 +129,7 @@ fn copy_into_staging_dir(source: &Path, staging_dir: &Path) -> Result<PathBuf, S
         .map(ToString::to_string)
         .unwrap_or_else(|| "source.bin".to_string());
     let staged_path = staging_dir.join(staged_name);
-    std::fs::copy(source, &staged_path).map_err(|error| SourceStagingError::Copy(error.to_string()))?;
+    std::fs::copy(source, &staged_path)
+        .map_err(|error| SourceStagingError::Copy(error.to_string()))?;
     Ok(staged_path)
 }
