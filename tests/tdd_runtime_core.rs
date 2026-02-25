@@ -26,12 +26,16 @@ mod notifications;
 mod runtime_cli_shell;
 #[path = "tdd_runtime/runtime_control.rs"]
 mod runtime_control;
+#[path = "tdd_runtime/runtime_derived_planner.rs"]
+mod runtime_derived_planner;
 #[path = "tdd_runtime/runtime_desktop_shell_controller.rs"]
 mod runtime_desktop_shell_controller;
 #[path = "tdd_runtime/runtime_gui_shell.rs"]
 mod runtime_gui_shell;
 #[path = "tdd_runtime/runtime_history_store.rs"]
 mod runtime_history_store;
+#[path = "tdd_runtime/runtime_job_worker.rs"]
+mod runtime_job_worker;
 #[path = "tdd_runtime/runtime_loop_engine.rs"]
 mod runtime_loop_engine;
 #[path = "tdd_runtime/runtime_orchestration.rs"]

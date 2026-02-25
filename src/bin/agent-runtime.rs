@@ -6,10 +6,11 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
     AgentRuntimeConfig, ClientRuntimeTarget, CompletedJobEntry, ConfigRepository, CoreApiGateway,
     DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats, DaemonRuntimeStats,
-    FileConfigRepository, LogLevel, RuntimeHistoryStore, RuntimePollCycleStatus, RuntimeSession,
+    DerivedProcessingError, DerivedProcessingGateway, FileConfigRepository, LogLevel,
+    RuntimeDerivedPlanner, RuntimeHistoryStore, RuntimePollCycleStatus, RuntimeSession,
     SystemConfigRepository, compact_validation_reason, detect_language,
-    notification_sink_profile_for_target, now_unix_ms, run_runtime_poll_cycle, run_state_label,
-    save_runtime_stats, select_notification_sink, t,
+    notification_sink_profile_for_target, now_unix_ms, process_next_pending_job,
+    run_runtime_poll_cycle, run_state_label, save_runtime_stats, select_notification_sink, t,
 };
 use tracing::{info, warn};
 
@@ -95,6 +96,8 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
 
     let lang = detect_language();
     let gateway = build_gateway(session.settings());
+    let derived_gateway = build_derived_gateway(session.settings());
+    let planner = RuntimeDerivedPlanner;
     let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
     let sleep_duration = Duration::from_millis(tick_ms.max(100));
     let mut history_store = match RuntimeHistoryStore::open_default() {
@@ -152,6 +155,26 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
         }
         if outcome.status == RuntimePollCycleStatus::Throttled {
             warn!(tick, "{}", t(lang, "runtime.throttled"));
+        }
+        match process_next_pending_job(
+            session,
+            gateway.as_ref(),
+            derived_gateway.as_ref(),
+            &planner,
+        ) {
+            Ok(Some(report)) => {
+                info!(
+                    tick,
+                    job_id = %report.job_id,
+                    asset_uuid = %report.asset_uuid,
+                    uploads = report.upload_count,
+                    "runtime processed one pending job"
+                );
+            }
+            Ok(None) => {}
+            Err(error) => {
+                warn!(tick, error = %error, "runtime processing pass failed");
+            }
         }
         let status = session.status_view();
         let current_job_snapshot = status.current_job.clone();
@@ -335,9 +358,25 @@ fn build_gateway(settings: &AgentRuntimeConfig) -> Box<dyn CoreApiGateway> {
     Box::new(OpenApiJobsGateway::new(client))
 }
 
+#[cfg(feature = "core-api-client")]
+fn build_derived_gateway(settings: &AgentRuntimeConfig) -> Box<dyn DerivedProcessingGateway> {
+    use retaia_agent::{OpenApiDerivedProcessingGateway, build_core_api_client, with_bearer_token};
+
+    let mut client = build_core_api_client(settings);
+    if let Ok(token) = std::env::var("RETAIA_AGENT_BEARER_TOKEN") {
+        client = with_bearer_token(client, token);
+    }
+    Box::new(OpenApiDerivedProcessingGateway::new(client))
+}
+
 #[cfg(not(feature = "core-api-client"))]
 fn build_gateway(_settings: &AgentRuntimeConfig) -> Box<dyn CoreApiGateway> {
     Box::new(FeatureDisabledCoreGateway)
+}
+
+#[cfg(not(feature = "core-api-client"))]
+fn build_derived_gateway(_settings: &AgentRuntimeConfig) -> Box<dyn DerivedProcessingGateway> {
+    Box::new(FeatureDisabledDerivedGateway)
 }
 
 #[cfg(not(feature = "core-api-client"))]
@@ -348,6 +387,71 @@ struct FeatureDisabledCoreGateway;
 impl CoreApiGateway for FeatureDisabledCoreGateway {
     fn poll_jobs(&self) -> Result<Vec<retaia_agent::CoreJobView>, CoreApiGatewayError> {
         Err(CoreApiGatewayError::Transport(
+            "core-api-client feature is disabled for this build".to_string(),
+        ))
+    }
+}
+
+#[cfg(not(feature = "core-api-client"))]
+#[derive(Debug, Clone, Copy)]
+struct FeatureDisabledDerivedGateway;
+
+#[cfg(not(feature = "core-api-client"))]
+impl DerivedProcessingGateway for FeatureDisabledDerivedGateway {
+    fn claim_job(
+        &self,
+        _job_id: &str,
+    ) -> Result<retaia_agent::ClaimedDerivedJob, DerivedProcessingError> {
+        Err(DerivedProcessingError::Transport(
+            "core-api-client feature is disabled for this build".to_string(),
+        ))
+    }
+
+    fn heartbeat(
+        &self,
+        _job_id: &str,
+        _lock_token: &str,
+    ) -> Result<retaia_agent::HeartbeatReceipt, DerivedProcessingError> {
+        Err(DerivedProcessingError::Transport(
+            "core-api-client feature is disabled for this build".to_string(),
+        ))
+    }
+
+    fn submit_derived(
+        &self,
+        _job_id: &str,
+        _lock_token: &str,
+        _idempotency_key: &str,
+        _payload: &retaia_agent::SubmitDerivedPayload,
+    ) -> Result<(), DerivedProcessingError> {
+        Err(DerivedProcessingError::Transport(
+            "core-api-client feature is disabled for this build".to_string(),
+        ))
+    }
+
+    fn upload_init(
+        &self,
+        _request: &retaia_agent::DerivedUploadInit,
+    ) -> Result<(), DerivedProcessingError> {
+        Err(DerivedProcessingError::Transport(
+            "core-api-client feature is disabled for this build".to_string(),
+        ))
+    }
+
+    fn upload_part(
+        &self,
+        _request: &retaia_agent::DerivedUploadPart,
+    ) -> Result<(), DerivedProcessingError> {
+        Err(DerivedProcessingError::Transport(
+            "core-api-client feature is disabled for this build".to_string(),
+        ))
+    }
+
+    fn upload_complete(
+        &self,
+        _request: &retaia_agent::DerivedUploadComplete,
+    ) -> Result<(), DerivedProcessingError> {
+        Err(DerivedProcessingError::Transport(
             "core-api-client feature is disabled for this build".to_string(),
         ))
     }

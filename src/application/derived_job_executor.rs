@@ -67,7 +67,10 @@ pub trait DerivedExecutionPlanner {
     ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError>;
 }
 
-pub fn execute_derived_job_once<G: DerivedProcessingGateway, P: DerivedExecutionPlanner>(
+pub fn execute_derived_job_once<
+    G: DerivedProcessingGateway + ?Sized,
+    P: DerivedExecutionPlanner + ?Sized,
+>(
     gateway: &G,
     planner: &P,
     job_id: &str,
@@ -76,8 +79,8 @@ pub fn execute_derived_job_once<G: DerivedProcessingGateway, P: DerivedExecution
 }
 
 pub fn execute_derived_job_once_with_source_staging<
-    G: DerivedProcessingGateway,
-    P: DerivedExecutionPlanner,
+    G: DerivedProcessingGateway + ?Sized,
+    P: DerivedExecutionPlanner + ?Sized,
 >(
     gateway: &G,
     planner: &P,
@@ -87,7 +90,10 @@ pub fn execute_derived_job_once_with_source_staging<
     execute_derived_job_once_internal(gateway, planner, job_id, Some(settings))
 }
 
-fn execute_derived_job_once_internal<G: DerivedProcessingGateway, P: DerivedExecutionPlanner>(
+fn execute_derived_job_once_internal<
+    G: DerivedProcessingGateway + ?Sized,
+    P: DerivedExecutionPlanner + ?Sized,
+>(
     gateway: &G,
     planner: &P,
     job_id: &str,
