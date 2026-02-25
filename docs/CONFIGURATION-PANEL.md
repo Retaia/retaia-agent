@@ -21,6 +21,12 @@ Normalisation URL Core:
 - `https://host` est normalisé en `https://host/api/v1`.
 - `https://host/api/v1/` est normalisé en `https://host/api/v1`.
 
+Déploiement NAS + workstations:
+
+- si Core est privé dans Docker, utiliser l'URL gateway LAN exposée par UI/Caddy.
+- exemple: `http://192.168.0.14:8080/api/v1`.
+- ne pas configurer un hostname Docker interne côté agent (`core:8000`, `app-prod:9000`).
+
 ## UX Rules
 
 - Validation explicite des champs.
@@ -53,7 +59,7 @@ Exemple:
 
 ```bash
 cargo run --bin agentctl -- config init \
-  --core-api-url https://core.retaia.local \
+  --core-api-url http://192.168.0.14:8080/api/v1 \
   --ollama-url http://127.0.0.1:11434 \
   --auth-mode technical \
   --client-id agent-prod \
