@@ -56,6 +56,48 @@ fn tdd_source_staging_copies_source_to_local_temp_and_cleans_up_on_drop() {
     );
 }
 
+#[test]
+fn tdd_source_staging_copies_sidecars_to_local_temp_and_cleans_up_on_drop() {
+    let source_dir = tempfile::tempdir().expect("source dir");
+    let source_rel = "INBOX/clip.mp4";
+    let sidecar_a_rel = "INBOX/clip.xmp";
+    let sidecar_b_rel = "INBOX/clip.srt";
+    for (relative, bytes) in [
+        (source_rel, b"video-bytes".as_slice()),
+        (sidecar_a_rel, b"xmp-bytes".as_slice()),
+        (sidecar_b_rel, b"srt-bytes".as_slice()),
+    ] {
+        let path = source_dir.path().join(relative);
+        std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
+        std::fs::write(path, bytes).expect("write");
+    }
+
+    let mut claim = claimed_job(source_rel);
+    claim.source_sidecars_relative = vec![sidecar_a_rel.to_string(), sidecar_b_rel.to_string()];
+    let config = config_with_mount(source_dir.path());
+
+    let (staged_main, staged_sidecars) = {
+        let staged = stage_claimed_job_source(&config, &claim).expect("stage");
+        assert_eq!(
+            std::fs::read(staged.path()).expect("read staged main"),
+            b"video-bytes"
+        );
+        let sidecars = staged.sidecar_paths().to_vec();
+        assert_eq!(sidecars.len(), 2);
+        let staged_payloads = sidecars
+            .iter()
+            .map(|path| std::fs::read(path).expect("read staged sidecar"))
+            .collect::<Vec<_>>();
+        assert_eq!(staged_payloads, vec![b"xmp-bytes".to_vec(), b"srt-bytes".to_vec()]);
+        (staged.path().to_path_buf(), sidecars)
+    };
+
+    assert!(!staged_main.exists(), "staged source should be cleaned on drop");
+    for path in staged_sidecars {
+        assert!(!path.exists(), "staged sidecar should be cleaned on drop");
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ZeroSpaceProbe;
 
@@ -77,6 +119,32 @@ fn tdd_source_staging_rejects_when_available_disk_space_is_insufficient() {
     let error =
         stage_claimed_job_source_with_probe(&config, &claimed_job(source_rel), &ZeroSpaceProbe)
             .expect_err("must fail");
+
+    assert!(matches!(
+        error,
+        SourceStagingError::InsufficientDiskSpace {
+            required_bytes: _,
+            available_bytes: 0
+        }
+    ));
+}
+
+#[test]
+fn tdd_source_staging_rejects_when_available_disk_space_is_insufficient_with_sidecars() {
+    let source_dir = tempfile::tempdir().expect("source dir");
+    let source_rel = "INBOX/clip.mp4";
+    let sidecar_rel = "INBOX/clip.xmp";
+    let source_path = source_dir.path().join(source_rel);
+    let sidecar_path = source_dir.path().join(sidecar_rel);
+    std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&source_path, b"video-bytes").expect("write source");
+    std::fs::write(&sidecar_path, b"xmp-bytes").expect("write sidecar");
+
+    let config = config_with_mount(source_dir.path());
+    let mut claim = claimed_job(source_rel);
+    claim.source_sidecars_relative = vec![sidecar_rel.to_string()];
+    let error = stage_claimed_job_source_with_probe(&config, &claim, &ZeroSpaceProbe)
+        .expect_err("must fail");
 
     assert!(matches!(
         error,
