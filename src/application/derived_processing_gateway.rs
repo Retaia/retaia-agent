@@ -47,6 +47,8 @@ pub struct ClaimedDerivedJob {
     pub asset_uuid: String,
     pub lock_token: String,
     pub job_type: DerivedJobType,
+    pub source_storage_id: String,
+    pub source_original_relative: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

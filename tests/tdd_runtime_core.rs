@@ -50,5 +50,7 @@ mod runtime_sync_coordinator;
 mod rust_photo_proxy_generator;
 #[path = "tdd_runtime/source_path_resolver.rs"]
 mod source_path_resolver;
+#[path = "tdd_runtime/source_staging.rs"]
+mod source_staging;
 #[path = "support/system_dispatcher_mock.rs"]
 mod system_dispatcher_mock;

@@ -26,15 +26,16 @@ serde_json = "1.0"
 service-manager = "0.10"
 tauri = { version = "2.10.2", default-features = false, optional = true }
 tauri-plugin-notification = { version = "2.3.3", optional = true }
+tempfile = "3.10"
 thiserror = "2.0"
 tokio = { version = "1.49", features = ["rt"] }
 toml = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+fs2 = "0.4"
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", default-features = false, features = ["user-hooks"] }
-tempfile = "3.10"
 
 [features]
 default = []

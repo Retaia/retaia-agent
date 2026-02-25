@@ -14,3 +14,4 @@ pub mod runtime_loop_engine;
 pub mod runtime_poll_cycle;
 pub mod runtime_session;
 pub mod runtime_sync_coordinator;
+pub mod source_staging;

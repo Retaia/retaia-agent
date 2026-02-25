@@ -190,7 +190,7 @@ fn e2e_openapi_derived_gateway_claim_rejects_missing_lock_token_from_http_payloa
         path: "/api/v1/jobs/job-1/claim",
         status: 200,
         content_type: "application/json",
-        body: r#"{"job_id":"job-1","job_type":"generate_proxy","status":"claimed","asset_uuid":"asset-1","required_capabilities":["media.proxies.photo@1"]}"#,
+        body: r#"{"job_id":"job-1","job_type":"generate_proxy","status":"claimed","asset_uuid":"asset-1","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.proxies.photo@1"]}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));
@@ -230,7 +230,7 @@ fn e2e_openapi_derived_gateway_claim_rejects_non_derived_job_type_from_http_payl
         path: "/api/v1/jobs/job-nd/claim",
         status: 200,
         content_type: "application/json",
-        body: r#"{"job_id":"job-nd","job_type":"extract_facts","status":"claimed","asset_uuid":"asset-nd","required_capabilities":["media.facts@1"],"lock_token":"lock-nd"}"#,
+        body: r#"{"job_id":"job-nd","job_type":"extract_facts","status":"claimed","asset_uuid":"asset-nd","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.facts@1"],"lock_token":"lock-nd"}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));

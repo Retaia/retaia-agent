@@ -1,9 +1,11 @@
 use thiserror::Error;
 
+use crate::AgentRuntimeConfig;
 use crate::application::derived_processing_gateway::{
     ClaimedDerivedJob, DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete,
     DerivedUploadInit, DerivedUploadPart, SubmitDerivedPayload,
 };
+use crate::application::source_staging::{SourceStagingError, stage_claimed_job_source};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DerivedUploadPlan {
@@ -54,6 +56,8 @@ pub enum DerivedJobExecutorError {
     },
     #[error("execution plan invalid: upload kind {0:?} is not present in submit manifest")]
     UploadKindNotInSubmitManifest(crate::application::derived_processing_gateway::DerivedKind),
+    #[error("source staging failed: {0}")]
+    SourceStaging(SourceStagingError),
 }
 
 pub trait DerivedExecutionPlanner {
@@ -68,12 +72,41 @@ pub fn execute_derived_job_once<G: DerivedProcessingGateway, P: DerivedExecution
     planner: &P,
     job_id: &str,
 ) -> Result<DerivedExecutionReport, DerivedJobExecutorError> {
+    execute_derived_job_once_internal(gateway, planner, job_id, None)
+}
+
+pub fn execute_derived_job_once_with_source_staging<
+    G: DerivedProcessingGateway,
+    P: DerivedExecutionPlanner,
+>(
+    gateway: &G,
+    planner: &P,
+    job_id: &str,
+    settings: &AgentRuntimeConfig,
+) -> Result<DerivedExecutionReport, DerivedJobExecutorError> {
+    execute_derived_job_once_internal(gateway, planner, job_id, Some(settings))
+}
+
+fn execute_derived_job_once_internal<G: DerivedProcessingGateway, P: DerivedExecutionPlanner>(
+    gateway: &G,
+    planner: &P,
+    job_id: &str,
+    settings: Option<&AgentRuntimeConfig>,
+) -> Result<DerivedExecutionReport, DerivedJobExecutorError> {
     let claimed = gateway
         .claim_job(job_id)
         .map_err(DerivedJobExecutorError::Gateway)?;
     gateway
         .heartbeat(&claimed.job_id, &claimed.lock_token)
         .map_err(DerivedJobExecutorError::Gateway)?;
+    let _staged_source = if let Some(settings) = settings {
+        Some(
+            stage_claimed_job_source(settings, &claimed)
+                .map_err(DerivedJobExecutorError::SourceStaging)?,
+        )
+    } else {
+        None
+    };
 
     let plan = planner.plan_for_claimed_job(&claimed)?;
     if plan.submit_idempotency_key.trim().is_empty() {

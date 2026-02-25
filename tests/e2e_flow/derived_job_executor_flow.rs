@@ -29,6 +29,8 @@ impl DerivedProcessingGateway for RecordingGateway {
             asset_uuid: "asset-22".to_string(),
             lock_token: "lock-22".to_string(),
             job_type: DerivedJobType::GenerateThumbnails,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
         })
     }
 
@@ -219,6 +221,8 @@ impl DerivedProcessingGateway for WaveformOptionalGateway {
             asset_uuid: "asset-wave-opt-1".to_string(),
             lock_token: "lock-wave-opt-1".to_string(),
             job_type: DerivedJobType::GenerateAudioWaveform,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
         })
     }
 

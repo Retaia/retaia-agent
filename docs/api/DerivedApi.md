@@ -104,6 +104,8 @@ Name | Type | Description  | Required | Notes
 > assets_uuid_derived_upload_init_post(uuid, idempotency_key, assets_uuid_derived_upload_init_post_request)
 Initialize derived upload
 
+Initializes upload for one derived file. Normative media profile constraints: - `proxy_video`: `video/mp4` (H.264/AVC, browser-compatible), source framerate preserved. - `proxy_audio`: `audio/mp4` (AAC-LC) or `audio/mpeg`. - `proxy_photo` / `thumb`: `image/jpeg` or `image/webp`. - `waveform`: `application/json` (preferred) or `application/octet-stream`. 
+
 ### Parameters
 
 

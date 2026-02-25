@@ -22,7 +22,7 @@ pub use application::daemon_manager::{
 };
 pub use application::derived_job_executor::{
     DerivedExecutionPlan, DerivedExecutionPlanner, DerivedExecutionReport, DerivedJobExecutorError,
-    DerivedUploadPlan, execute_derived_job_once,
+    DerivedUploadPlan, execute_derived_job_once, execute_derived_job_once_with_source_staging,
 };
 pub use application::derived_processing_gateway::{
     ClaimedDerivedJob, DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
@@ -54,6 +54,10 @@ pub use application::runtime_poll_cycle::{
 };
 pub use application::runtime_session::{RuntimeNotificationReport, RuntimeSession};
 pub use application::runtime_sync_coordinator::{RuntimeSyncCoordinator, RuntimeSyncPlan};
+pub use application::source_staging::{
+    DiskSpaceProbe, Fs2DiskSpaceProbe, SourceStagingError, StagedSourceFile,
+    stage_claimed_job_source, stage_claimed_job_source_with_probe,
+};
 pub use domain::capabilities::{
     AgentCapability, declared_agent_capabilities, declared_agent_capabilities_with_ffmpeg,
     declared_agent_capabilities_with_runtime, ffmpeg_available, has_required_capabilities,

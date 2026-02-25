@@ -59,6 +59,8 @@ impl DerivedProcessingGateway for NoopGateway {
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
             job_type: DerivedJobType::GenerateProxy,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
         })
     }
 
@@ -118,6 +120,8 @@ impl DerivedProcessingGateway for WaveformOptionalManifestGateway {
             asset_uuid: "asset-wf-1".to_string(),
             lock_token: "lock-wf-1".to_string(),
             job_type: DerivedJobType::GenerateAudioWaveform,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
         })
     }
 
