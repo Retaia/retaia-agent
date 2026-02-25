@@ -19,10 +19,11 @@ mod desktop_shell {
         DaemonLevel, DaemonManager, DaemonManagerError, DaemonRuntimeStats, DaemonStatus,
         DiagnosticsLimits, FileConfigRepository, Language, LogLevel, RuntimeStatsStoreError,
         SystemConfigRepository, SystemNotification, build_bug_report_markdown,
-        collect_daemon_diagnostics, copy_to_clipboard, detect_language, dispatch_notifications,
-        load_runtime_stats, notification_sink_profile_for_target, redacted_runtime_config_from,
-        render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path,
-        select_notification_sink, t,
+        collect_daemon_diagnostics, compact_validation_reason, copy_to_clipboard, detect_language,
+        dispatch_notifications, load_runtime_stats, normalize_core_api_url,
+        normalize_storage_mount_path, notification_sink_profile_for_target,
+        redacted_runtime_config_from, render_daemon_inspect, render_daemon_inspect_json,
+        runtime_history_db_path, select_notification_sink, t, validate_config,
     };
     use service_manager::{
         ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx, ServiceStopCtx,
@@ -204,12 +205,13 @@ mod desktop_shell {
         lang: Language,
         manager: NativeDaemonManager,
         tray: TrayHandle,
+        config_path: Option<PathBuf>,
         config: AgentRuntimeConfig,
         daemon_status: Option<DaemonStatus>,
         stats: Option<DaemonRuntimeStats>,
         started_at: Instant,
         status_modal: Option<String>,
-        settings_modal: Option<String>,
+        settings_modal: Option<SettingsEditorState>,
         info_modal: Option<String>,
         last_error: Option<String>,
         quit_requested: bool,
@@ -217,13 +219,18 @@ mod desktop_shell {
     }
 
     impl ControlCenterApp {
-        fn new(config: AgentRuntimeConfig, lang: Language) -> Result<Self, String> {
+        fn new(
+            config: AgentRuntimeConfig,
+            config_path: Option<PathBuf>,
+            lang: Language,
+        ) -> Result<Self, String> {
             let tray = TrayHandle::new(lang)?;
             let manager = NativeDaemonManager;
             let mut app = Self {
                 lang,
                 manager,
                 tray,
+                config_path,
                 config,
                 daemon_status: None,
                 stats: None,
@@ -310,7 +317,37 @@ mod desktop_shell {
         }
 
         fn open_preferences(&mut self) {
-            self.settings_modal = Some(format_settings(&self.config));
+            self.settings_modal = Some(SettingsEditorState::from_config(&self.config));
+        }
+
+        fn save_preferences(&mut self) {
+            let Some(form) = self.settings_modal.clone() else {
+                return;
+            };
+            let next = match form.to_config(&self.config) {
+                Ok(config) => config,
+                Err(error) => {
+                    self.last_error = Some(error);
+                    self.notify(SystemNotification::SettingsInvalid {
+                        reason: "invalid settings".to_string(),
+                    });
+                    return;
+                }
+            };
+
+            let save_result = match self.config_path.as_ref() {
+                Some(path) => FileConfigRepository::new(path.clone()).save(&next),
+                None => SystemConfigRepository.save(&next),
+            };
+            if let Err(error) = save_result {
+                self.last_error = Some(format!("unable to save config: {error}"));
+                return;
+            }
+
+            self.config = next.clone();
+            self.settings_modal = Some(SettingsEditorState::from_config(&next));
+            self.info_modal = Some("Settings saved".to_string());
+            self.notify(SystemNotification::SettingsSaved);
         }
 
         fn process_tray_events(&mut self, ctx: &egui::Context) {
@@ -637,16 +674,122 @@ mod desktop_shell {
                 }
             }
 
-            if let Some(content) = self.settings_modal.as_mut() {
+            if let Some(form) = self.settings_modal.as_mut() {
                 let mut open = true;
+                let mut should_save = false;
+                let mut should_reload = false;
                 egui::Window::new(t(self.lang, "gui.modal.preferences"))
                     .open(&mut open)
                     .resizable(true)
                     .show(ctx, |ui| {
-                        ui.code(content.as_str());
+                        ui.horizontal(|ui| {
+                            ui.label("core_api_url");
+                            ui.text_edit_singleline(&mut form.core_api_url);
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("ollama_url");
+                            ui.text_edit_singleline(&mut form.ollama_url);
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("auth_mode");
+                            egui::ComboBox::from_id_salt("auth_mode_combo")
+                                .selected_text(match form.auth_mode {
+                                    AuthMode::Interactive => "interactive",
+                                    AuthMode::Technical => "technical",
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut form.auth_mode,
+                                        AuthMode::Interactive,
+                                        "interactive",
+                                    );
+                                    ui.selectable_value(
+                                        &mut form.auth_mode,
+                                        AuthMode::Technical,
+                                        "technical",
+                                    );
+                                });
+                        });
+                        if matches!(form.auth_mode, AuthMode::Technical) {
+                            ui.horizontal(|ui| {
+                                ui.label("client_id");
+                                ui.text_edit_singleline(&mut form.technical_client_id);
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("secret_key");
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut form.technical_secret_key)
+                                        .password(true),
+                                );
+                            });
+                            ui.small("Leave secret_key empty to keep current value.");
+                        }
+                        ui.horizontal(|ui| {
+                            ui.label("max_parallel_jobs");
+                            ui.text_edit_singleline(&mut form.max_parallel_jobs);
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("log_level");
+                            egui::ComboBox::from_id_salt("log_level_combo")
+                                .selected_text(match form.log_level {
+                                    LogLevel::Error => "error",
+                                    LogLevel::Warn => "warn",
+                                    LogLevel::Info => "info",
+                                    LogLevel::Debug => "debug",
+                                    LogLevel::Trace => "trace",
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut form.log_level,
+                                        LogLevel::Error,
+                                        "error",
+                                    );
+                                    ui.selectable_value(
+                                        &mut form.log_level,
+                                        LogLevel::Warn,
+                                        "warn",
+                                    );
+                                    ui.selectable_value(
+                                        &mut form.log_level,
+                                        LogLevel::Info,
+                                        "info",
+                                    );
+                                    ui.selectable_value(
+                                        &mut form.log_level,
+                                        LogLevel::Debug,
+                                        "debug",
+                                    );
+                                    ui.selectable_value(
+                                        &mut form.log_level,
+                                        LogLevel::Trace,
+                                        "trace",
+                                    );
+                                });
+                        });
+                        ui.separator();
+                        ui.label("storage_mounts (one per line: storage_id=/absolute/path)");
+                        ui.add_sized(
+                            [560.0, 140.0],
+                            egui::TextEdit::multiline(&mut form.storage_mounts),
+                        );
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            if ui.button("Save").clicked() {
+                                should_save = true;
+                            }
+                            if ui.button("Reload").clicked() {
+                                should_reload = true;
+                            }
+                        });
                     });
                 if !open {
                     self.settings_modal = None;
+                }
+                if should_reload {
+                    self.settings_modal = Some(SettingsEditorState::from_config(&self.config));
+                }
+                if should_save {
+                    self.save_preferences();
                 }
             }
 
@@ -695,39 +838,111 @@ mod desktop_shell {
         }
     }
 
-    fn format_settings(config: &AgentRuntimeConfig) -> String {
-        let auth_mode = match config.auth_mode {
-            AuthMode::Interactive => "interactive",
-            AuthMode::Technical => "technical",
-        };
-        let log_level = match config.log_level {
-            LogLevel::Error => "error",
-            LogLevel::Warn => "warn",
-            LogLevel::Info => "info",
-            LogLevel::Debug => "debug",
-            LogLevel::Trace => "trace",
-        };
+    #[derive(Debug, Clone)]
+    struct SettingsEditorState {
+        core_api_url: String,
+        ollama_url: String,
+        auth_mode: AuthMode,
+        technical_client_id: String,
+        technical_secret_key: String,
+        storage_mounts: String,
+        max_parallel_jobs: String,
+        log_level: LogLevel,
+    }
 
-        [
-            format!("core_api_url={}", config.core_api_url),
-            format!("ollama_url={}", config.ollama_url),
-            format!("auth_mode={auth_mode}"),
-            format!(
-                "technical_client_id={}",
-                config
+    impl SettingsEditorState {
+        fn from_config(config: &AgentRuntimeConfig) -> Self {
+            let storage_mounts = config
+                .storage_mounts
+                .iter()
+                .map(|(storage_id, path)| format!("{storage_id}={path}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            Self {
+                core_api_url: config.core_api_url.clone(),
+                ollama_url: config.ollama_url.clone(),
+                auth_mode: config.auth_mode,
+                technical_client_id: config
                     .technical_auth
                     .as_ref()
-                    .map(|value| value.client_id.as_str())
-                    .unwrap_or("-")
-            ),
-            format!(
-                "technical_secret_key_set={}",
-                config.technical_auth.is_some()
-            ),
-            format!("max_parallel_jobs={}", config.max_parallel_jobs),
-            format!("log_level={log_level}"),
-        ]
-        .join("\n")
+                    .map(|value| value.client_id.clone())
+                    .unwrap_or_default(),
+                technical_secret_key: String::new(),
+                storage_mounts,
+                max_parallel_jobs: config.max_parallel_jobs.to_string(),
+                log_level: config.log_level,
+            }
+        }
+
+        fn to_config(&self, current: &AgentRuntimeConfig) -> Result<AgentRuntimeConfig, String> {
+            let max_parallel_jobs = self
+                .max_parallel_jobs
+                .trim()
+                .parse::<u16>()
+                .map_err(|_| "max_parallel_jobs must be a positive integer".to_string())?;
+            let storage_mounts = parse_storage_mounts_text(&self.storage_mounts)?;
+
+            let technical_auth = match self.auth_mode {
+                AuthMode::Interactive => None,
+                AuthMode::Technical => {
+                    let secret_key = if self.technical_secret_key.trim().is_empty() {
+                        current
+                            .technical_auth
+                            .as_ref()
+                            .map(|value| value.secret_key.clone())
+                            .unwrap_or_default()
+                    } else {
+                        self.technical_secret_key.clone()
+                    };
+                    Some(retaia_agent::TechnicalAuthConfig {
+                        client_id: self.technical_client_id.clone(),
+                        secret_key,
+                    })
+                }
+            };
+
+            let config = AgentRuntimeConfig {
+                core_api_url: normalize_core_api_url(&self.core_api_url),
+                ollama_url: self.ollama_url.clone(),
+                auth_mode: self.auth_mode,
+                technical_auth,
+                storage_mounts,
+                max_parallel_jobs,
+                log_level: self.log_level,
+            };
+            validate_config(&config)
+                .map_err(|errors| compact_validation_reason(&errors))
+                .map(|_| config)
+        }
+    }
+
+    fn parse_storage_mounts_text(
+        value: &str,
+    ) -> Result<std::collections::BTreeMap<String, String>, String> {
+        let mut mounts = std::collections::BTreeMap::new();
+        for line in value.lines() {
+            let entry = line.trim();
+            if entry.is_empty() {
+                continue;
+            }
+            let Some((storage_id, raw_path)) = entry.split_once('=') else {
+                return Err(format!(
+                    "invalid storage mount '{entry}' (expected storage_id=/absolute/path)"
+                ));
+            };
+            let storage_id = storage_id.trim();
+            if storage_id.is_empty() {
+                return Err("invalid storage mount: storage_id must not be empty".to_string());
+            }
+            let path = normalize_storage_mount_path(raw_path);
+            if path.is_empty() {
+                return Err(format!(
+                    "invalid storage mount '{entry}' (mount path must not be empty)"
+                ));
+            }
+            mounts.insert(storage_id.to_string(), path);
+        }
+        Ok(mounts)
     }
 
     fn format_duration(duration: Duration) -> String {
@@ -800,7 +1015,7 @@ mod desktop_shell {
     fn run() -> Result<(), String> {
         let lang = detect_language();
         let cli = Cli::parse();
-        let settings = load_settings(cli.config)?;
+        let settings = load_settings(cli.config.clone())?;
 
         let options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
@@ -812,7 +1027,7 @@ mod desktop_shell {
         eframe::run_native(
             t(lang, "gui.title"),
             options,
-            Box::new(move |_cc| Ok(Box::new(ControlCenterApp::new(settings, lang)?))),
+            Box::new(move |_cc| Ok(Box::new(ControlCenterApp::new(settings, cli.config, lang)?))),
         )
         .map_err(|error| error.to_string())
     }
