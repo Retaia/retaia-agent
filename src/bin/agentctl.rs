@@ -1055,13 +1055,39 @@ fn run_with_repository<R: ConfigRepository>(
     }
 }
 
+fn restart_user_daemon_if_running<M: DaemonManager>(manager: &M) -> Result<(), AgentCtlError> {
+    let request = DaemonLabelRequest {
+        label: "io.retaia.agent".to_string(),
+        level: DaemonLevel::User,
+    };
+    let status = manager
+        .status(request.clone())
+        .map_err(AgentCtlError::Daemon)?;
+    if !matches!(status, DaemonStatus::Running) {
+        return Ok(());
+    }
+    manager.stop(request.clone()).map_err(AgentCtlError::Daemon)?;
+    wait_until_daemon_not_running(manager, &request)?;
+    manager.start(request).map_err(AgentCtlError::Daemon)?;
+    Ok(())
+}
+
 fn run(cli: Cli) -> Result<(), AgentCtlError> {
     let lang = detect_language();
     match cli.command {
-        RootCommand::Config { command } => match command.config_path().cloned() {
-            Some(path) => run_with_repository(&FileConfigRepository::new(path), command, lang),
-            None => run_with_repository(&SystemConfigRepository, command, lang),
-        },
+        RootCommand::Config { command } => {
+            let restart_daemon_after_save =
+                matches!(&command, ConfigCommand::Set(_)) && command.config_path().is_none();
+            let result = match command.config_path().cloned() {
+                Some(path) => run_with_repository(&FileConfigRepository::new(path), command, lang),
+                None => run_with_repository(&SystemConfigRepository, command, lang),
+            };
+            result?;
+            if restart_daemon_after_save {
+                restart_user_daemon_if_running(&NativeDaemonManager)?;
+            }
+            Ok(())
+        }
         RootCommand::Daemon { command } => run_daemon_command(&NativeDaemonManager, command, lang),
     }
 }
@@ -1087,7 +1113,7 @@ mod tests {
 
     use super::{
         Cli, ConfigCommand, DaemonCommand, LogLevelArg, RootCommand, daemon_install_request,
-        run_daemon_command,
+        restart_user_daemon_if_running, run_daemon_command,
     };
 
     #[test]
@@ -1407,6 +1433,39 @@ mod tests {
 
         run_daemon_command(&manager, command, retaia_agent::Language::En)
             .expect("daemon restart should succeed");
+        let calls = manager.calls.lock().expect("calls").clone();
+        assert_eq!(
+            calls,
+            vec![
+                "status".to_string(),
+                "stop".to_string(),
+                "status".to_string(),
+                "start".to_string(),
+            ]
+        );
+        assert!(*manager.running.lock().expect("running"));
+    }
+
+    #[test]
+    fn tdd_config_set_restart_skips_when_daemon_not_running() {
+        let manager = MockDaemonManager {
+            running: Mutex::new(false),
+            ..MockDaemonManager::default()
+        };
+
+        restart_user_daemon_if_running(&manager).expect("restart helper should succeed");
+        let calls = manager.calls.lock().expect("calls").clone();
+        assert_eq!(calls, vec!["status".to_string()]);
+    }
+
+    #[test]
+    fn tdd_config_set_restart_gracefully_restarts_when_daemon_running() {
+        let manager = MockDaemonManager {
+            running: Mutex::new(true),
+            ..MockDaemonManager::default()
+        };
+
+        restart_user_daemon_if_running(&manager).expect("restart helper should succeed");
         let calls = manager.calls.lock().expect("calls").clone();
         assert_eq!(
             calls,
