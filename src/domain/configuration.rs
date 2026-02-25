@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::net::IpAddr;
 use std::path::{Component, Path, PathBuf};
 use thiserror::Error;
 
@@ -37,6 +38,7 @@ pub struct AgentRuntimeConfig {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigValidationError {
     InvalidCoreApiUrl,
+    CoreApiUrlDockerHostnameForbidden,
     InvalidOllamaUrl,
     MissingTechnicalAuth,
     EmptyClientId,
@@ -90,6 +92,23 @@ fn is_http_url(value: &str) -> bool {
     value.starts_with("http://") || value.starts_with("https://")
 }
 
+fn is_docker_internal_like_hostname(value: &str) -> bool {
+    let Ok(parsed) = reqwest::Url::parse(value) else {
+        return false;
+    };
+    let Some(host) = parsed.host_str() else {
+        return false;
+    };
+    let lowercase = host.to_ascii_lowercase();
+    if lowercase == "localhost" {
+        return false;
+    }
+    if host.parse::<IpAddr>().is_ok() {
+        return false;
+    }
+    !host.contains('.')
+}
+
 pub fn normalize_core_api_url(value: &str) -> String {
     let trimmed = value.trim().trim_end_matches('/').to_string();
     if !is_http_url(&trimmed) {
@@ -106,6 +125,8 @@ pub fn validate_config(config: &AgentRuntimeConfig) -> Result<(), Vec<ConfigVali
 
     if !is_http_url(&config.core_api_url) {
         errors.push(ConfigValidationError::InvalidCoreApiUrl);
+    } else if is_docker_internal_like_hostname(&config.core_api_url) {
+        errors.push(ConfigValidationError::CoreApiUrlDockerHostnameForbidden);
     }
     if !is_http_url(&config.ollama_url) {
         errors.push(ConfigValidationError::InvalidOllamaUrl);
@@ -152,6 +173,9 @@ pub fn compact_validation_reason(errors: &[ConfigValidationError]) -> String {
         .iter()
         .map(|err| match err {
             ConfigValidationError::InvalidCoreApiUrl => "invalid core api url",
+            ConfigValidationError::CoreApiUrlDockerHostnameForbidden => {
+                "core api url uses forbidden docker-internal hostname"
+            }
             ConfigValidationError::InvalidOllamaUrl => "invalid ollama url",
             ConfigValidationError::MissingTechnicalAuth => "missing technical auth",
             ConfigValidationError::EmptyClientId => "empty client id",
