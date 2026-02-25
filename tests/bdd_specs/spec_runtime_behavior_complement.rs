@@ -54,9 +54,23 @@ fn bdd_given_invalid_configuration_when_validating_then_multiple_errors_are_repo
 fn bdd_given_validation_errors_when_compacting_reason_then_message_is_human_readable() {
     let reason = compact_validation_reason(&[
         ConfigValidationError::InvalidCoreApiUrl,
+        ConfigValidationError::CoreApiUrlDockerHostnameForbidden,
         ConfigValidationError::EmptySecretKey,
     ]);
-    assert_eq!(reason, "invalid core api url, empty secret key");
+    assert_eq!(
+        reason,
+        "invalid core api url, core api url uses forbidden docker-internal hostname, empty secret key"
+    );
+}
+
+#[test]
+fn bdd_given_docker_internal_core_api_url_when_validating_then_it_is_rejected_for_http_and_https() {
+    for scheme in ["http", "https"] {
+        let mut config = valid_config();
+        config.core_api_url = format!("{scheme}://core:8000/api/v1");
+        let errors = validate_config(&config).expect_err("expected validation failure");
+        assert!(errors.contains(&ConfigValidationError::CoreApiUrlDockerHostnameForbidden));
+    }
 }
 
 #[test]
