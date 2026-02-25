@@ -96,9 +96,7 @@ fn execute_derived_job_once_internal<G: DerivedProcessingGateway, P: DerivedExec
     let claimed = gateway
         .claim_job(job_id)
         .map_err(DerivedJobExecutorError::Gateway)?;
-    gateway
-        .heartbeat(&claimed.job_id, &claimed.lock_token)
-        .map_err(DerivedJobExecutorError::Gateway)?;
+    send_heartbeat(gateway, &claimed)?;
     let _staged_source = if let Some(settings) = settings {
         Some(
             stage_claimed_job_source(settings, &claimed)
@@ -107,6 +105,7 @@ fn execute_derived_job_once_internal<G: DerivedProcessingGateway, P: DerivedExec
     } else {
         None
     };
+    send_heartbeat(gateway, &claimed)?;
 
     let plan = planner.plan_for_claimed_job(&claimed)?;
     if plan.submit_idempotency_key.trim().is_empty() {
@@ -127,19 +126,23 @@ fn execute_derived_job_once_internal<G: DerivedProcessingGateway, P: DerivedExec
             return Err(DerivedJobExecutorError::UploadInitCompleteAssetMismatch);
         }
 
+        send_heartbeat(gateway, &claimed)?;
         gateway
             .upload_init(&upload.init)
             .map_err(DerivedJobExecutorError::Gateway)?;
         for part in &upload.parts {
+            send_heartbeat(gateway, &claimed)?;
             gateway
                 .upload_part(part)
                 .map_err(DerivedJobExecutorError::Gateway)?;
         }
+        send_heartbeat(gateway, &claimed)?;
         gateway
             .upload_complete(&upload.complete)
             .map_err(DerivedJobExecutorError::Gateway)?;
     }
 
+    send_heartbeat(gateway, &claimed)?;
     gateway
         .submit_derived(
             &claimed.job_id,
@@ -215,6 +218,16 @@ fn validate_submit_payload_for_claimed_job(
         }
     }
 
+    Ok(())
+}
+
+fn send_heartbeat<G: DerivedProcessingGateway>(
+    gateway: &G,
+    claimed: &ClaimedDerivedJob,
+) -> Result<(), DerivedJobExecutorError> {
+    gateway
+        .heartbeat(&claimed.job_id, &claimed.lock_token)
+        .map_err(DerivedJobExecutorError::Gateway)?;
     Ok(())
 }
 

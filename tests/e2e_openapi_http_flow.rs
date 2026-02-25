@@ -224,6 +224,32 @@ fn e2e_openapi_derived_gateway_claim_maps_401_from_http_response() {
 }
 
 #[test]
+fn e2e_openapi_derived_gateway_claim_maps_optional_sidecars_from_http_payload() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-sidecars/claim",
+        status: 200,
+        content_type: "application/json",
+        body: r#"{"job_id":"job-sidecars","job_type":"generate_proxy","status":"claimed","asset_uuid":"asset-sidecars","lock_token":"lock-sidecars","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov","sidecars_relative":["INBOX/a.xmp","INBOX/a.srt"]},"required_capabilities":["media.proxies.video@1"]}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let claimed = gateway
+        .claim_job("job-sidecars")
+        .expect("claim with sidecars");
+    assert_eq!(claimed.job_id, "job-sidecars");
+    assert_eq!(claimed.source_storage_id, "nas-main");
+    assert_eq!(claimed.source_original_relative, "INBOX/a.mov");
+    assert_eq!(
+        claimed.source_sidecars_relative,
+        vec!["INBOX/a.xmp".to_string(), "INBOX/a.srt".to_string()]
+    );
+
+    server.join().expect("server thread");
+}
+
+#[test]
 fn e2e_openapi_derived_gateway_claim_rejects_non_derived_job_type_from_http_payload() {
     let (server, base_url) = spawn_mock_server(vec![MockExchange {
         method: "POST",

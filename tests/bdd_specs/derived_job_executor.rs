@@ -61,6 +61,7 @@ impl DerivedProcessingGateway for NoopGateway {
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 
@@ -122,6 +123,7 @@ impl DerivedProcessingGateway for WaveformOptionalManifestGateway {
             job_type: DerivedJobType::GenerateAudioWaveform,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 

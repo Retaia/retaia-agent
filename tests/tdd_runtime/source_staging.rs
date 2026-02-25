@@ -29,6 +29,7 @@ fn claimed_job(relative: &str) -> ClaimedDerivedJob {
         job_type: DerivedJobType::GenerateProxy,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: relative.to_string(),
+        source_sidecars_relative: Vec::new(),
     }
 }
 
