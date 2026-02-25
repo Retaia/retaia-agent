@@ -4,8 +4,8 @@ use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner,
     DerivedJobExecutorError, DerivedJobType, DerivedKind, DerivedManifestItem,
     DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit,
-    DerivedUploadPart, HeartbeatReceipt, LogLevel, SubmitDerivedPayload, execute_derived_job_once,
-    execute_derived_job_once_with_source_staging,
+    DerivedUploadPart, HeartbeatReceipt, LogLevel, RuntimeDerivedPlanner, SubmitDerivedPayload,
+    execute_derived_job_once, execute_derived_job_once_with_source_staging,
 };
 
 #[derive(Default)]
@@ -585,4 +585,45 @@ fn tdd_execute_derived_job_once_with_source_staging_fails_explicitly_when_mappin
         execute_derived_job_once_with_source_staging(&gateway, &ProxyPlanner, "job-1", &settings)
             .expect_err("missing mapping must fail");
     assert!(matches!(error, DerivedJobExecutorError::SourceStaging(_)));
+}
+
+#[test]
+fn tdd_execute_derived_job_once_with_runtime_planner_emits_upload_calls_with_staged_source() {
+    let source_root = tempfile::tempdir().expect("source root");
+    let source_path = source_root.path().join("INBOX/sample-source.bin");
+    std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&source_path, b"source-bytes").expect("write source");
+
+    let mut storage_mounts = std::collections::BTreeMap::new();
+    storage_mounts.insert(
+        "nas-main".to_string(),
+        source_root.path().display().to_string(),
+    );
+    let settings = AgentRuntimeConfig {
+        core_api_url: "https://core.retaia.local".to_string(),
+        ollama_url: "http://127.0.0.1:11434".to_string(),
+        auth_mode: AuthMode::Interactive,
+        technical_auth: None,
+        storage_mounts,
+        max_parallel_jobs: 1,
+        log_level: LogLevel::Info,
+    };
+
+    let gateway = MemoryGateway::default();
+    let report = execute_derived_job_once_with_source_staging(
+        &gateway,
+        &RuntimeDerivedPlanner,
+        "job-1",
+        &settings,
+    )
+    .expect("flow with runtime planner");
+    assert_eq!(report.upload_count, 1);
+    let calls = gateway.calls();
+    assert!(calls.iter().any(|call| call.starts_with("upload_init:")));
+    assert!(calls.iter().any(|call| call.starts_with("upload_part:")));
+    assert!(
+        calls
+            .iter()
+            .any(|call| call.starts_with("upload_complete:"))
+    );
 }
