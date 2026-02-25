@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use thiserror::Error;
 
@@ -82,7 +82,7 @@ pub fn stage_claimed_job_source_with_probe<P: DiskSpaceProbe>(
             .map_err(|error| SourceStagingError::ResolvePath(error.to_string()))?;
         let sidecar_size = validated_file_size(&resolved)?;
         required = required.saturating_add(sidecar_size);
-        sidecars.push(resolved);
+        sidecars.push((resolved, relative.as_str()));
     }
 
     let temp_dir = tempfile::Builder::new()
@@ -97,10 +97,11 @@ pub fn stage_claimed_job_source_with_probe<P: DiskSpaceProbe>(
         });
     }
 
-    let staged_path = copy_into_staging_dir(&source, temp_dir.path())?;
+    let staged_path =
+        copy_into_staging_dir(&source, &claimed.source_original_relative, temp_dir.path())?;
     let mut staged_sidecars = Vec::with_capacity(sidecars.len());
-    for sidecar in sidecars {
-        staged_sidecars.push(copy_into_staging_dir(&sidecar, temp_dir.path())?);
+    for (sidecar, relative) in sidecars {
+        staged_sidecars.push(copy_into_staging_dir(&sidecar, relative, temp_dir.path())?);
     }
 
     Ok(StagedSourceFile {
@@ -122,14 +123,39 @@ fn validated_file_size(path: &Path) -> Result<u64, SourceStagingError> {
     Ok(metadata.len())
 }
 
-fn copy_into_staging_dir(source: &Path, staging_dir: &Path) -> Result<PathBuf, SourceStagingError> {
-    let staged_name = source
-        .file_name()
-        .and_then(|value| value.to_str())
-        .map(ToString::to_string)
-        .unwrap_or_else(|| "source.bin".to_string());
-    let staged_path = staging_dir.join(staged_name);
-    std::fs::copy(source, &staged_path)
-        .map_err(|error| SourceStagingError::Copy(error.to_string()))?;
+fn copy_into_staging_dir(
+    source: &Path,
+    relative_path: &str,
+    staging_dir: &Path,
+) -> Result<PathBuf, SourceStagingError> {
+    let staged_relative = staged_relative_path(relative_path)?;
+    let staged_path = staging_dir.join(staged_relative);
+    if let Some(parent) = staged_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| SourceStagingError::Copy(error.to_string()))?;
+    }
+    std::fs::copy(source, &staged_path).map_err(|error| SourceStagingError::Copy(error.to_string()))?;
     Ok(staged_path)
+}
+
+fn staged_relative_path(value: &str) -> Result<PathBuf, SourceStagingError> {
+    let path = Path::new(value);
+    let mut sanitized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => sanitized.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(SourceStagingError::Copy(format!(
+                    "unsafe relative staging path: {value}"
+                )));
+            }
+        }
+    }
+
+    if sanitized.as_os_str().is_empty() {
+        return Err(SourceStagingError::Copy(format!(
+            "empty relative staging path: {value}"
+        )));
+    }
+    Ok(sanitized)
 }

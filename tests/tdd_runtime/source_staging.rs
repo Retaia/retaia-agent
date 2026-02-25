@@ -104,6 +104,46 @@ fn tdd_source_staging_copies_sidecars_to_local_temp_and_cleans_up_on_drop() {
     }
 }
 
+#[test]
+fn tdd_source_staging_preserves_relative_paths_to_avoid_sidecar_name_collisions() {
+    let source_dir = tempfile::tempdir().expect("source dir");
+    let source_rel = "INBOX/clip.mp4";
+    let sidecar_a_rel = "INBOX/cam-a/clip.xmp";
+    let sidecar_b_rel = "INBOX/cam-b/clip.xmp";
+    for (relative, bytes) in [
+        (source_rel, b"video-bytes".as_slice()),
+        (sidecar_a_rel, b"xmp-a".as_slice()),
+        (sidecar_b_rel, b"xmp-b".as_slice()),
+    ] {
+        let path = source_dir.path().join(relative);
+        std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
+        std::fs::write(path, bytes).expect("write");
+    }
+
+    let mut claim = claimed_job(source_rel);
+    claim.source_sidecars_relative = vec![sidecar_a_rel.to_string(), sidecar_b_rel.to_string()];
+    let config = config_with_mount(source_dir.path());
+
+    let staged = stage_claimed_job_source(&config, &claim).expect("stage");
+    let staged_source = staged.path().to_path_buf();
+    assert!(
+        staged_source.to_string_lossy().ends_with("INBOX/clip.mp4"),
+        "source should keep relative path in staging: {}",
+        staged_source.display()
+    );
+    let sidecars = staged.sidecar_paths().to_vec();
+    assert_eq!(sidecars.len(), 2);
+    assert_ne!(sidecars[0], sidecars[1], "sidecars must not overwrite each other");
+    assert_eq!(
+        std::fs::read(&sidecars[0]).expect("read sidecar A"),
+        b"xmp-a"
+    );
+    assert_eq!(
+        std::fs::read(&sidecars[1]).expect("read sidecar B"),
+        b"xmp-b"
+    );
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ZeroSpaceProbe;
 
