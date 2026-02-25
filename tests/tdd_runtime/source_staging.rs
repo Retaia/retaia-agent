@@ -133,7 +133,10 @@ fn tdd_source_staging_preserves_relative_paths_to_avoid_sidecar_name_collisions(
     );
     let sidecars = staged.sidecar_paths().to_vec();
     assert_eq!(sidecars.len(), 2);
-    assert_ne!(sidecars[0], sidecars[1], "sidecars must not overwrite each other");
+    assert_ne!(
+        sidecars[0], sidecars[1],
+        "sidecars must not overwrite each other"
+    );
     assert_eq!(
         std::fs::read(&sidecars[0]).expect("read sidecar A"),
         b"xmp-a"
