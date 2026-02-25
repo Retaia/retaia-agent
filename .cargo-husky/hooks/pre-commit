@@ -5,3 +5,8 @@ if [ "$BRANCH" = "master" ]; then
   echo "Commit on master is blocked. Use a feature branch + PR."
   exit 1
 fi
+
+if ! cargo fmt --all --check >/dev/null 2>&1; then
+  echo "Rust formatting check failed. Run: cargo fmt --all"
+  exit 1
+fi

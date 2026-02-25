@@ -1066,7 +1066,9 @@ fn restart_user_daemon_if_running<M: DaemonManager>(manager: &M) -> Result<(), A
     if !matches!(status, DaemonStatus::Running) {
         return Ok(());
     }
-    manager.stop(request.clone()).map_err(AgentCtlError::Daemon)?;
+    manager
+        .stop(request.clone())
+        .map_err(AgentCtlError::Daemon)?;
     wait_until_daemon_not_running(manager, &request)?;
     manager.start(request).map_err(AgentCtlError::Daemon)?;
     Ok(())
