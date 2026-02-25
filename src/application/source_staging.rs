@@ -131,9 +131,11 @@ fn copy_into_staging_dir(
     let staged_relative = staged_relative_path(relative_path)?;
     let staged_path = staging_dir.join(staged_relative);
     if let Some(parent) = staged_path.parent() {
-        std::fs::create_dir_all(parent).map_err(|error| SourceStagingError::Copy(error.to_string()))?;
+        std::fs::create_dir_all(parent)
+            .map_err(|error| SourceStagingError::Copy(error.to_string()))?;
     }
-    std::fs::copy(source, &staged_path).map_err(|error| SourceStagingError::Copy(error.to_string()))?;
+    std::fs::copy(source, &staged_path)
+        .map_err(|error| SourceStagingError::Copy(error.to_string()))?;
     Ok(staged_path)
 }
 
