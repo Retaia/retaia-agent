@@ -212,6 +212,7 @@ mod desktop_shell {
         started_at: Instant,
         status_modal: Option<String>,
         settings_modal: Option<SettingsEditorState>,
+        pending_settings_restart: bool,
         info_modal: Option<String>,
         last_error: Option<String>,
         quit_requested: bool,
@@ -237,6 +238,7 @@ mod desktop_shell {
                 started_at: Instant::now(),
                 status_modal: None,
                 settings_modal: None,
+                pending_settings_restart: false,
                 info_modal: None,
                 last_error: None,
                 quit_requested: false,
@@ -346,8 +348,67 @@ mod desktop_shell {
 
             self.config = next.clone();
             self.settings_modal = Some(SettingsEditorState::from_config(&next));
-            self.info_modal = Some("Settings saved".to_string());
             self.notify(SystemNotification::SettingsSaved);
+            self.request_daemon_restart_after_settings_change();
+        }
+
+        fn request_daemon_restart_after_settings_change(&mut self) {
+            let request = Self::daemon_request();
+            match self.manager.status(request.clone()) {
+                Ok(DaemonStatus::Running) => match self.manager.stop(request) {
+                    Ok(()) => {
+                        self.pending_settings_restart = true;
+                        self.info_modal = Some(
+                            "Settings saved. Graceful daemon restart requested (waiting current job)."
+                                .to_string(),
+                        );
+                    }
+                    Err(error) => {
+                        self.last_error =
+                            Some(format!("settings saved but daemon stop failed: {error}"));
+                    }
+                },
+                Ok(_) => {
+                    self.info_modal = Some("Settings saved".to_string());
+                }
+                Err(error) => {
+                    self.last_error = Some(format!(
+                        "settings saved but daemon status check failed: {error}"
+                    ));
+                }
+            }
+            self.refresh_daemon_status();
+            self.refresh_stats();
+            self.refresh_tray();
+        }
+
+        fn tick_pending_restart(&mut self) {
+            if !self.pending_settings_restart {
+                return;
+            }
+            match self.manager.status(Self::daemon_request()) {
+                Ok(DaemonStatus::Running) => {}
+                Ok(_) => {
+                    if let Err(error) = self.manager.start(Self::daemon_request()) {
+                        self.last_error = Some(format!(
+                            "settings restart failed while starting daemon: {error}"
+                        ));
+                    } else {
+                        self.info_modal =
+                            Some("Daemon restarted with updated settings".to_string());
+                        self.notify(SystemNotification::DaemonStarted);
+                    }
+                    self.pending_settings_restart = false;
+                    self.refresh_daemon_status();
+                    self.refresh_stats();
+                    self.refresh_tray();
+                }
+                Err(error) => {
+                    self.last_error =
+                        Some(format!("settings restart status check failed: {error}"));
+                    self.pending_settings_restart = false;
+                }
+            }
         }
 
         fn process_tray_events(&mut self, ctx: &egui::Context) {
@@ -489,6 +550,7 @@ mod desktop_shell {
         fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
             self.process_tray_events(ctx);
             self.handle_keyboard_shortcuts(ctx);
+            self.tick_pending_restart();
 
             if ctx.input(|i| i.viewport().close_requested()) {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);

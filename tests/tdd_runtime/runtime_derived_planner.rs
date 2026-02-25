@@ -12,6 +12,7 @@ fn tdd_runtime_derived_planner_infers_audio_proxy_manifest_from_extension() {
         job_type: DerivedJobType::GenerateProxy,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mp3".to_string(),
+        source_sidecars_relative: Vec::new(),
     };
 
     let plan = planner.plan_for_claimed_job(&claimed).expect("plan");

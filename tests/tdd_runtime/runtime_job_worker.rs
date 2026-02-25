@@ -45,6 +45,7 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/asset.jpg".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 

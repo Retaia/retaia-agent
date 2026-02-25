@@ -227,7 +227,7 @@ fn validate_submit_payload_for_claimed_job(
     Ok(())
 }
 
-fn send_heartbeat<G: DerivedProcessingGateway>(
+fn send_heartbeat<G: DerivedProcessingGateway + ?Sized>(
     gateway: &G,
     claimed: &ClaimedDerivedJob,
 ) -> Result<(), DerivedJobExecutorError> {
