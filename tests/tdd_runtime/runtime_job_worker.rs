@@ -45,6 +45,7 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/asset.jpg".to_string(),
+            source_sidecars_relative: Vec::new(),
         })
     }
 
@@ -124,12 +125,19 @@ fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
         .expect("job should be processed");
     assert_eq!(report.job_id, "job-1");
     assert_eq!(report.asset_uuid, "asset-1");
-    assert_eq!(
-        derived.calls(),
-        vec![
-            "claim:job-1".to_string(),
-            "heartbeat:job-1".to_string(),
-            "submit:job-1".to_string(),
-        ]
+    let calls = derived.calls();
+    assert_eq!(calls.first().map(std::string::String::as_str), Some("claim:job-1"));
+    assert_eq!(calls.last().map(std::string::String::as_str), Some("submit:job-1"));
+    assert!(
+        calls
+            .iter()
+            .skip(1)
+            .take(calls.len().saturating_sub(2))
+            .all(|call| call == "heartbeat:job-1"),
+        "expected only heartbeats between claim and submit, got: {calls:?}"
+    );
+    assert!(
+        calls.iter().any(|call| call == "heartbeat:job-1"),
+        "expected at least one heartbeat call, got: {calls:?}"
     );
 }

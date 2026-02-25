@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 use std::process::exit;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
@@ -114,6 +116,8 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     let mut last_job: Option<DaemonLastJobStats> = None;
     let mut last_cycle_fingerprint: Option<String> = None;
     let mut last_persisted_cycle_tick: u64 = 0;
+    let shutdown_requested = install_shutdown_signal()?;
+    let mut shutdown_log_emitted = false;
     info!(
         target = ?session.target(),
         run_state = ?session.run_state(),
@@ -234,6 +238,16 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                 current_job_started_at_unix_ms = None;
             }
         }
+        if shutdown_requested.load(Ordering::Relaxed) {
+            if !shutdown_log_emitted {
+                info!(tick, "shutdown requested: draining active job before stop");
+                shutdown_log_emitted = true;
+            }
+            if current_job_id.is_none() {
+                info!(tick, "graceful shutdown complete");
+                return Ok(());
+            }
+        }
 
         let current_job = current_job_snapshot.map(|job| DaemonCurrentJobStats {
             job_id: job.job_id,
@@ -302,6 +316,16 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
         }
         std::thread::sleep(sleep_duration);
     }
+}
+
+fn install_shutdown_signal() -> Result<Arc<AtomicBool>, String> {
+    let flag = Arc::new(AtomicBool::new(false));
+    let handler_flag = Arc::clone(&flag);
+    ctrlc::set_handler(move || {
+        handler_flag.store(true, Ordering::Relaxed);
+    })
+    .map_err(|error| format!("unable to install shutdown signal handler: {error}"))?;
+    Ok(flag)
 }
 
 fn cycle_fingerprint(

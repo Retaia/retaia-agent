@@ -60,6 +60,7 @@ enum DaemonCommand {
     Uninstall(DaemonLabelArgs),
     Start(DaemonLabelArgs),
     Stop(DaemonLabelArgs),
+    Restart(DaemonLabelArgs),
     Status(DaemonLabelArgs),
     Stats,
     History(DaemonHistoryArgs),
@@ -767,6 +768,21 @@ fn run_daemon_command<M: DaemonManager>(
             println!("{}", t(lang, "daemon.stopped"));
             Ok(())
         }
+        DaemonCommand::Restart(args) => {
+            let request = daemon_label_request(&args);
+            let status = manager
+                .status(request.clone())
+                .map_err(AgentCtlError::Daemon)?;
+            if matches!(status, DaemonStatus::Running) {
+                manager
+                    .stop(request.clone())
+                    .map_err(AgentCtlError::Daemon)?;
+                wait_until_daemon_not_running(manager, &request)?;
+            }
+            manager.start(request).map_err(AgentCtlError::Daemon)?;
+            println!("{}", t(lang, "daemon.started"));
+            Ok(())
+        }
         DaemonCommand::Status(args) => {
             let status = manager
                 .status(daemon_label_request(&args))
@@ -974,6 +990,21 @@ fn run_daemon_command<M: DaemonManager>(
     }
 }
 
+fn wait_until_daemon_not_running<M: DaemonManager>(
+    manager: &M,
+    request: &DaemonLabelRequest,
+) -> Result<(), AgentCtlError> {
+    loop {
+        let status = manager
+            .status(request.clone())
+            .map_err(AgentCtlError::Daemon)?;
+        if !matches!(status, DaemonStatus::Running) {
+            return Ok(());
+        }
+        std::thread::sleep(Duration::from_secs(1));
+    }
+}
+
 fn run_with_repository<R: ConfigRepository>(
     repository: &R,
     command: ConfigCommand,
@@ -1045,6 +1076,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+
     use clap::Parser;
 
     use retaia_agent::{
@@ -1241,9 +1274,34 @@ mod tests {
         }
     }
 
+    #[test]
+    fn tdd_clap_parses_daemon_restart_args() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "daemon",
+            "restart",
+            "--label",
+            "io.retaia.agent",
+        ])
+        .expect("daemon restart parse should succeed");
+
+        match cli.command {
+            RootCommand::Daemon {
+                command: DaemonCommand::Restart(args),
+            } => {
+                assert_eq!(args.label, "io.retaia.agent");
+                assert!(!args.system);
+            }
+            _ => panic!("unexpected parse result"),
+        }
+    }
+
     #[derive(Default)]
     struct MockDaemonManager {
         fail: bool,
+        calls: Mutex<Vec<String>>,
+        running: Mutex<bool>,
+        stop_pending: Mutex<bool>,
     }
 
     impl DaemonManager for MockDaemonManager {
@@ -1251,6 +1309,10 @@ mod tests {
             if self.fail {
                 return Err(DaemonManagerError::OperationFailed("boom".to_string()));
             }
+            self.calls
+                .lock()
+                .expect("calls")
+                .push("install".to_string());
             Ok(())
         }
 
@@ -1258,6 +1320,10 @@ mod tests {
             if self.fail {
                 return Err(DaemonManagerError::OperationFailed("boom".to_string()));
             }
+            self.calls
+                .lock()
+                .expect("calls")
+                .push("uninstall".to_string());
             Ok(())
         }
 
@@ -1265,6 +1331,8 @@ mod tests {
             if self.fail {
                 return Err(DaemonManagerError::OperationFailed("boom".to_string()));
             }
+            self.calls.lock().expect("calls").push("start".to_string());
+            *self.running.lock().expect("running") = true;
             Ok(())
         }
 
@@ -1272,6 +1340,8 @@ mod tests {
             if self.fail {
                 return Err(DaemonManagerError::OperationFailed("boom".to_string()));
             }
+            self.calls.lock().expect("calls").push("stop".to_string());
+            *self.stop_pending.lock().expect("stop_pending") = true;
             Ok(())
         }
 
@@ -1279,13 +1349,25 @@ mod tests {
             if self.fail {
                 return Err(DaemonManagerError::OperationFailed("boom".to_string()));
             }
-            Ok(DaemonStatus::Running)
+            self.calls.lock().expect("calls").push("status".to_string());
+            if *self.stop_pending.lock().expect("stop_pending") {
+                *self.running.lock().expect("running") = false;
+                *self.stop_pending.lock().expect("stop_pending") = false;
+            }
+            if *self.running.lock().expect("running") {
+                Ok(DaemonStatus::Running)
+            } else {
+                Ok(DaemonStatus::Stopped(None))
+            }
         }
     }
 
     #[test]
     fn tdd_daemon_command_executes_with_shared_manager_port() {
-        let manager = MockDaemonManager::default();
+        let manager = MockDaemonManager {
+            running: Mutex::new(true),
+            ..MockDaemonManager::default()
+        };
         let command = DaemonCommand::Status(super::DaemonLabelArgs {
             label: "io.retaia.agent".to_string(),
             system: false,
@@ -1297,7 +1379,10 @@ mod tests {
 
     #[test]
     fn tdd_daemon_command_maps_manager_errors() {
-        let manager = MockDaemonManager { fail: true };
+        let manager = MockDaemonManager {
+            fail: true,
+            ..MockDaemonManager::default()
+        };
         let command = DaemonCommand::Stop(super::DaemonLabelArgs {
             label: "io.retaia.agent".to_string(),
             system: false,
@@ -1307,5 +1392,31 @@ mod tests {
             .expect_err("daemon command must fail");
         assert!(err.to_string().contains("daemon operation failed"));
         assert_eq!(DaemonLevel::User, super::daemon_level(false));
+    }
+
+    #[test]
+    fn tdd_daemon_restart_stops_waits_then_starts() {
+        let manager = MockDaemonManager {
+            running: Mutex::new(true),
+            ..MockDaemonManager::default()
+        };
+        let command = DaemonCommand::Restart(super::DaemonLabelArgs {
+            label: "io.retaia.agent".to_string(),
+            system: false,
+        });
+
+        run_daemon_command(&manager, command, retaia_agent::Language::En)
+            .expect("daemon restart should succeed");
+        let calls = manager.calls.lock().expect("calls").clone();
+        assert_eq!(
+            calls,
+            vec![
+                "status".to_string(),
+                "stop".to_string(),
+                "status".to_string(),
+                "start".to_string(),
+            ]
+        );
+        assert!(*manager.running.lock().expect("running"));
     }
 }

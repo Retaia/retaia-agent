@@ -10,6 +10,7 @@ path = "src/lib.rs"
 [dependencies]
 backon = "1.6.0"
 clap = { version = "4.5", features = ["derive"] }
+ctrlc = "3.5"
 directories = "5.0"
 eframe = { version = "0.33", default-features = true, optional = true }
 genai = "0.4.0-alpha.7"
