@@ -137,12 +137,14 @@ impl DerivedExecutionPlanner for ProxyPlanner {
 
 struct ExtractFactsGateway {
     calls: Mutex<Vec<String>>,
+    submitted_payload: Mutex<Option<SubmitDerivedPayload>>,
 }
 
 impl Default for ExtractFactsGateway {
     fn default() -> Self {
         Self {
             calls: Mutex::new(Vec::new()),
+            submitted_payload: Mutex::new(None),
         }
     }
 }
@@ -150,6 +152,10 @@ impl Default for ExtractFactsGateway {
 impl ExtractFactsGateway {
     fn calls(&self) -> Vec<String> {
         self.calls.lock().expect("calls").clone()
+    }
+
+    fn submitted_payload(&self) -> Option<SubmitDerivedPayload> {
+        self.submitted_payload.lock().expect("payload").clone()
     }
 }
 
@@ -166,7 +172,10 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
             job_type: DerivedJobType::ExtractFacts,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
-            source_sidecars_relative: Vec::new(),
+            source_sidecars_relative: vec![
+                "INBOX/sidecars/sample-source.xmp".to_string(),
+                "INBOX/sidecars/sample-source.srt".to_string(),
+            ],
         })
     }
 
@@ -187,12 +196,13 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
         job_id: &str,
         _lock_token: &str,
         _idempotency_key: &str,
-        _payload: &SubmitDerivedPayload,
+        payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("submit:{job_id}"));
+        *self.submitted_payload.lock().expect("payload") = Some(payload.clone());
         Ok(())
     }
 
@@ -721,8 +731,13 @@ fn tdd_execute_derived_job_once_with_runtime_planner_emits_upload_calls_with_sta
 fn tdd_execute_derived_job_once_with_runtime_planner_supports_extract_facts_without_upload_calls() {
     let source_root = tempfile::tempdir().expect("source root");
     let source_path = source_root.path().join("INBOX/sample-source.bin");
+    let sidecar_xmp_path = source_root.path().join("INBOX/sidecars/sample-source.xmp");
+    let sidecar_srt_path = source_root.path().join("INBOX/sidecars/sample-source.srt");
     std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
+    std::fs::create_dir_all(sidecar_xmp_path.parent().expect("parent")).expect("mkdir");
     std::fs::write(&source_path, b"source-bytes").expect("write source");
+    std::fs::write(&sidecar_xmp_path, b"xmp-bytes").expect("write xmp");
+    std::fs::write(&sidecar_srt_path, b"srt-bytes").expect("write srt");
 
     let mut storage_mounts = std::collections::BTreeMap::new();
     storage_mounts.insert(
@@ -751,4 +766,10 @@ fn tdd_execute_derived_job_once_with_runtime_planner_supports_extract_facts_with
     let calls = gateway.calls();
     assert!(calls.contains(&"submit:job-facts-1".to_string()));
     assert!(!calls.iter().any(|call| call.starts_with("upload_")));
+    let payload = gateway.submitted_payload().expect("submitted payload");
+    let metrics = payload.metrics.expect("metrics");
+    assert_eq!(
+        metrics.get("staged_sidecars_count"),
+        Some(&serde_json::json!(2))
+    );
 }

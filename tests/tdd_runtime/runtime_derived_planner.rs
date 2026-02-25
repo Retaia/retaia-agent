@@ -40,7 +40,7 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
     std::fs::write(&staged, b"staged-bytes").expect("write");
 
     let plan = planner
-        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()))
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
         .expect("plan");
     assert_eq!(plan.uploads.len(), 1);
     assert_eq!(plan.uploads[0].init.kind, DerivedKind::ProxyVideo);
@@ -67,9 +67,61 @@ fn tdd_runtime_derived_planner_extract_facts_stays_uploadless_with_staged_source
     std::fs::write(&staged, b"facts-source").expect("write");
 
     let plan = planner
-        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()))
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
         .expect("plan");
     assert_eq!(plan.submit.job_type, DerivedJobType::ExtractFacts);
     assert!(plan.submit.manifest.is_empty());
     assert!(plan.uploads.is_empty());
+}
+
+#[test]
+fn tdd_runtime_derived_planner_includes_sidecar_metrics_when_sidecars_are_staged() {
+    let planner = RuntimeDerivedPlanner;
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-facts-2".to_string(),
+        asset_uuid: "asset-facts-2".to_string(),
+        lock_token: "lock-facts-2".to_string(),
+        job_type: DerivedJobType::ExtractFacts,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/clip.mov".to_string(),
+        source_sidecars_relative: vec![
+            "INBOX/clip.xmp".to_string(),
+            "INBOX/clip.srt".to_string(),
+            "INBOX/clip.XMP".to_string(),
+        ],
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("INBOX/clip.mov");
+    let staged_xmp = dir.path().join("INBOX/clip.xmp");
+    let staged_srt = dir.path().join("INBOX/clip.srt");
+    let staged_xmp_upper = dir.path().join("INBOX/clip.XMP");
+    std::fs::create_dir_all(staged.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&staged, b"source").expect("write source");
+    std::fs::write(&staged_xmp, b"xmp-a").expect("write xmp");
+    std::fs::write(&staged_srt, b"srt-a").expect("write srt");
+    std::fs::write(&staged_xmp_upper, b"xmp-b").expect("write xmp upper");
+
+    let sidecars = vec![staged_xmp, staged_srt, staged_xmp_upper];
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &sidecars)
+        .expect("plan");
+    let metrics = plan.submit.metrics.expect("metrics must be set");
+    assert_eq!(
+        metrics.get("staged_sidecars_count"),
+        Some(&serde_json::json!(3))
+    );
+    assert_eq!(
+        metrics.get("staged_source_size_bytes"),
+        Some(&serde_json::json!(6))
+    );
+    assert_eq!(
+        metrics.get("staged_sidecars_total_bytes"),
+        Some(&serde_json::json!(15))
+    );
+    assert_eq!(
+        metrics
+            .get("staged_sidecars_by_extension")
+            .and_then(|value| value.get("xmp")),
+        Some(&serde_json::json!(2))
+    );
 }

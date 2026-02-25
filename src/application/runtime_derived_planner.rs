@@ -6,7 +6,9 @@ use crate::application::derived_processing_gateway::{
     DerivedUploadInit, DerivedUploadPart, SubmitDerivedPayload,
 };
 use crate::domain::capabilities::photo_source_extension_supported;
-use std::path::Path;
+use serde_json::{Map, Value};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct RuntimeDerivedPlanner;
@@ -33,8 +35,10 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
         &self,
         claimed: &ClaimedDerivedJob,
         staged_source_path: Option<&Path>,
+        staged_sidecar_paths: &[PathBuf],
     ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
         let mut plan = self.plan_for_claimed_job(claimed)?;
+        plan.submit.metrics = sidecar_metrics(staged_source_path, staged_sidecar_paths)?;
         if claimed.job_type == DerivedJobType::ExtractFacts {
             return Ok(plan);
         }
@@ -143,5 +147,62 @@ fn content_type_for_kind(kind: DerivedKind) -> &'static str {
         DerivedKind::ProxyAudio => "audio/mp4",
         DerivedKind::ProxyPhoto | DerivedKind::Thumb => "image/jpeg",
         DerivedKind::Waveform => "application/json",
+    }
+}
+
+fn sidecar_metrics(
+    staged_source_path: Option<&Path>,
+    staged_sidecar_paths: &[PathBuf],
+) -> Result<Option<HashMap<String, Value>>, DerivedJobExecutorError> {
+    let mut metrics = HashMap::new();
+
+    if let Some(source_path) = staged_source_path {
+        let source_size = std::fs::metadata(source_path)
+            .map_err(|error| DerivedJobExecutorError::Planner(error.to_string()))?
+            .len();
+        metrics.insert(
+            "staged_source_size_bytes".to_string(),
+            Value::from(source_size),
+        );
+    }
+
+    if !staged_sidecar_paths.is_empty() {
+        let mut extension_counts = Map::new();
+        let mut total_sidecars_bytes = 0_u64;
+        for path in staged_sidecar_paths {
+            let size = std::fs::metadata(path)
+                .map_err(|error| DerivedJobExecutorError::Planner(error.to_string()))?
+                .len();
+            total_sidecars_bytes = total_sidecars_bytes.saturating_add(size);
+            let extension = path
+                .extension()
+                .and_then(|value| value.to_str())
+                .map(|value| value.to_ascii_lowercase())
+                .unwrap_or_else(|| "(none)".to_string());
+            let next_count = extension_counts
+                .get(&extension)
+                .and_then(|value| value.as_u64())
+                .unwrap_or(0)
+                + 1;
+            extension_counts.insert(extension, Value::from(next_count));
+        }
+        metrics.insert(
+            "staged_sidecars_count".to_string(),
+            Value::from(staged_sidecar_paths.len() as u64),
+        );
+        metrics.insert(
+            "staged_sidecars_total_bytes".to_string(),
+            Value::from(total_sidecars_bytes),
+        );
+        metrics.insert(
+            "staged_sidecars_by_extension".to_string(),
+            Value::Object(extension_counts),
+        );
+    }
+
+    if metrics.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(metrics))
     }
 }
