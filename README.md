@@ -201,6 +201,7 @@ Le workflow build les binaires (`agentctl`, `agent-runtime`, `agent-desktop-shel
 - installateurs Linux (`.deb`, `.rpm`)
 - installateurs macOS (`.pkg`)
 - installateurs Windows (`.msi`)
+- SBOM release (`CycloneDX JSON`, `*.cdx.json`)
 
 ## Contributing
 
