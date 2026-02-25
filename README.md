@@ -62,7 +62,8 @@ NAS/LAN profile (Core private behind UI gateway):
 
 - if Core is not exposed directly, use the NAS UI/Caddy gateway URL
 - example: `http://192.168.0.14:8080/api/v1`
-- avoid Docker-internal hostnames (`core:8000`, `app-prod:9000`) from workstation agents
+- avoid Docker-internal hostnames (`core:9000`, `app-prod:9000`) from workstation agents
+- normative deployment profile: `specs/architecture/DEPLOYMENT-TOPOLOGY.md`
 
 `--check-respond` validates API compatibility (`Core /jobs`, `Ollama OpenAI-compatible /v1/chat/completions via genai`), not just TCP reachability.
 
