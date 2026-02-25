@@ -39,6 +39,10 @@ fn e2e_agentctl_init_show_validate_set_flow() {
         "3",
         "--log-level",
         "info",
+        "--storage-mount",
+        "nas-main=/mnt/nas/main/",
+        "--storage-mount",
+        "archive=/mnt/nas/archive",
     ]);
     assert!(init.status.success(), "init failed: {init:?}");
 
@@ -48,6 +52,7 @@ fn e2e_agentctl_init_show_validate_set_flow() {
     assert!(show_stdout.contains("core_api_url=https://core.retaia.local/api/v1"));
     assert!(show_stdout.contains("technical_client_id=agent-e2e"));
     assert!(show_stdout.contains("technical_secret_key_set=true"));
+    assert!(show_stdout.contains("storage_mounts=archive=/mnt/nas/archive,nas-main=/mnt/nas/main"));
     assert!(!show_stdout.contains("super-secret"));
 
     let validate = run_agentctl(&["config", "validate", "--config", &config_path_str]);
@@ -62,12 +67,15 @@ fn e2e_agentctl_init_show_validate_set_flow() {
         "6",
         "--log-level",
         "warn",
+        "--storage-mount",
+        "nas-main=/srv/nas/main/",
     ]);
     assert!(set.status.success(), "set failed: {set:?}");
 
     let raw = fs::read_to_string(&config_path).expect("config file should exist");
     assert!(raw.contains("max_parallel_jobs = 6"));
     assert!(raw.contains("log_level = \"warn\""));
+    assert!(raw.contains("nas-main = \"/srv/nas/main\""));
 }
 
 #[test]

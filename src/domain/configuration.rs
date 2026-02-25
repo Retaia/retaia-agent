@@ -1,4 +1,6 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Component, Path, PathBuf};
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthMode {
@@ -27,6 +29,7 @@ pub struct AgentRuntimeConfig {
     pub ollama_url: String,
     pub auth_mode: AuthMode,
     pub technical_auth: Option<TechnicalAuthConfig>,
+    pub storage_mounts: BTreeMap<String, String>,
     pub max_parallel_jobs: u16,
     pub log_level: LogLevel,
 }
@@ -38,6 +41,8 @@ pub enum ConfigValidationError {
     MissingTechnicalAuth,
     EmptyClientId,
     EmptySecretKey,
+    EmptyStorageMountId,
+    StorageMountPathNotAbsolute(String),
     InvalidMaxParallelJobs,
 }
 
@@ -48,6 +53,7 @@ pub enum ConfigField {
     AuthMode,
     TechnicalClientId,
     TechnicalSecretKey,
+    StorageMounts,
     MaxParallelJobs,
     LogLevel,
 }
@@ -66,8 +72,18 @@ pub struct RuntimeConfigUpdate {
     pub technical_client_id: Option<String>,
     pub technical_secret_key: Option<String>,
     pub clear_technical_auth: bool,
+    pub storage_mounts: Option<BTreeMap<String, String>>,
+    pub clear_storage_mounts: bool,
     pub max_parallel_jobs: Option<u16>,
     pub log_level: Option<LogLevel>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum SourcePathResolveError {
+    #[error("unknown storage_id: {0}")]
+    UnknownStorageId(String),
+    #[error("unsafe relative path: {0}")]
+    UnsafeRelativePath(String),
 }
 
 fn is_http_url(value: &str) -> bool {
@@ -97,6 +113,17 @@ pub fn validate_config(config: &AgentRuntimeConfig) -> Result<(), Vec<ConfigVali
 
     if config.max_parallel_jobs == 0 {
         errors.push(ConfigValidationError::InvalidMaxParallelJobs);
+    }
+
+    for (storage_id, mount_path) in &config.storage_mounts {
+        if storage_id.trim().is_empty() {
+            errors.push(ConfigValidationError::EmptyStorageMountId);
+        }
+        if !Path::new(mount_path).is_absolute() {
+            errors.push(ConfigValidationError::StorageMountPathNotAbsolute(
+                storage_id.clone(),
+            ));
+        }
     }
 
     if config.auth_mode == AuthMode::Technical {
@@ -129,6 +156,10 @@ pub fn compact_validation_reason(errors: &[ConfigValidationError]) -> String {
             ConfigValidationError::MissingTechnicalAuth => "missing technical auth",
             ConfigValidationError::EmptyClientId => "empty client id",
             ConfigValidationError::EmptySecretKey => "empty secret key",
+            ConfigValidationError::EmptyStorageMountId => "empty storage mount id",
+            ConfigValidationError::StorageMountPathNotAbsolute(_) => {
+                "storage mount path is not absolute"
+            }
             ConfigValidationError::InvalidMaxParallelJobs => "invalid max_parallel_jobs",
         })
         .collect::<Vec<_>>()
@@ -143,6 +174,7 @@ pub fn supported_config_fields(interface: ConfigInterface) -> BTreeSet<ConfigFie
         ConfigField::AuthMode,
         ConfigField::TechnicalClientId,
         ConfigField::TechnicalSecretKey,
+        ConfigField::StorageMounts,
         ConfigField::MaxParallelJobs,
         ConfigField::LogLevel,
     ])
@@ -168,6 +200,9 @@ pub fn apply_config_update(
     if update.clear_technical_auth {
         next.technical_auth = None;
     }
+    if update.clear_storage_mounts {
+        next.storage_mounts.clear();
+    }
 
     if update.technical_client_id.is_some() || update.technical_secret_key.is_some() {
         let mut technical = next.technical_auth.unwrap_or(TechnicalAuthConfig {
@@ -187,6 +222,9 @@ pub fn apply_config_update(
     if let Some(max_parallel_jobs) = update.max_parallel_jobs {
         next.max_parallel_jobs = max_parallel_jobs;
     }
+    if let Some(storage_mounts) = &update.storage_mounts {
+        next.storage_mounts = normalize_storage_mounts(storage_mounts);
+    }
     if let Some(log_level) = update.log_level {
         next.log_level = log_level;
     }
@@ -194,4 +232,73 @@ pub fn apply_config_update(
     let _ = interface;
     validate_config(&next)?;
     Ok(next)
+}
+
+pub fn normalize_storage_mount_path(value: &str) -> String {
+    let mut normalized = value.trim().to_string();
+    while normalized.len() > 1 && (normalized.ends_with('/') || normalized.ends_with('\\')) {
+        normalized.pop();
+    }
+    normalized
+}
+
+pub fn normalize_storage_mounts(value: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    value
+        .iter()
+        .map(|(storage_id, path)| {
+            (
+                storage_id.trim().to_string(),
+                normalize_storage_mount_path(path),
+            )
+        })
+        .collect()
+}
+
+pub fn resolve_source_path(
+    config: &AgentRuntimeConfig,
+    storage_id: &str,
+    relative_path: &str,
+) -> Result<PathBuf, SourcePathResolveError> {
+    let base = config
+        .storage_mounts
+        .get(storage_id)
+        .ok_or_else(|| SourcePathResolveError::UnknownStorageId(storage_id.to_string()))?;
+    let sanitized_relative = sanitize_relative_path(relative_path)?;
+    Ok(Path::new(base).join(sanitized_relative))
+}
+
+fn sanitize_relative_path(value: &str) -> Result<PathBuf, SourcePathResolveError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed.contains('\0') {
+        return Err(SourcePathResolveError::UnsafeRelativePath(
+            value.to_string(),
+        ));
+    }
+
+    let path = Path::new(trimmed);
+    if path.is_absolute() {
+        return Err(SourcePathResolveError::UnsafeRelativePath(
+            value.to_string(),
+        ));
+    }
+
+    let mut sanitized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Normal(part) => sanitized.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(SourcePathResolveError::UnsafeRelativePath(
+                    value.to_string(),
+                ));
+            }
+        }
+    }
+
+    if sanitized.as_os_str().is_empty() {
+        return Err(SourcePathResolveError::UnsafeRelativePath(
+            value.to_string(),
+        ));
+    }
+    Ok(sanitized)
 }

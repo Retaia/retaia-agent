@@ -9,6 +9,7 @@ fn valid_config() -> AgentRuntimeConfig {
         ollama_url: "http://127.0.0.1:11434".to_string(),
         auth_mode: AuthMode::Interactive,
         technical_auth: None,
+        storage_mounts: std::collections::BTreeMap::new(),
         max_parallel_jobs: 2,
         log_level: LogLevel::Info,
     }
@@ -80,4 +81,30 @@ fn tdd_normalize_core_api_url_accepts_host_and_api_v1_with_or_without_trailing_s
         normalize_core_api_url("https://core.retaia.local/api/v1/"),
         "https://core.retaia.local/api/v1"
     );
+}
+
+#[test]
+fn tdd_configuration_rejects_non_absolute_storage_mount_paths() {
+    let mut config = valid_config();
+    config
+        .storage_mounts
+        .insert("nas-main".to_string(), "mnt/nas".to_string());
+
+    let errors = validate_config(&config).expect_err("relative mount path must fail");
+    assert!(
+        errors.contains(&ConfigValidationError::StorageMountPathNotAbsolute(
+            "nas-main".to_string()
+        ))
+    );
+}
+
+#[test]
+fn tdd_configuration_rejects_empty_storage_mount_id() {
+    let mut config = valid_config();
+    config
+        .storage_mounts
+        .insert("   ".to_string(), "/mnt/nas".to_string());
+
+    let errors = validate_config(&config).expect_err("empty storage id must fail");
+    assert!(errors.contains(&ConfigValidationError::EmptyStorageMountId));
 }

@@ -14,6 +14,7 @@
 - Mode d'auth (`interactif` / `technique`)
 - Identifiants techniques (si mode technique)
 - Paramètres runtime (ex: concurrence/max jobs, niveau de log)
+- Mapping des montages storage agent (`storage_mounts`) pour résoudre les chemins relatifs Core (`INBOX/...`) vers des chemins absolus locaux NAS.
 
 Normalisation URL Core:
 
@@ -37,12 +38,15 @@ Normalisation URL Core:
 
 - `agentctl config path`: affiche le chemin de config résolu.
 - `agentctl config show`: affiche la config active (secret masqué).
+- `agentctl config show`: inclut `storage_mounts` (`storage_id=/mount/absolu`).
 - `agentctl config validate`: valide la config active.
 - `agentctl config validate --check-respond`: valide la compatibilité API côté Core/Ollama.
   - Core: probe `GET /jobs` (statuts compatibles attendus + payload JSON).
   - Ollama: probe `POST /v1/chat/completions` via `genai` (endpoint OpenAI-compatible).
 - `agentctl config init ...`: initialise la config (première installation).
 - `agentctl config set ...`: met à jour la config existante.
+- `--storage-mount <storage_id=/mount/absolu>`: ajout/remplacement du mapping (répétable).
+- `--clear-storage-mounts`: supprime tous les mappings.
 - `agentctl daemon install/start/stop/status/uninstall`: lifecycle du daemon partagé.
 
 Exemple:
@@ -53,5 +57,7 @@ cargo run --bin agentctl -- config init \
   --ollama-url http://127.0.0.1:11434 \
   --auth-mode technical \
   --client-id agent-prod \
-  --secret-key '$RETAIA_AGENT_SECRET'
+  --secret-key '$RETAIA_AGENT_SECRET' \
+  --storage-mount nas-main=/Volumes/NAS-01/retaia \
+  --storage-mount nas-archive=/Volumes/NAS-01/archive
 ```

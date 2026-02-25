@@ -6,6 +6,9 @@ use retaia_agent::{
 };
 
 fn valid_config() -> AgentRuntimeConfig {
+    let mut storage_mounts = std::collections::BTreeMap::new();
+    storage_mounts.insert("nas-main".to_string(), "/mnt/nas/main".to_string());
+
     AgentRuntimeConfig {
         core_api_url: "https://core.retaia.local".to_string(),
         ollama_url: "http://127.0.0.1:11434".to_string(),
@@ -14,6 +17,7 @@ fn valid_config() -> AgentRuntimeConfig {
             client_id: "agent-svc".to_string(),
             secret_key: "secret".to_string(),
         }),
+        storage_mounts,
         max_parallel_jobs: 3,
         log_level: LogLevel::Info,
     }
@@ -53,4 +57,24 @@ fn tdd_config_store_rejects_invalid_config_before_persist() {
 fn tdd_config_store_system_path_resolution_returns_config_file() {
     let path = system_config_file_path().expect("system path should resolve");
     assert!(path.ends_with("config.toml"));
+}
+
+#[test]
+fn tdd_config_store_loads_legacy_toml_without_storage_mounts() {
+    let dir = tempdir().expect("temp dir");
+    let path = dir.path().join("legacy.toml");
+    std::fs::write(
+        &path,
+        r#"
+core_api_url = "https://core.retaia.local/api/v1"
+ollama_url = "http://127.0.0.1:11434"
+auth_mode = "interactive"
+max_parallel_jobs = 2
+log_level = "info"
+"#,
+    )
+    .expect("write legacy config");
+
+    let loaded = load_config_from_path(&path).expect("legacy config should load");
+    assert!(loaded.storage_mounts.is_empty());
 }

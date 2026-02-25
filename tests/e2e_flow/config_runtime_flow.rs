@@ -12,6 +12,7 @@ fn e2e_invalid_settings_emit_single_deduplicated_notification() {
         ollama_url: "127.0.0.1:11434".to_string(),
         auth_mode: AuthMode::Interactive,
         technical_auth: None,
+        storage_mounts: std::collections::BTreeMap::new(),
         max_parallel_jobs: 0,
         log_level: LogLevel::Warn,
     };
@@ -39,6 +40,7 @@ fn e2e_valid_settings_then_runtime_menu_controls_execute_flow() {
         ollama_url: "http://127.0.0.1:11434".to_string(),
         auth_mode: AuthMode::Interactive,
         technical_auth: None,
+        storage_mounts: std::collections::BTreeMap::new(),
         max_parallel_jobs: 4,
         log_level: LogLevel::Info,
     };

@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::io;
@@ -9,7 +10,7 @@ use thiserror::Error;
 
 use crate::domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigValidationError, LogLevel, TechnicalAuthConfig,
-    validate_config,
+    normalize_storage_mounts, validate_config,
 };
 
 pub const CONFIG_FILE_ENV: &str = "RETAIA_AGENT_CONFIG_PATH";
@@ -76,6 +77,8 @@ struct StoredAgentRuntimeConfig {
     ollama_url: String,
     auth_mode: StoredAuthMode,
     technical_auth: Option<StoredTechnicalAuthConfig>,
+    #[serde(default)]
+    storage_mounts: BTreeMap<String, String>,
     max_parallel_jobs: u16,
     log_level: StoredLogLevel,
 }
@@ -147,6 +150,7 @@ impl From<StoredAgentRuntimeConfig> for AgentRuntimeConfig {
             ollama_url: value.ollama_url,
             auth_mode: value.auth_mode.into(),
             technical_auth: value.technical_auth.map(Into::into),
+            storage_mounts: normalize_storage_mounts(&value.storage_mounts),
             max_parallel_jobs: value.max_parallel_jobs,
             log_level: value.log_level.into(),
         }
@@ -160,6 +164,7 @@ impl From<AgentRuntimeConfig> for StoredAgentRuntimeConfig {
             ollama_url: value.ollama_url,
             auth_mode: value.auth_mode.into(),
             technical_auth: value.technical_auth.map(Into::into),
+            storage_mounts: normalize_storage_mounts(&value.storage_mounts),
             max_parallel_jobs: value.max_parallel_jobs,
             log_level: value.log_level.into(),
         }

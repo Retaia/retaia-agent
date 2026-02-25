@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
@@ -186,6 +187,8 @@ struct ConfigInitArgs {
     max_parallel_jobs: Option<u16>,
     #[arg(long = "log-level", value_enum)]
     log_level: Option<LogLevelArg>,
+    #[arg(long = "storage-mount")]
+    storage_mounts: Vec<String>,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -204,6 +207,10 @@ struct ConfigSetArgs {
     secret_key: Option<String>,
     #[arg(long = "clear-technical-auth")]
     clear_technical_auth: bool,
+    #[arg(long = "storage-mount")]
+    storage_mounts: Vec<String>,
+    #[arg(long = "clear-storage-mounts")]
+    clear_storage_mounts: bool,
     #[arg(long = "max-parallel-jobs")]
     max_parallel_jobs: Option<u16>,
     #[arg(long = "log-level", value_enum)]
@@ -403,6 +410,17 @@ fn print_config(config: &AgentRuntimeConfig) {
         "technical_secret_key_set={}",
         config.technical_auth.is_some()
     );
+    if config.storage_mounts.is_empty() {
+        println!("storage_mounts=-");
+    } else {
+        let mounts = config
+            .storage_mounts
+            .iter()
+            .map(|(storage_id, mount_path)| format!("{storage_id}={mount_path}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        println!("storage_mounts={mounts}");
+    }
     println!("max_parallel_jobs={}", config.max_parallel_jobs);
     println!("log_level={log_level}");
 }
@@ -582,6 +600,8 @@ fn init_config(args: &ConfigInitArgs) -> Result<AgentRuntimeConfig, AgentCtlErro
         ollama_url: args.ollama_url.clone(),
         auth_mode,
         technical_auth,
+        storage_mounts: parse_storage_mounts(&args.storage_mounts)
+            .map_err(AgentCtlError::InvalidConfig)?,
         max_parallel_jobs: args.max_parallel_jobs.unwrap_or(1),
         log_level: args.log_level.unwrap_or(LogLevelArg::Info).into(),
     };
@@ -592,17 +612,53 @@ fn init_config(args: &ConfigInitArgs) -> Result<AgentRuntimeConfig, AgentCtlErro
     Ok(config)
 }
 
-fn update_from_args(args: &ConfigSetArgs) -> RuntimeConfigUpdate {
-    RuntimeConfigUpdate {
+fn update_from_args(args: &ConfigSetArgs) -> Result<RuntimeConfigUpdate, AgentCtlError> {
+    let storage_mounts = if args.storage_mounts.is_empty() {
+        None
+    } else {
+        Some(
+            parse_storage_mounts(&args.storage_mounts)
+                .map_err(AgentCtlError::InvalidConfigUpdate)?,
+        )
+    };
+
+    Ok(RuntimeConfigUpdate {
         core_api_url: args.core_api_url.clone(),
         ollama_url: args.ollama_url.clone(),
         auth_mode: args.auth_mode.map(Into::into),
         technical_client_id: args.client_id.clone(),
         technical_secret_key: args.secret_key.clone(),
         clear_technical_auth: args.clear_technical_auth,
+        storage_mounts,
+        clear_storage_mounts: args.clear_storage_mounts,
         max_parallel_jobs: args.max_parallel_jobs,
         log_level: args.log_level.map(Into::into),
+    })
+}
+
+fn parse_storage_mounts(entries: &[String]) -> Result<BTreeMap<String, String>, String> {
+    let mut mounts = BTreeMap::new();
+    for entry in entries {
+        let Some((storage_id, path)) = entry.split_once('=') else {
+            return Err(format!(
+                "invalid storage mount '{entry}' (expected storage_id=/absolute/path)"
+            ));
+        };
+        let storage_id = storage_id.trim();
+        let mount_path = retaia_agent::normalize_storage_mount_path(path);
+
+        if storage_id.is_empty() {
+            return Err("invalid storage mount: storage_id must not be empty".to_string());
+        }
+        if mount_path.is_empty() {
+            return Err(format!(
+                "invalid storage mount '{entry}' (mount path must not be empty)"
+            ));
+        }
+
+        mounts.insert(storage_id.to_string(), mount_path);
     }
+    Ok(mounts)
 }
 
 fn resolve_agent_runtime_program_path(
@@ -815,12 +871,31 @@ fn run_daemon_command<M: DaemonManager>(
             let history_db = runtime_history_db_path()
                 .ok()
                 .map(|path| path.display().to_string());
+            let redacted_config = SystemConfigRepository
+                .load()
+                .ok()
+                .map(|settings| redacted_runtime_config_from(&settings));
             let rendered = if args.json {
-                render_daemon_inspect_json(&diagnostics, history_db.as_deref(), None)
+                render_daemon_inspect_json(
+                    &diagnostics,
+                    history_db.as_deref(),
+                    redacted_config.as_ref(),
+                )
             } else {
                 render_daemon_inspect(&diagnostics, history_db.as_deref())
             };
             print!("{rendered}");
+            if !args.json {
+                if let Some(config) = redacted_config.as_ref() {
+                    if config.storage_mounts.is_empty() {
+                        println!("storage_mounts=-");
+                    } else {
+                        println!("storage_mounts={}", config.storage_mounts.join(","));
+                    }
+                } else {
+                    println!("storage_mounts=-");
+                }
+            }
             Ok(())
         }
         DaemonCommand::Report(args) => {
@@ -938,10 +1013,10 @@ fn run_with_repository<R: ConfigRepository>(
             let current = repository
                 .load()
                 .map_err(AgentCtlError::LoadCurrentForSet)?;
-            let next =
-                apply_config_update(&current, &update_from_args(&args), ConfigInterface::Cli)
-                    .map_err(validation_error)
-                    .map_err(AgentCtlError::InvalidConfigUpdate)?;
+            let update = update_from_args(&args)?;
+            let next = apply_config_update(&current, &update, ConfigInterface::Cli)
+                .map_err(validation_error)
+                .map_err(AgentCtlError::InvalidConfigUpdate)?;
             repository.save(&next).map_err(AgentCtlError::Save)?;
             println!("{}", t(lang, "config.updated"));
             Ok(())
@@ -1001,6 +1076,29 @@ mod tests {
             } => {
                 assert_eq!(args.max_parallel_jobs, Some(8));
                 assert_eq!(args.log_level, Some(LogLevelArg::Debug));
+            }
+            _ => panic!("unexpected parse result"),
+        }
+    }
+
+    #[test]
+    fn tdd_clap_parses_storage_mount_entries() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "config",
+            "set",
+            "--storage-mount",
+            "nas-main=/mnt/nas/main/",
+            "--clear-storage-mounts",
+        ])
+        .expect("set args should parse");
+
+        match cli.command {
+            RootCommand::Config {
+                command: ConfigCommand::Set(args),
+            } => {
+                assert_eq!(args.storage_mounts, vec!["nas-main=/mnt/nas/main/"]);
+                assert!(args.clear_storage_mounts);
             }
             _ => panic!("unexpected parse result"),
         }

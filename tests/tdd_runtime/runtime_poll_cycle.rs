@@ -12,6 +12,7 @@ fn settings() -> AgentRuntimeConfig {
         ollama_url: "http://127.0.0.1:11434".to_string(),
         auth_mode: AuthMode::Interactive,
         technical_auth: None,
+        storage_mounts: std::collections::BTreeMap::new(),
         max_parallel_jobs: 2,
         log_level: LogLevel::Info,
     }
