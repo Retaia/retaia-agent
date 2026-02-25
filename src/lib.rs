@@ -35,7 +35,7 @@ pub use application::notification_bridge::{
 };
 pub use application::proxy_generator::{
     AudioProxyFormat, AudioProxyRequest, PhotoProxyFormat, PhotoProxyRequest, ProxyGenerationError,
-    ProxyGenerator, VideoProxyRequest,
+    ProxyGenerator, VideoProxyRequest, resolve_processing_input_path,
 };
 pub use application::runtime_cli_shell::{
     ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,
@@ -61,8 +61,9 @@ pub use domain::capabilities::{
 };
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
-    RuntimeConfigUpdate, TechnicalAuthConfig, apply_config_update, compact_validation_reason,
-    normalize_core_api_url, supported_config_fields, validate_config,
+    RuntimeConfigUpdate, SourcePathResolveError, TechnicalAuthConfig, apply_config_update,
+    compact_validation_reason, normalize_core_api_url, normalize_storage_mount_path,
+    resolve_source_path, supported_config_fields, validate_config,
 };
 pub use domain::feature_flags::{
     ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,

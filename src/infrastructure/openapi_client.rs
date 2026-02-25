@@ -29,6 +29,7 @@ mod tests {
             log_level: LogLevel::Info,
             auth_mode: AuthMode::Interactive,
             technical_auth: None,
+            storage_mounts: std::collections::BTreeMap::new(),
         }
     }
 

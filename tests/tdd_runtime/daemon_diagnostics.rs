@@ -120,6 +120,10 @@ fn tdd_daemon_diagnostics_render_inspect_json_contains_redacted_config() {
             client_id: "client-id".to_string(),
             secret_key: "secret".to_string(),
         }),
+        storage_mounts: std::collections::BTreeMap::from([(
+            "nas-main".to_string(),
+            "/mnt/nas/main".to_string(),
+        )]),
         max_parallel_jobs: 3,
         log_level: LogLevel::Info,
     });
@@ -129,6 +133,7 @@ fn tdd_daemon_diagnostics_render_inspect_json_contains_redacted_config() {
     assert!(rendered.contains("\"history_db_path\": \"/tmp/history.sqlite3\""));
     assert!(rendered.contains("\"redacted_config\""));
     assert!(rendered.contains("\"technical_secret_key_set\": true"));
+    assert!(rendered.contains("nas-main=/mnt/nas/main"));
 }
 
 #[test]

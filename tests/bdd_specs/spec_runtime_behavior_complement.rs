@@ -16,6 +16,7 @@ fn valid_config() -> retaia_agent::AgentRuntimeConfig {
         ollama_url: "http://127.0.0.1:11434".to_string(),
         auth_mode: retaia_agent::AuthMode::Interactive,
         technical_auth: None,
+        storage_mounts: std::collections::BTreeMap::new(),
         max_parallel_jobs: 2,
         log_level: retaia_agent::LogLevel::Info,
     }

@@ -37,6 +37,7 @@ pub struct RedactedRuntimeConfig {
     pub auth_mode: String,
     pub technical_client_id: String,
     pub technical_secret_key_set: bool,
+    pub storage_mounts: Vec<String>,
     pub max_parallel_jobs: u16,
     pub log_level: String,
 }
@@ -63,6 +64,11 @@ pub fn redacted_runtime_config_from(settings: &AgentRuntimeConfig) -> RedactedRu
             .map(|value| value.client_id.clone())
             .unwrap_or_else(|| "-".to_string()),
         technical_secret_key_set: settings.technical_auth.is_some(),
+        storage_mounts: settings
+            .storage_mounts
+            .iter()
+            .map(|(storage_id, mount_path)| format!("{storage_id}={mount_path}"))
+            .collect(),
         max_parallel_jobs: settings.max_parallel_jobs,
         log_level: log_level.to_string(),
     }
@@ -513,6 +519,10 @@ mod tests {
                 client_id: "client".to_string(),
                 secret_key: "secret".to_string(),
             }),
+            storage_mounts: std::collections::BTreeMap::from([(
+                "nas-main".to_string(),
+                "/mnt/nas/main".to_string(),
+            )]),
             max_parallel_jobs: 4,
             log_level: LogLevel::Info,
         });
@@ -520,6 +530,7 @@ mod tests {
         assert!(rendered.contains("\"history_db_path\": \"/tmp/h.sqlite3\""));
         assert!(rendered.contains("\"redacted_config\""));
         assert!(rendered.contains("\"technical_secret_key_set\": true"));
+        assert!(rendered.contains("nas-main=/mnt/nas/main"));
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use crate::{AgentRuntimeConfig, resolve_source_path};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,4 +61,18 @@ pub trait ProxyGenerator {
     -> Result<(), ProxyGenerationError>;
     fn generate_photo_proxy(&self, request: &PhotoProxyRequest)
     -> Result<(), ProxyGenerationError>;
+}
+
+pub fn resolve_processing_input_path(
+    settings: &AgentRuntimeConfig,
+    storage_id: &str,
+    relative_path: &str,
+) -> Result<String, ProxyGenerationError> {
+    resolve_source_path(settings, storage_id, relative_path)
+        .map(|path| path.to_string_lossy().to_string())
+        .map_err(|error| {
+            ProxyGenerationError::InvalidRequest(format!(
+                "unable to resolve source path: {error:?}"
+            ))
+        })
 }

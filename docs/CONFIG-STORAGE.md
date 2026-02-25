@@ -21,6 +21,23 @@ These libraries are widely used in Rust projects and stable for system config pe
   - `daemon-stats.json` (snapshot courant),
   - `daemon-history.sqlite3` (historique cycles + jobs complétés, avec compaction périodique).
 
+### Storage Mount Mapping (Agent-side)
+
+Le Core peut retourner des chemins relatifs (`INBOX/...`).  
+L'agent résout ces chemins via `storage_mounts` dans `AgentRuntimeConfig`:
+
+```toml
+[storage_mounts]
+nas-main = "/Volumes/NAS-01/retaia"
+nas-archive = "/Volumes/NAS-01/archive"
+```
+
+Contraintes:
+- clé `storage_id` non vide,
+- path absolu uniquement,
+- trailing slash normalisé côté agent (pas imposé côté Core),
+- champ optionnel/backward compatible (config legacy sans `storage_mounts` reste valide).
+
 ## System Location
 
 Default path is resolved with `ProjectDirs::from("io", "Retaia", "retaia-agent")`:

@@ -6,6 +6,9 @@ use retaia_agent::{
 };
 
 fn valid_config() -> AgentRuntimeConfig {
+    let mut storage_mounts = std::collections::BTreeMap::new();
+    storage_mounts.insert("nas-main".to_string(), "/mnt/nas/main".to_string());
+
     AgentRuntimeConfig {
         core_api_url: "https://core.retaia.local".to_string(),
         ollama_url: "http://127.0.0.1:11434".to_string(),
@@ -14,6 +17,7 @@ fn valid_config() -> AgentRuntimeConfig {
             client_id: "agent-svc".to_string(),
             secret_key: "secret".to_string(),
         }),
+        storage_mounts,
         max_parallel_jobs: 3,
         log_level: LogLevel::Debug,
     }
