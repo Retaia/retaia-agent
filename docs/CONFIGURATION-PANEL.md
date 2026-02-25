@@ -25,7 +25,8 @@ Déploiement NAS + workstations:
 
 - si Core est privé dans Docker, utiliser l'URL gateway LAN exposée par UI/Caddy.
 - exemple: `http://192.168.0.14:8080/api/v1`.
-- ne pas configurer un hostname Docker interne côté agent (`core:8000`, `app-prod:9000`).
+- ne pas configurer un hostname Docker interne côté agent (`core:9000`, `app-prod:9000`).
+- profil de déploiement normatif: `specs/architecture/DEPLOYMENT-TOPOLOGY.md`.
 
 ## UX Rules
 
