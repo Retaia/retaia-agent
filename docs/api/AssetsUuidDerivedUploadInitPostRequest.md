@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **kind** | **Kind** |  (enum: proxy_video, proxy_audio, proxy_photo, thumb, waveform) | 
-**content_type** | **String** |  | 
+**content_type** | **String** | MIME type constrained by `kind` (see endpoint description).  | 
 **size_bytes** | **i32** |  | 
 **sha256** | Option<**String**> |  | [optional]
 

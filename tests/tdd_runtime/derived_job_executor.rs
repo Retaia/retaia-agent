@@ -1,10 +1,11 @@
 use std::sync::Mutex;
 
 use retaia_agent::{
-    ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner, DerivedJobExecutorError,
-    DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
-    DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload, execute_derived_job_once,
+    AgentRuntimeConfig, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner,
+    DerivedJobExecutorError, DerivedJobType, DerivedKind, DerivedManifestItem,
+    DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit,
+    DerivedUploadPart, HeartbeatReceipt, LogLevel, SubmitDerivedPayload, execute_derived_job_once,
+    execute_derived_job_once_with_source_staging,
 };
 
 #[derive(Default)]
@@ -29,6 +30,8 @@ impl DerivedProcessingGateway for MemoryGateway {
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
             job_type: DerivedJobType::GenerateProxy,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
         })
     }
 
@@ -266,6 +269,8 @@ impl DerivedProcessingGateway for WaveformGateway {
             asset_uuid: "asset-wave-1".to_string(),
             lock_token: "lock-wave-1".to_string(),
             job_type: DerivedJobType::GenerateAudioWaveform,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
         })
     }
 
@@ -523,4 +528,52 @@ fn tdd_execute_derived_job_once_allows_waveform_job_without_waveform_output_and_
             "submit:job-wave-3".to_string(),
         ]
     );
+}
+
+#[test]
+fn tdd_execute_derived_job_once_with_source_staging_copies_source_before_processing() {
+    let source_root = tempfile::tempdir().expect("source root");
+    let source_path = source_root.path().join("INBOX/sample-source.bin");
+    std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&source_path, b"source-bytes").expect("write source");
+
+    let mut storage_mounts = std::collections::BTreeMap::new();
+    storage_mounts.insert(
+        "nas-main".to_string(),
+        source_root.path().display().to_string(),
+    );
+    let settings = AgentRuntimeConfig {
+        core_api_url: "https://core.retaia.local".to_string(),
+        ollama_url: "http://127.0.0.1:11434".to_string(),
+        auth_mode: AuthMode::Interactive,
+        technical_auth: None,
+        storage_mounts,
+        max_parallel_jobs: 1,
+        log_level: LogLevel::Info,
+    };
+
+    let gateway = MemoryGateway::default();
+    let report =
+        execute_derived_job_once_with_source_staging(&gateway, &ProxyPlanner, "job-1", &settings)
+            .expect("flow with staging");
+    assert_eq!(report.job_id, "job-1");
+}
+
+#[test]
+fn tdd_execute_derived_job_once_with_source_staging_fails_explicitly_when_mapping_missing() {
+    let settings = AgentRuntimeConfig {
+        core_api_url: "https://core.retaia.local".to_string(),
+        ollama_url: "http://127.0.0.1:11434".to_string(),
+        auth_mode: AuthMode::Interactive,
+        technical_auth: None,
+        storage_mounts: std::collections::BTreeMap::new(),
+        max_parallel_jobs: 1,
+        log_level: LogLevel::Info,
+    };
+
+    let gateway = MemoryGateway::default();
+    let error =
+        execute_derived_job_once_with_source_staging(&gateway, &ProxyPlanner, "job-1", &settings)
+            .expect_err("missing mapping must fail");
+    assert!(matches!(error, DerivedJobExecutorError::SourceStaging(_)));
 }

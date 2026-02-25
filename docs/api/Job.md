@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **job_type** | **JobType** |  (enum: extract_facts, generate_proxy, generate_thumbnails, generate_audio_waveform) | 
 **status** | **Status** |  (enum: pending, claimed, completed, failed) | 
 **asset_uuid** | **String** |  | 
+**source** | [**models::AssetPaths**](AssetPaths.md) | Source locator (relative paths + storage id) for local media access. | 
 **required_capabilities** | **Vec<String>** |  | 
 **claimed_by** | Option<**String**> |  | [optional]
 **lock_token** | Option<**String**> |  | [optional]

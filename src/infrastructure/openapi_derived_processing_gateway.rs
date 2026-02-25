@@ -61,6 +61,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             asset_uuid: job.asset_uuid,
             lock_token,
             job_type,
+            source_storage_id: job.source.storage_id.clone(),
+            source_original_relative: job.source.original_relative.clone(),
         })
     }
 
