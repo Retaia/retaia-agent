@@ -190,6 +190,7 @@ fn validate_submit_payload_for_claimed_job(
 
     use crate::application::derived_processing_gateway::{DerivedJobType, DerivedKind};
     match submit.job_type {
+        DerivedJobType::ExtractFacts => {}
         DerivedJobType::GenerateProxy => {
             if submit.manifest.is_empty() {
                 return Err(DerivedJobExecutorError::MissingSubmitManifestForJobType(

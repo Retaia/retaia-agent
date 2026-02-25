@@ -135,6 +135,95 @@ impl DerivedExecutionPlanner for ProxyPlanner {
     }
 }
 
+struct ExtractFactsGateway {
+    calls: Mutex<Vec<String>>,
+}
+
+impl Default for ExtractFactsGateway {
+    fn default() -> Self {
+        Self {
+            calls: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl ExtractFactsGateway {
+    fn calls(&self) -> Vec<String> {
+        self.calls.lock().expect("calls").clone()
+    }
+}
+
+impl DerivedProcessingGateway for ExtractFactsGateway {
+    fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("claim:{job_id}"));
+        Ok(ClaimedDerivedJob {
+            job_id: job_id.to_string(),
+            asset_uuid: "asset-facts".to_string(),
+            lock_token: "lock-facts".to_string(),
+            job_type: DerivedJobType::ExtractFacts,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: Vec::new(),
+        })
+    }
+
+    fn heartbeat(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+    ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("heartbeat:{job_id}"));
+        Ok(HeartbeatReceipt { locked_until: None })
+    }
+
+    fn submit_derived(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+        _idempotency_key: &str,
+        _payload: &SubmitDerivedPayload,
+    ) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("submit:{job_id}"));
+        Ok(())
+    }
+
+    fn upload_init(&self, _request: &DerivedUploadInit) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push("upload_init".to_string());
+        Ok(())
+    }
+
+    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push("upload_part".to_string());
+        Ok(())
+    }
+
+    fn upload_complete(
+        &self,
+        _request: &DerivedUploadComplete,
+    ) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push("upload_complete".to_string());
+        Ok(())
+    }
+}
+
 struct MissingIdempotencyPlanner;
 
 impl DerivedExecutionPlanner for MissingIdempotencyPlanner {
@@ -626,4 +715,40 @@ fn tdd_execute_derived_job_once_with_runtime_planner_emits_upload_calls_with_sta
             .iter()
             .any(|call| call.starts_with("upload_complete:"))
     );
+}
+
+#[test]
+fn tdd_execute_derived_job_once_with_runtime_planner_supports_extract_facts_without_upload_calls() {
+    let source_root = tempfile::tempdir().expect("source root");
+    let source_path = source_root.path().join("INBOX/sample-source.bin");
+    std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&source_path, b"source-bytes").expect("write source");
+
+    let mut storage_mounts = std::collections::BTreeMap::new();
+    storage_mounts.insert(
+        "nas-main".to_string(),
+        source_root.path().display().to_string(),
+    );
+    let settings = AgentRuntimeConfig {
+        core_api_url: "https://core.retaia.local".to_string(),
+        ollama_url: "http://127.0.0.1:11434".to_string(),
+        auth_mode: AuthMode::Interactive,
+        technical_auth: None,
+        storage_mounts,
+        max_parallel_jobs: 1,
+        log_level: LogLevel::Info,
+    };
+
+    let gateway = ExtractFactsGateway::default();
+    let report = execute_derived_job_once_with_source_staging(
+        &gateway,
+        &RuntimeDerivedPlanner,
+        "job-facts-1",
+        &settings,
+    )
+    .expect("extract_facts flow");
+    assert_eq!(report.upload_count, 0);
+    let calls = gateway.calls();
+    assert!(calls.contains(&"submit:job-facts-1".to_string()));
+    assert!(!calls.iter().any(|call| call.starts_with("upload_")));
 }

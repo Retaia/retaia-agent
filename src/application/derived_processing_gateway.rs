@@ -5,6 +5,7 @@ use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DerivedJobType {
+    ExtractFacts,
     GenerateProxy,
     GenerateThumbnails,
     GenerateAudioWaveform,
