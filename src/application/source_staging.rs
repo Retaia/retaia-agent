@@ -9,12 +9,17 @@ use crate::{AgentRuntimeConfig, resolve_source_path};
 pub struct StagedSourceFile {
     _temp_dir: tempfile::TempDir,
     path: PathBuf,
+    sidecar_paths: Vec<PathBuf>,
     pub size_bytes: u64,
 }
 
 impl StagedSourceFile {
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    pub fn sidecar_paths(&self) -> &[PathBuf] {
+        &self.sidecar_paths
     }
 }
 
@@ -69,12 +74,15 @@ pub fn stage_claimed_job_source_with_probe<P: DiskSpaceProbe>(
     )
     .map_err(|error| SourceStagingError::ResolvePath(error.to_string()))?;
 
-    let metadata = std::fs::metadata(&source)
-        .map_err(|error| SourceStagingError::SourceIo(error.to_string()))?;
-    if !metadata.is_file() {
-        return Err(SourceStagingError::SourceNotFile(
-            source.display().to_string(),
-        ));
+    let source_size = validated_file_size(&source)?;
+    let mut sidecars = Vec::with_capacity(claimed.source_sidecars_relative.len());
+    let mut required = source_size;
+    for relative in &claimed.source_sidecars_relative {
+        let resolved = resolve_source_path(settings, &claimed.source_storage_id, relative)
+            .map_err(|error| SourceStagingError::ResolvePath(error.to_string()))?;
+        let sidecar_size = validated_file_size(&resolved)?;
+        required = required.saturating_add(sidecar_size);
+        sidecars.push(resolved);
     }
 
     let temp_dir = tempfile::Builder::new()
@@ -82,7 +90,6 @@ pub fn stage_claimed_job_source_with_probe<P: DiskSpaceProbe>(
         .tempdir()
         .map_err(|error| SourceStagingError::Copy(error.to_string()))?;
     let available = probe.available_space(temp_dir.path())?;
-    let required = metadata.len();
     if available < required {
         return Err(SourceStagingError::InsufficientDiskSpace {
             required_bytes: required,
@@ -90,18 +97,36 @@ pub fn stage_claimed_job_source_with_probe<P: DiskSpaceProbe>(
         });
     }
 
+    let staged_path = copy_into_staging_dir(&source, temp_dir.path())?;
+    let mut staged_sidecars = Vec::with_capacity(sidecars.len());
+    for sidecar in sidecars {
+        staged_sidecars.push(copy_into_staging_dir(&sidecar, temp_dir.path())?);
+    }
+
+    Ok(StagedSourceFile {
+        _temp_dir: temp_dir,
+        path: staged_path,
+        sidecar_paths: staged_sidecars,
+        size_bytes: required,
+    })
+}
+
+fn validated_file_size(path: &Path) -> Result<u64, SourceStagingError> {
+    let metadata =
+        std::fs::metadata(path).map_err(|error| SourceStagingError::SourceIo(error.to_string()))?;
+    if !metadata.is_file() {
+        return Err(SourceStagingError::SourceNotFile(path.display().to_string()));
+    }
+    Ok(metadata.len())
+}
+
+fn copy_into_staging_dir(source: &Path, staging_dir: &Path) -> Result<PathBuf, SourceStagingError> {
     let staged_name = source
         .file_name()
         .and_then(|value| value.to_str())
         .map(ToString::to_string)
         .unwrap_or_else(|| "source.bin".to_string());
-    let staged_path = temp_dir.path().join(staged_name);
-    std::fs::copy(&source, &staged_path)
-        .map_err(|error| SourceStagingError::Copy(error.to_string()))?;
-
-    Ok(StagedSourceFile {
-        _temp_dir: temp_dir,
-        path: staged_path,
-        size_bytes: required,
-    })
+    let staged_path = staging_dir.join(staged_name);
+    std::fs::copy(source, &staged_path).map_err(|error| SourceStagingError::Copy(error.to_string()))?;
+    Ok(staged_path)
 }
