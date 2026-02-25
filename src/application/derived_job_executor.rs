@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 use crate::AgentRuntimeConfig;
@@ -73,6 +73,7 @@ pub trait DerivedExecutionPlanner {
         &self,
         claimed: &ClaimedDerivedJob,
         _staged_source_path: Option<&Path>,
+        _staged_sidecar_paths: &[PathBuf],
     ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
         self.plan_for_claimed_job(claimed)
     }
@@ -124,8 +125,15 @@ fn execute_derived_job_once_internal<
     };
     send_heartbeat(gateway, &claimed)?;
 
-    let plan = planner
-        .plan_for_claimed_job_with_source(&claimed, staged_source.as_ref().map(|s| s.path()))?;
+    let staged_sidecars: &[PathBuf] = staged_source
+        .as_ref()
+        .map(|staged| staged.sidecar_paths())
+        .unwrap_or(&[]);
+    let plan = planner.plan_for_claimed_job_with_source(
+        &claimed,
+        staged_source.as_ref().map(|s| s.path()),
+        staged_sidecars,
+    )?;
     if plan.submit_idempotency_key.trim().is_empty() {
         return Err(DerivedJobExecutorError::MissingSubmitIdempotencyKey);
     }
