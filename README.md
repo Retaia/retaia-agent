@@ -52,11 +52,17 @@ Headless config (CLI):
 
 ```bash
 cargo run --bin agentctl -- config init \
-  --core-api-url https://core.retaia.local \
+  --core-api-url http://192.168.0.14:8080/api/v1 \
   --ollama-url http://127.0.0.1:11434
 cargo run --bin agentctl -- config validate
 cargo run --bin agentctl -- config validate --check-respond
 ```
+
+NAS/LAN profile (Core private behind UI gateway):
+
+- if Core is not exposed directly, use the NAS UI/Caddy gateway URL
+- example: `http://192.168.0.14:8080/api/v1`
+- avoid Docker-internal hostnames (`core:8000`, `app-prod:9000`) from workstation agents
 
 `--check-respond` validates API compatibility (`Core /jobs`, `Ollama OpenAI-compatible /v1/chat/completions via genai`), not just TCP reachability.
 
