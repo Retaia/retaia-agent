@@ -104,12 +104,14 @@ fn e2e_agentctl_validate_check_respond_succeeds_when_core_and_ollama_endpoints_r
     let port = listener.local_addr().expect("local addr").port();
 
     let server = thread::spawn(move || {
-        for _ in 0..2 {
+        for _ in 0..3 {
             let (mut stream, _) = listener.accept().expect("accept");
             let mut buffer = [0_u8; 1024];
             let size = stream.read(&mut buffer).expect("read request");
             let request = String::from_utf8_lossy(&buffer[..size]);
             let response = if request.starts_with("GET /api/v1/jobs ") {
+                "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 23\r\nConnection: close\r\n\r\n{\"code\":\"UNAUTHORIZED\"}".to_string()
+            } else if request.starts_with("GET /api/v1/assets?captured_at_from=") {
                 "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 23\r\nConnection: close\r\n\r\n{\"code\":\"UNAUTHORIZED\"}".to_string()
             } else if request.starts_with("POST /v1/chat/completions ") {
                 let body = "{\"error\":{\"message\":\"model not found\"}}";
