@@ -487,6 +487,45 @@ fn check_core_api_compatible(core_api_url: &str) -> Result<(), AgentCtlError> {
             url,
             reason: "expected JSON object error payload on /jobs".to_string(),
         }),
+    }?;
+
+    check_core_assets_filters_compatible(core_api_url)
+}
+
+fn check_core_assets_filters_compatible(core_api_url: &str) -> Result<(), AgentCtlError> {
+    let url = format!(
+        "{}?captured_at_from=2024-01-01T00:00:00Z&captured_at_to=2024-12-31T23:59:59Z&sort=-captured_at&limit=1",
+        join_url(core_api_url, "/assets")
+    );
+    let response = http_get(&url)?;
+    let status = response.status().as_u16();
+    let body = response.text().unwrap_or_default();
+
+    if !matches!(status, 200 | 401 | 403 | 429) {
+        return Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: format!("unexpected status {status} on /assets"),
+        });
+    }
+
+    let parsed = serde_json::from_str::<serde_json::Value>(&body).map_err(|error| {
+        AgentCtlError::EndpointIncompatible {
+            url: url.clone(),
+            reason: format!("non-JSON response on /assets: {error}"),
+        }
+    })?;
+
+    match status {
+        200 if parsed.is_object() => Ok(()),
+        401 | 403 | 429 if parsed.is_object() => Ok(()),
+        200 => Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: "expected JSON object on /assets (status 200)".to_string(),
+        }),
+        _ => Err(AgentCtlError::EndpointIncompatible {
+            url,
+            reason: "expected JSON object error payload on /assets".to_string(),
+        }),
     }
 }
 
