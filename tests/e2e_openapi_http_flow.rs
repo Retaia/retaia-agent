@@ -2,6 +2,7 @@
 
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::sync::Arc;
 use std::thread;
 
 use retaia_agent::{
@@ -12,6 +13,7 @@ use retaia_agent::{
     OpenApiDerivedProcessingGateway, OpenApiJobsGateway, SubmitDerivedPayload,
     build_core_api_client,
 };
+use retaia_core_client::apis::assets_api::{AssetsApi, AssetsApiClient};
 
 struct MockExchange {
     method: &'static str,
@@ -179,6 +181,50 @@ fn e2e_openapi_jobs_gateway_maps_text_success_payload_to_transport_error() {
         CoreApiGatewayError::Transport(message) => assert!(message.contains("text/plain")),
         other => panic!("unexpected error variant: {other:?}"),
     }
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_assets_get_parses_asset_summary_name_and_updated_at() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "GET",
+        path: "/api/v1/assets?limit=1",
+        status: 200,
+        content_type: "application/json",
+        body: r#"{"items":[{"uuid":"asset-1","name":"IMG_0001.JPG","media_type":"PHOTO","state":"DECISION_PENDING","created_at":"2026-02-26T00:00:00Z","updated_at":"2026-02-26T01:00:00Z"}],"next_cursor":null}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let api = AssetsApiClient::new(Arc::new(client));
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime");
+    let response = runtime
+        .block_on(api.assets_get(
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(1),
+            None,
+        ))
+        .expect("assets_get should succeed");
+
+    let items = response.items.expect("items");
+    assert_eq!(items.len(), 1);
+    let first = &items[0];
+    assert_eq!(first.name.as_deref(), Some("IMG_0001.JPG"));
+    assert_eq!(first.updated_at.as_deref(), Some("2026-02-26T01:00:00Z"));
 
     server.join().expect("server thread");
 }
