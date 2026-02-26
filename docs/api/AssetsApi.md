@@ -13,7 +13,7 @@ Method | HTTP request | Description
 
 ## assets_get
 
-> models::AssetsGet200Response assets_get(state, media_type, tags, has_proxy, tags_mode, q, location_country, location_city, geo_bbox, sort, limit, cursor)
+> models::AssetsGet200Response assets_get(state, media_type, tags, has_proxy, tags_mode, q, location_country, location_city, geo_bbox, sort, captured_at_from, captured_at_to, limit, cursor)
 List assets
 
 ### Parameters
@@ -31,6 +31,8 @@ Name | Type | Description  | Required | Notes
 **location_city** | Option<**String**> | City-level location filter (uses secure derived search index). |  |
 **geo_bbox** | Option<**String**> | Bounding box filter `min_lon,min_lat,max_lon,max_lat` (uses secure derived spatial index). |  |
 **sort** | Option<**String**> |  |  |
+**captured_at_from** | Option<**String**> | Include assets with `captured_at` greater than or equal to this timestamp (UTC ISO-8601). |  |
+**captured_at_to** | Option<**String**> | Include assets with `captured_at` lower than or equal to this timestamp (UTC ISO-8601). |  |
 **limit** | Option<**i32**> |  |  |
 **cursor** | Option<**String**> |  |  |
 
