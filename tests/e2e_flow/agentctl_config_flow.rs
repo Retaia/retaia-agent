@@ -2,6 +2,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use tempfile::tempdir;
@@ -160,6 +161,88 @@ fn e2e_agentctl_validate_check_respond_succeeds_when_core_and_ollama_endpoints_r
     );
 
     server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_agentctl_validate_check_respond_probes_assets_with_captured_at_filters() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    let port = listener.local_addr().expect("local addr").port();
+    let seen_requests = Arc::new(Mutex::new(Vec::<String>::new()));
+    let seen_requests_server = Arc::clone(&seen_requests);
+
+    let server = thread::spawn(move || {
+        for _ in 0..3 {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buffer = [0_u8; 1024];
+            let size = stream.read(&mut buffer).expect("read request");
+            let request = String::from_utf8_lossy(&buffer[..size]).to_string();
+            seen_requests_server
+                .lock()
+                .expect("lock seen requests")
+                .push(request.clone());
+            let response = if request.starts_with("GET /api/v1/jobs ") {
+                "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 23\r\nConnection: close\r\n\r\n{\"code\":\"UNAUTHORIZED\"}".to_string()
+            } else if request.starts_with("GET /api/v1/assets?captured_at_from=") {
+                "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 23\r\nConnection: close\r\n\r\n{\"code\":\"UNAUTHORIZED\"}".to_string()
+            } else if request.starts_with("POST /v1/chat/completions ") {
+                let body = "{\"error\":{\"message\":\"model not found\"}}";
+                format!(
+                    "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            } else {
+                "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    .to_string()
+            };
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
+        }
+    });
+
+    let dir = tempdir().expect("temp dir");
+    let config_path = dir.path().join("agent-config-check-respond-assets.toml");
+    let config_path_str = config_path.to_string_lossy().to_string();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let init = run_agentctl(&[
+        "config",
+        "init",
+        "--config",
+        &config_path_str,
+        "--core-api-url",
+        &base_url,
+        "--ollama-url",
+        &base_url,
+    ]);
+    assert!(init.status.success(), "init failed: {init:?}");
+
+    let validate = run_agentctl(&[
+        "config",
+        "validate",
+        "--config",
+        &config_path_str,
+        "--check-respond",
+    ]);
+    assert!(
+        validate.status.success(),
+        "validate with check-respond failed: {validate:?}"
+    );
+
+    server.join().expect("server thread");
+
+    let requests = seen_requests.lock().expect("lock seen requests");
+    let assets_probe_present = requests.iter().any(|request| {
+        request.starts_with(
+            "GET /api/v1/assets?captured_at_from=2024-01-01T00:00:00Z&captured_at_to=2024-12-31T23:59:59Z&sort=-captured_at&limit=1 ",
+        )
+    });
+    assert!(
+        assets_probe_present,
+        "expected assets captured_at probe request, got: {:?}",
+        requests
+    );
 }
 
 #[test]
