@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::IpAddr;
 use std::path::{Component, Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::time::SystemTime;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -113,12 +115,22 @@ struct StorageMarkerPaths {
     rejects: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ValidatedStorageMarkerPaths {
+    version: u64,
     inbox: PathBuf,
     archive: PathBuf,
     rejects: PathBuf,
 }
+
+#[derive(Debug, Clone)]
+struct CachedStorageMarker {
+    modified_at: SystemTime,
+    paths: ValidatedStorageMarkerPaths,
+}
+
+static STORAGE_MARKER_CACHE: OnceLock<Mutex<BTreeMap<String, CachedStorageMarker>>> =
+    OnceLock::new();
 
 fn is_http_url(value: &str) -> bool {
     value.starts_with("http://") || value.starts_with("https://")
@@ -330,6 +342,20 @@ fn load_and_validate_storage_marker(
     expected_storage_id: &str,
 ) -> Result<ValidatedStorageMarkerPaths, SourcePathResolveError> {
     let marker_path = mount_root.join(STORAGE_MARKER_FILENAME);
+    let metadata = std::fs::metadata(&marker_path).map_err(|_| {
+        SourcePathResolveError::StorageMarkerMissing(marker_path.display().to_string())
+    })?;
+    let modified_at = metadata.modified().map_err(|error| {
+        SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} (unable to read mtime: {error})",
+            marker_path.display()
+        ))
+    })?;
+    let cache_key = format!("{}::{expected_storage_id}", mount_root.display());
+    if let Some(cached) = cached_storage_marker(&cache_key, modified_at) {
+        return Ok(cached);
+    }
+
     let raw = std::fs::read_to_string(&marker_path).map_err(|_| {
         SourcePathResolveError::StorageMarkerMissing(marker_path.display().to_string())
     })?;
@@ -378,11 +404,14 @@ fn load_and_validate_storage_marker(
         ))
     })?;
 
-    Ok(ValidatedStorageMarkerPaths {
+    let validated = ValidatedStorageMarkerPaths {
+        version: marker.version,
         inbox,
         archive,
         rejects,
-    })
+    };
+    cache_storage_marker(&cache_key, modified_at, &validated);
+    Ok(validated)
 }
 
 fn ensure_path_within_marker_roots(
@@ -390,7 +419,11 @@ fn ensure_path_within_marker_roots(
     marker_paths: &ValidatedStorageMarkerPaths,
     original_relative: &str,
 ) -> Result<(), SourcePathResolveError> {
-    if sanitized_relative.starts_with(&marker_paths.inbox)
+    if marker_paths.version == 1 {
+        if sanitized_relative.starts_with(&marker_paths.inbox) {
+            return Ok(());
+        }
+    } else if sanitized_relative.starts_with(&marker_paths.inbox)
         || sanitized_relative.starts_with(&marker_paths.archive)
         || sanitized_relative.starts_with(&marker_paths.rejects)
     {
@@ -399,6 +432,29 @@ fn ensure_path_within_marker_roots(
     Err(SourcePathResolveError::PathOutsideMarkerRoots(
         original_relative.to_string(),
     ))
+}
+
+fn cached_storage_marker(cache_key: &str, modified_at: SystemTime) -> Option<ValidatedStorageMarkerPaths> {
+    let cache = STORAGE_MARKER_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
+    let guard = cache.lock().ok()?;
+    let cached = guard.get(cache_key)?;
+    if cached.modified_at != modified_at {
+        return None;
+    }
+    Some(cached.paths.clone())
+}
+
+fn cache_storage_marker(cache_key: &str, modified_at: SystemTime, paths: &ValidatedStorageMarkerPaths) {
+    let cache = STORAGE_MARKER_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
+    if let Ok(mut guard) = cache.lock() {
+        guard.insert(
+            cache_key.to_string(),
+            CachedStorageMarker {
+                modified_at,
+                paths: paths.clone(),
+            },
+        );
+    }
 }
 
 fn sanitize_relative_path(value: &str) -> Result<PathBuf, SourcePathResolveError> {
