@@ -67,9 +67,10 @@ pub use domain::capabilities::{
 };
 pub use domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigField, ConfigInterface, ConfigValidationError, LogLevel,
-    RuntimeConfigUpdate, SourcePathResolveError, TechnicalAuthConfig, apply_config_update,
-    compact_validation_reason, normalize_core_api_url, normalize_storage_mount_path,
-    resolve_source_path, supported_config_fields, validate_config,
+    RuntimeConfigUpdate, SourcePathResolveError, StorageMarkerProvider, StorageMarkerRead,
+    TechnicalAuthConfig, apply_config_update, compact_validation_reason, normalize_core_api_url,
+    normalize_storage_mount_path, resolve_source_path, resolve_source_path_with_marker_provider,
+    supported_config_fields, validate_config,
 };
 pub use domain::feature_flags::{
     ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,
