@@ -6,6 +6,13 @@ use retaia_agent::{
     stage_claimed_job_source_with_probe,
 };
 
+fn write_storage_marker(root: &Path, storage_id: &str) {
+    let marker = format!(
+        r#"{{"version":1,"storage_id":"{storage_id}","paths":{{"inbox":"INBOX","archive":"ARCHIVE","rejects":"REJECTS"}}}}"#
+    );
+    std::fs::write(root.join(".retaia"), marker).expect("write marker");
+}
+
 fn config_with_mount(mount_path: &Path) -> AgentRuntimeConfig {
     let mut storage_mounts = std::collections::BTreeMap::new();
     storage_mounts.insert("nas-main".to_string(), mount_path.display().to_string());
@@ -36,6 +43,7 @@ fn claimed_job(relative: &str) -> ClaimedDerivedJob {
 #[test]
 fn tdd_source_staging_copies_source_to_local_temp_and_cleans_up_on_drop() {
     let source_dir = tempfile::tempdir().expect("source dir");
+    write_storage_marker(source_dir.path(), "nas-main");
     let source_rel = "INBOX/clip.mp4";
     let source_path = source_dir.path().join(source_rel);
     std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
@@ -59,6 +67,7 @@ fn tdd_source_staging_copies_source_to_local_temp_and_cleans_up_on_drop() {
 #[test]
 fn tdd_source_staging_copies_sidecars_to_local_temp_and_cleans_up_on_drop() {
     let source_dir = tempfile::tempdir().expect("source dir");
+    write_storage_marker(source_dir.path(), "nas-main");
     let source_rel = "INBOX/clip.mp4";
     let sidecar_a_rel = "INBOX/clip.xmp";
     let sidecar_b_rel = "INBOX/clip.srt";
@@ -107,6 +116,7 @@ fn tdd_source_staging_copies_sidecars_to_local_temp_and_cleans_up_on_drop() {
 #[test]
 fn tdd_source_staging_preserves_relative_paths_to_avoid_sidecar_name_collisions() {
     let source_dir = tempfile::tempdir().expect("source dir");
+    write_storage_marker(source_dir.path(), "nas-main");
     let source_rel = "INBOX/clip.mp4";
     let sidecar_a_rel = "INBOX/cam-a/clip.xmp";
     let sidecar_b_rel = "INBOX/cam-b/clip.xmp";
@@ -159,6 +169,7 @@ impl DiskSpaceProbe for ZeroSpaceProbe {
 #[test]
 fn tdd_source_staging_rejects_when_available_disk_space_is_insufficient() {
     let source_dir = tempfile::tempdir().expect("source dir");
+    write_storage_marker(source_dir.path(), "nas-main");
     let source_rel = "INBOX/clip.mp4";
     let source_path = source_dir.path().join(source_rel);
     std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
@@ -181,6 +192,7 @@ fn tdd_source_staging_rejects_when_available_disk_space_is_insufficient() {
 #[test]
 fn tdd_source_staging_rejects_when_available_disk_space_is_insufficient_with_sidecars() {
     let source_dir = tempfile::tempdir().expect("source dir");
+    write_storage_marker(source_dir.path(), "nas-main");
     let source_rel = "INBOX/clip.mp4";
     let sidecar_rel = "INBOX/clip.xmp";
     let source_path = source_dir.path().join(source_rel);

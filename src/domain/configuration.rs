@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::IpAddr;
 use std::path::{Component, Path, PathBuf};
+use serde::Deserialize;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,8 +85,39 @@ pub struct RuntimeConfigUpdate {
 pub enum SourcePathResolveError {
     #[error("unknown storage_id: {0}")]
     UnknownStorageId(String),
+    #[error("storage marker missing: {0}")]
+    StorageMarkerMissing(String),
+    #[error("storage marker invalid: {0}")]
+    StorageMarkerInvalid(String),
+    #[error("storage marker storage_id mismatch (expected={expected} actual={actual})")]
+    StorageMarkerStorageIdMismatch { expected: String, actual: String },
     #[error("unsafe relative path: {0}")]
     UnsafeRelativePath(String),
+    #[error("path outside marker-declared roots: {0}")]
+    PathOutsideMarkerRoots(String),
+}
+
+const STORAGE_MARKER_FILENAME: &str = ".retaia";
+
+#[derive(Debug, Deserialize)]
+struct StorageMarker {
+    version: u64,
+    storage_id: String,
+    paths: StorageMarkerPaths,
+}
+
+#[derive(Debug, Deserialize)]
+struct StorageMarkerPaths {
+    inbox: String,
+    archive: String,
+    rejects: String,
+}
+
+#[derive(Debug)]
+struct ValidatedStorageMarkerPaths {
+    inbox: PathBuf,
+    archive: PathBuf,
+    rejects: PathBuf,
 }
 
 fn is_http_url(value: &str) -> bool {
@@ -287,8 +319,86 @@ pub fn resolve_source_path(
         .storage_mounts
         .get(storage_id)
         .ok_or_else(|| SourcePathResolveError::UnknownStorageId(storage_id.to_string()))?;
+    let marker_paths = load_and_validate_storage_marker(Path::new(base), storage_id)?;
     let sanitized_relative = sanitize_relative_path(relative_path)?;
+    ensure_path_within_marker_roots(&sanitized_relative, &marker_paths, relative_path)?;
     Ok(Path::new(base).join(sanitized_relative))
+}
+
+fn load_and_validate_storage_marker(
+    mount_root: &Path,
+    expected_storage_id: &str,
+) -> Result<ValidatedStorageMarkerPaths, SourcePathResolveError> {
+    let marker_path = mount_root.join(STORAGE_MARKER_FILENAME);
+    let raw = std::fs::read_to_string(&marker_path).map_err(|_| {
+        SourcePathResolveError::StorageMarkerMissing(marker_path.display().to_string())
+    })?;
+    let marker: StorageMarker = serde_json::from_str(&raw).map_err(|error| {
+        SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} ({error})",
+            marker_path.display()
+        ))
+    })?;
+
+    if marker.version == 0 {
+        return Err(SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} (version must be > 0)",
+            marker_path.display()
+        )));
+    }
+    if marker.storage_id.trim().is_empty() {
+        return Err(SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} (storage_id must not be empty)",
+            marker_path.display()
+        )));
+    }
+    if marker.storage_id != expected_storage_id {
+        return Err(SourcePathResolveError::StorageMarkerStorageIdMismatch {
+            expected: expected_storage_id.to_string(),
+            actual: marker.storage_id,
+        });
+    }
+
+    let inbox = sanitize_relative_path(&marker.paths.inbox).map_err(|_| {
+        SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} (paths.inbox is invalid)",
+            marker_path.display()
+        ))
+    })?;
+    let archive = sanitize_relative_path(&marker.paths.archive).map_err(|_| {
+        SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} (paths.archive is invalid)",
+            marker_path.display()
+        ))
+    })?;
+    let rejects = sanitize_relative_path(&marker.paths.rejects).map_err(|_| {
+        SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} (paths.rejects is invalid)",
+            marker_path.display()
+        ))
+    })?;
+
+    Ok(ValidatedStorageMarkerPaths {
+        inbox,
+        archive,
+        rejects,
+    })
+}
+
+fn ensure_path_within_marker_roots(
+    sanitized_relative: &Path,
+    marker_paths: &ValidatedStorageMarkerPaths,
+    original_relative: &str,
+) -> Result<(), SourcePathResolveError> {
+    if sanitized_relative.starts_with(&marker_paths.inbox)
+        || sanitized_relative.starts_with(&marker_paths.archive)
+        || sanitized_relative.starts_with(&marker_paths.rejects)
+    {
+        return Ok(());
+    }
+    Err(SourcePathResolveError::PathOutsideMarkerRoots(
+        original_relative.to_string(),
+    ))
 }
 
 fn sanitize_relative_path(value: &str) -> Result<PathBuf, SourcePathResolveError> {

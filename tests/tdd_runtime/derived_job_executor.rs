@@ -8,6 +8,13 @@ use retaia_agent::{
     execute_derived_job_once, execute_derived_job_once_with_source_staging,
 };
 
+fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
+    let marker = format!(
+        r#"{{"version":1,"storage_id":"{storage_id}","paths":{{"inbox":"INBOX","archive":"ARCHIVE","rejects":"REJECTS"}}}}"#
+    );
+    std::fs::write(root.join(".retaia"), marker).expect("write marker");
+}
+
 #[derive(Default)]
 struct MemoryGateway {
     calls: Mutex<Vec<String>>,
@@ -641,6 +648,7 @@ fn tdd_execute_derived_job_once_allows_waveform_job_without_waveform_output_and_
 #[test]
 fn tdd_execute_derived_job_once_with_source_staging_copies_source_before_processing() {
     let source_root = tempfile::tempdir().expect("source root");
+    write_storage_marker(source_root.path(), "nas-main");
     let source_path = source_root.path().join("INBOX/sample-source.bin");
     std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
     std::fs::write(&source_path, b"source-bytes").expect("write source");
@@ -689,6 +697,7 @@ fn tdd_execute_derived_job_once_with_source_staging_fails_explicitly_when_mappin
 #[test]
 fn tdd_execute_derived_job_once_with_runtime_planner_emits_upload_calls_with_staged_source() {
     let source_root = tempfile::tempdir().expect("source root");
+    write_storage_marker(source_root.path(), "nas-main");
     let source_path = source_root.path().join("INBOX/sample-source.bin");
     std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
     std::fs::write(&source_path, b"source-bytes").expect("write source");
@@ -730,6 +739,7 @@ fn tdd_execute_derived_job_once_with_runtime_planner_emits_upload_calls_with_sta
 #[test]
 fn tdd_execute_derived_job_once_with_runtime_planner_supports_extract_facts_without_upload_calls() {
     let source_root = tempfile::tempdir().expect("source root");
+    write_storage_marker(source_root.path(), "nas-main");
     let source_path = source_root.path().join("INBOX/sample-source.bin");
     let sidecar_xmp_path = source_root.path().join("INBOX/sidecars/sample-source.xmp");
     let sidecar_srt_path = source_root.path().join("INBOX/sidecars/sample-source.srt");
