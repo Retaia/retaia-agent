@@ -7,6 +7,13 @@ use retaia_agent::{
     RuntimeDerivedPlanner, RuntimeSession, SubmitDerivedPayload, process_next_pending_job,
 };
 
+fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
+    let marker = format!(
+        r#"{{"version":1,"storage_id":"{storage_id}","paths":{{"inbox":"INBOX","archive":"ARCHIVE","rejects":"REJECTS"}}}}"#
+    );
+    std::fs::write(root.join(".retaia"), marker).expect("write marker");
+}
+
 #[derive(Debug)]
 struct SinglePendingGateway;
 
@@ -94,6 +101,7 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
 #[test]
 fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
     let source_root = tempfile::tempdir().expect("source root");
+    write_storage_marker(source_root.path(), "nas-main");
     let source_path = source_root.path().join("INBOX/asset.jpg");
     std::fs::create_dir_all(source_path.parent().expect("parent")).expect("create dirs");
     std::fs::write(&source_path, b"fixture").expect("write source");
