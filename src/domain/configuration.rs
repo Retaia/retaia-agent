@@ -87,8 +87,6 @@ pub struct RuntimeConfigUpdate {
 pub enum SourcePathResolveError {
     #[error("unknown storage_id: {0}")]
     UnknownStorageId(String),
-    #[error("storage marker missing: {0}")]
-    StorageMarkerMissing(String),
     #[error("storage marker invalid: {0}")]
     StorageMarkerInvalid(String),
     #[error("storage marker storage_id mismatch (expected={expected} actual={actual})")]
@@ -333,18 +331,21 @@ pub fn resolve_source_path(
         .ok_or_else(|| SourcePathResolveError::UnknownStorageId(storage_id.to_string()))?;
     let marker_paths = load_and_validate_storage_marker(Path::new(base), storage_id)?;
     let sanitized_relative = sanitize_relative_path(relative_path)?;
-    ensure_path_within_marker_roots(&sanitized_relative, &marker_paths, relative_path)?;
+    if let Some(marker_paths) = marker_paths {
+        ensure_path_within_marker_roots(&sanitized_relative, &marker_paths, relative_path)?;
+    }
     Ok(Path::new(base).join(sanitized_relative))
 }
 
 fn load_and_validate_storage_marker(
     mount_root: &Path,
     expected_storage_id: &str,
-) -> Result<ValidatedStorageMarkerPaths, SourcePathResolveError> {
+) -> Result<Option<ValidatedStorageMarkerPaths>, SourcePathResolveError> {
     let marker_path = mount_root.join(STORAGE_MARKER_FILENAME);
-    let metadata = std::fs::metadata(&marker_path).map_err(|_| {
-        SourcePathResolveError::StorageMarkerMissing(marker_path.display().to_string())
-    })?;
+    let metadata = match std::fs::metadata(&marker_path) {
+        Ok(metadata) => metadata,
+        Err(_) => return Ok(None),
+    };
     let modified_at = metadata.modified().map_err(|error| {
         SourcePathResolveError::StorageMarkerInvalid(format!(
             "{} (unable to read mtime: {error})",
@@ -353,11 +354,14 @@ fn load_and_validate_storage_marker(
     })?;
     let cache_key = format!("{}::{expected_storage_id}", mount_root.display());
     if let Some(cached) = cached_storage_marker(&cache_key, modified_at) {
-        return Ok(cached);
+        return Ok(Some(cached));
     }
 
-    let raw = std::fs::read_to_string(&marker_path).map_err(|_| {
-        SourcePathResolveError::StorageMarkerMissing(marker_path.display().to_string())
+    let raw = std::fs::read_to_string(&marker_path).map_err(|error| {
+        SourcePathResolveError::StorageMarkerInvalid(format!(
+            "{} (unable to read marker: {error})",
+            marker_path.display()
+        ))
     })?;
     let marker: StorageMarker = serde_json::from_str(&raw).map_err(|error| {
         SourcePathResolveError::StorageMarkerInvalid(format!(
@@ -411,7 +415,7 @@ fn load_and_validate_storage_marker(
         rejects,
     };
     cache_storage_marker(&cache_key, modified_at, &validated);
-    Ok(validated)
+    Ok(Some(validated))
 }
 
 fn ensure_path_within_marker_roots(
