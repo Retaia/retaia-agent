@@ -44,15 +44,11 @@ fn marker_json(storage_id: &str, version: u64) -> String {
 }
 
 fn config_with_mount(mount: &str) -> AgentRuntimeConfig {
-    config_with_mount_and_core_api(mount, "https://core.retaia.local/api/v1")
-}
-
-fn config_with_mount_and_core_api(mount: &str, core_api_url: &str) -> AgentRuntimeConfig {
     let mut storage_mounts = std::collections::BTreeMap::new();
     storage_mounts.insert("nas-main".to_string(), mount.to_string());
 
     AgentRuntimeConfig {
-        core_api_url: core_api_url.to_string(),
+        core_api_url: "https://core.retaia.local/api/v1".to_string(),
         ollama_url: "http://127.0.0.1:11434".to_string(),
         auth_mode: AuthMode::Interactive,
         technical_auth: None,
@@ -157,33 +153,17 @@ fn tdd_resolve_processing_input_path_returns_explicit_error_without_panic() {
 }
 
 #[test]
-fn tdd_resolve_source_path_allows_missing_storage_marker_for_v1_inbox() {
+fn tdd_resolve_source_path_rejects_missing_storage_marker() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
     let provider = FakeStorageMarkerProvider::default();
 
-    let resolved =
+    let error =
         resolve_source_path_with_marker_provider(&config, "nas-main", "INBOX/a.mp4", &provider)
-            .expect("must pass for API v1 without marker");
-    assert_eq!(resolved, std::path::PathBuf::from(mount).join("INBOX/a.mp4"));
-}
-
-#[test]
-fn tdd_resolve_source_path_rejects_non_inbox_without_marker_for_v1() {
-    let mount = "/mnt/nas/main";
-    let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default();
-
-    let error = resolve_source_path_with_marker_provider(
-        &config,
-        "nas-main",
-        "ARCHIVE/a.mp4",
-        &provider,
-    )
-    .expect_err("must fail");
+            .expect_err("must fail");
     assert!(matches!(
         error,
-        SourcePathResolveError::PathOutsideMarkerRoots(_)
+        SourcePathResolveError::StorageMarkerMissing(_)
     ));
 }
 
@@ -233,19 +213,4 @@ fn tdd_resolve_source_path_allows_non_inbox_for_marker_v2() {
         resolve_source_path_with_marker_provider(&config, "nas-main", "ARCHIVE/a.mp4", &provider)
             .expect("must pass");
     assert_eq!(resolved, std::path::PathBuf::from(mount).join("ARCHIVE/a.mp4"));
-}
-
-#[test]
-fn tdd_resolve_source_path_requires_marker_outside_v1_api() {
-    let mount = "/mnt/nas/main";
-    let config = config_with_mount_and_core_api(mount, "https://core.retaia.local/api/v2");
-    let provider = FakeStorageMarkerProvider::default();
-
-    let error =
-        resolve_source_path_with_marker_provider(&config, "nas-main", "INBOX/a.mp4", &provider)
-            .expect_err("must fail");
-    assert!(matches!(
-        error,
-        SourcePathResolveError::StorageMarkerMissing(_)
-    ));
 }

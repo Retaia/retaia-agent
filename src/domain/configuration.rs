@@ -380,14 +380,10 @@ pub fn resolve_source_path_with_marker_provider<P: StorageMarkerProvider>(
         .storage_mounts
         .get(storage_id)
         .ok_or_else(|| SourcePathResolveError::UnknownStorageId(storage_id.to_string()))?;
+    let marker_paths =
+        load_and_validate_storage_marker(Path::new(base), storage_id, marker_provider)?;
     let sanitized_relative = sanitize_relative_path(relative_path)?;
-    match load_and_validate_storage_marker(Path::new(base), storage_id, marker_provider) {
-        Ok(marker_paths) => ensure_path_within_marker_roots(&sanitized_relative, &marker_paths, relative_path)?,
-        Err(SourcePathResolveError::StorageMarkerMissing(_)) if is_marker_optional_for_config(config) => {
-            ensure_path_within_v1_inbox_root(&sanitized_relative, relative_path)?;
-        }
-        Err(error) => return Err(error),
-    }
+    ensure_path_within_marker_roots(&sanitized_relative, &marker_paths, relative_path)?;
     Ok(Path::new(base).join(sanitized_relative))
 }
 
@@ -482,39 +478,6 @@ fn ensure_path_within_marker_roots(
     Err(SourcePathResolveError::PathOutsideMarkerRoots(
         original_relative.to_string(),
     ))
-}
-
-fn ensure_path_within_v1_inbox_root(
-    sanitized_relative: &Path,
-    original_relative: &str,
-) -> Result<(), SourcePathResolveError> {
-    if sanitized_relative.starts_with(Path::new("INBOX")) {
-        return Ok(());
-    }
-    Err(SourcePathResolveError::PathOutsideMarkerRoots(
-        original_relative.to_string(),
-    ))
-}
-
-fn is_marker_optional_for_config(config: &AgentRuntimeConfig) -> bool {
-    match parse_core_api_version(&config.core_api_url) {
-        Some(1) | None => true,
-        Some(_) => false,
-    }
-}
-
-fn parse_core_api_version(core_api_url: &str) -> Option<u64> {
-    let parsed = reqwest::Url::parse(core_api_url).ok()?;
-    let segments: Vec<&str> = parsed.path_segments()?.collect();
-    for pair in segments.windows(2) {
-        if pair[0] == "api" {
-            let value = pair[1].strip_prefix('v')?;
-            if let Ok(version) = value.parse::<u64>() {
-                return Some(version);
-            }
-        }
-    }
-    None
 }
 
 fn marker_contents_fingerprint(contents: &str) -> u64 {
