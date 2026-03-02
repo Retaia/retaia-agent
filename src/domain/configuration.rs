@@ -1,4 +1,6 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, BTreeSet};
+use std::hash::{Hash, Hasher};
 use std::net::IpAddr;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
@@ -126,6 +128,7 @@ struct ValidatedStorageMarkerPaths {
 #[derive(Debug, Clone)]
 struct CachedStorageMarker {
     modified_at: SystemTime,
+    content_fingerprint: u64,
     paths: ValidatedStorageMarkerPaths,
 }
 
@@ -377,10 +380,14 @@ pub fn resolve_source_path_with_marker_provider<P: StorageMarkerProvider>(
         .storage_mounts
         .get(storage_id)
         .ok_or_else(|| SourcePathResolveError::UnknownStorageId(storage_id.to_string()))?;
-    let marker_paths =
-        load_and_validate_storage_marker(Path::new(base), storage_id, marker_provider)?;
     let sanitized_relative = sanitize_relative_path(relative_path)?;
-    ensure_path_within_marker_roots(&sanitized_relative, &marker_paths, relative_path)?;
+    match load_and_validate_storage_marker(Path::new(base), storage_id, marker_provider) {
+        Ok(marker_paths) => ensure_path_within_marker_roots(&sanitized_relative, &marker_paths, relative_path)?,
+        Err(SourcePathResolveError::StorageMarkerMissing(_)) if is_marker_optional_for_config(config) => {
+            ensure_path_within_v1_inbox_root(&sanitized_relative, relative_path)?;
+        }
+        Err(error) => return Err(error),
+    }
     Ok(Path::new(base).join(sanitized_relative))
 }
 
@@ -391,8 +398,9 @@ fn load_and_validate_storage_marker<P: StorageMarkerProvider>(
 ) -> Result<ValidatedStorageMarkerPaths, SourcePathResolveError> {
     let marker_path = mount_root.join(STORAGE_MARKER_FILENAME);
     let marker_read = marker_provider.read_marker(&marker_path)?;
+    let content_fingerprint = marker_contents_fingerprint(&marker_read.contents);
     let cache_key = format!("{}::{expected_storage_id}", mount_root.display());
-    if let Some(cached) = cached_storage_marker(&cache_key, marker_read.modified_at) {
+    if let Some(cached) = cached_storage_marker(&cache_key, marker_read.modified_at, content_fingerprint) {
         return Ok(cached);
     }
 
@@ -447,7 +455,12 @@ fn load_and_validate_storage_marker<P: StorageMarkerProvider>(
         archive,
         rejects,
     };
-    cache_storage_marker(&cache_key, marker_read.modified_at, &validated);
+    cache_storage_marker(
+        &cache_key,
+        marker_read.modified_at,
+        content_fingerprint,
+        &validated,
+    );
     Ok(validated)
 }
 
@@ -471,23 +484,75 @@ fn ensure_path_within_marker_roots(
     ))
 }
 
-fn cached_storage_marker(cache_key: &str, modified_at: SystemTime) -> Option<ValidatedStorageMarkerPaths> {
+fn ensure_path_within_v1_inbox_root(
+    sanitized_relative: &Path,
+    original_relative: &str,
+) -> Result<(), SourcePathResolveError> {
+    if sanitized_relative.starts_with(Path::new("INBOX")) {
+        return Ok(());
+    }
+    Err(SourcePathResolveError::PathOutsideMarkerRoots(
+        original_relative.to_string(),
+    ))
+}
+
+fn is_marker_optional_for_config(config: &AgentRuntimeConfig) -> bool {
+    match parse_core_api_version(&config.core_api_url) {
+        Some(1) | None => true,
+        Some(_) => false,
+    }
+}
+
+fn parse_core_api_version(core_api_url: &str) -> Option<u64> {
+    let parsed = reqwest::Url::parse(core_api_url).ok()?;
+    let segments: Vec<&str> = parsed.path_segments()?.collect();
+    for pair in segments.windows(2) {
+        if pair[0] == "api" {
+            let value = pair[1].strip_prefix('v')?;
+            if let Ok(version) = value.parse::<u64>() {
+                return Some(version);
+            }
+        }
+    }
+    None
+}
+
+fn marker_contents_fingerprint(contents: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    contents.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn cached_storage_marker(
+    cache_key: &str,
+    modified_at: SystemTime,
+    content_fingerprint: u64,
+) -> Option<ValidatedStorageMarkerPaths> {
     let cache = STORAGE_MARKER_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
     let guard = cache.lock().ok()?;
     let cached = guard.get(cache_key)?;
     if cached.modified_at != modified_at {
         return None;
     }
+    if cached.content_fingerprint != content_fingerprint {
+        return None;
+    }
     Some(cached.paths.clone())
 }
 
-fn cache_storage_marker(cache_key: &str, modified_at: SystemTime, paths: &ValidatedStorageMarkerPaths) {
+fn cache_storage_marker(
+    cache_key: &str,
+    modified_at: SystemTime,
+    content_fingerprint: u64,
+    paths: &ValidatedStorageMarkerPaths,
+) {
     let cache = STORAGE_MARKER_CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
     if let Ok(mut guard) = cache.lock() {
         guard.insert(
             cache_key.to_string(),
             CachedStorageMarker {
                 modified_at,
+                content_fingerprint,
                 paths: paths.clone(),
             },
         );
