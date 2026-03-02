@@ -96,7 +96,7 @@ fn tdd_resolve_processing_input_path_returns_explicit_error_without_panic() {
 }
 
 #[test]
-fn tdd_resolve_source_path_allows_missing_storage_marker_for_v1_compat() {
+fn tdd_resolve_source_path_rejects_missing_storage_marker() {
     let mount = tempfile::tempdir().expect("temp mount");
     let mut storage_mounts = std::collections::BTreeMap::new();
     storage_mounts.insert(
@@ -113,8 +113,11 @@ fn tdd_resolve_source_path_allows_missing_storage_marker_for_v1_compat() {
         log_level: LogLevel::Info,
     };
 
-    let resolved = resolve_source_path(&config, "nas-main", "INBOX/a.mp4").expect("must pass");
-    assert_eq!(resolved, mount.path().join("INBOX/a.mp4"));
+    let error = resolve_source_path(&config, "nas-main", "INBOX/a.mp4").expect_err("must fail");
+    assert!(matches!(
+        error,
+        SourcePathResolveError::StorageMarkerMissing(_)
+    ));
 }
 
 #[test]
