@@ -87,6 +87,7 @@ impl AgentsApi for AgentsApiClient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AgentsRegisterPostError {
+    Status401(models::ErrorResponse),
     Status426(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }

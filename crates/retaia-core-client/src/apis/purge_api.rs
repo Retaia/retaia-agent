@@ -113,6 +113,7 @@ impl PurgeApi for PurgeApiClient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidPurgePostError {
+    Status401(models::ErrorResponse),
     Status409(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
@@ -121,6 +122,7 @@ pub enum AssetsUuidPurgePostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidPurgePreviewPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 

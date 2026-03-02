@@ -77,6 +77,13 @@ Class | Method | HTTP request | Description
 *JobsApi* | [**jobs_job_id_fail_post**](docs/JobsApi.md#jobs_job_id_fail_post) | **POST** /jobs/{job_id}/fail | Mark job as failed
 *JobsApi* | [**jobs_job_id_heartbeat_post**](docs/JobsApi.md#jobs_job_id_heartbeat_post) | **POST** /jobs/{job_id}/heartbeat | Extend job lease
 *JobsApi* | [**jobs_job_id_submit_post**](docs/JobsApi.md#jobs_job_id_submit_post) | **POST** /jobs/{job_id}/submit | Submit job result patch
+*OpsApi* | [**ops_ingest_diagnostics_get**](docs/OpsApi.md#ops_ingest_diagnostics_get) | **GET** /ops/ingest/diagnostics | Get ingest diagnostics counters and latest unmatched sidecars
+*OpsApi* | [**ops_ingest_requeue_post**](docs/OpsApi.md#ops_ingest_requeue_post) | **POST** /ops/ingest/requeue | Requeue ingest processing for a specific target
+*OpsApi* | [**ops_ingest_unmatched_get**](docs/OpsApi.md#ops_ingest_unmatched_get) | **GET** /ops/ingest/unmatched | List unmatched ingest sidecars
+*OpsApi* | [**ops_jobs_queue_get**](docs/OpsApi.md#ops_jobs_queue_get) | **GET** /ops/jobs/queue | Get jobs queue diagnostics
+*OpsApi* | [**ops_locks_get**](docs/OpsApi.md#ops_locks_get) | **GET** /ops/locks | List active operation locks
+*OpsApi* | [**ops_locks_recover_post**](docs/OpsApi.md#ops_locks_recover_post) | **POST** /ops/locks/recover | Recover stale operation locks
+*OpsApi* | [**ops_readiness_get**](docs/OpsApi.md#ops_readiness_get) | **GET** /ops/readiness | Get operational readiness checks
 *PurgeApi* | [**assets_uuid_purge_post**](docs/PurgeApi.md#assets_uuid_purge_post) | **POST** /assets/{uuid}/purge | Purge one rejected asset
 *PurgeApi* | [**assets_uuid_purge_preview_post**](docs/PurgeApi.md#assets_uuid_purge_preview_post) | **POST** /assets/{uuid}/purge/preview | Preview purge impact for one asset
 
@@ -147,6 +154,23 @@ Class | Method | HTTP request | Description
  - [JobsJobIdHeartbeatPost200Response](docs/JobsJobIdHeartbeatPost200Response.md)
  - [JobsJobIdHeartbeatPostRequest](docs/JobsJobIdHeartbeatPostRequest.md)
  - [NonUiClientKind](docs/NonUiClientKind.md)
+ - [OpsIngestDiagnosticsGet200Response](docs/OpsIngestDiagnosticsGet200Response.md)
+ - [OpsIngestDiagnosticsGet200ResponseLatestUnmatchedInner](docs/OpsIngestDiagnosticsGet200ResponseLatestUnmatchedInner.md)
+ - [OpsIngestRequeuePost202Response](docs/OpsIngestRequeuePost202Response.md)
+ - [OpsIngestRequeuePost202ResponseTarget](docs/OpsIngestRequeuePost202ResponseTarget.md)
+ - [OpsIngestRequeuePostRequest](docs/OpsIngestRequeuePostRequest.md)
+ - [OpsIngestUnmatchedGet200Response](docs/OpsIngestUnmatchedGet200Response.md)
+ - [OpsIngestUnmatchedGet200ResponseItemsInner](docs/OpsIngestUnmatchedGet200ResponseItemsInner.md)
+ - [OpsJobsQueueGet200Response](docs/OpsJobsQueueGet200Response.md)
+ - [OpsJobsQueueGet200ResponseByTypeInner](docs/OpsJobsQueueGet200ResponseByTypeInner.md)
+ - [OpsJobsQueueGet200ResponseSummary](docs/OpsJobsQueueGet200ResponseSummary.md)
+ - [OpsLocksGet200Response](docs/OpsLocksGet200Response.md)
+ - [OpsLocksGet200ResponseItemsInner](docs/OpsLocksGet200ResponseItemsInner.md)
+ - [OpsLocksRecoverPost200Response](docs/OpsLocksRecoverPost200Response.md)
+ - [OpsLocksRecoverPostRequest](docs/OpsLocksRecoverPostRequest.md)
+ - [OpsReadinessGet200Response](docs/OpsReadinessGet200Response.md)
+ - [OpsReadinessGet200ResponseChecksInner](docs/OpsReadinessGet200ResponseChecksInner.md)
+ - [OpsReadinessGet200ResponseSelfHealing](docs/OpsReadinessGet200ResponseSelfHealing.md)
  - [ProcessingResultPatch](docs/ProcessingResultPatch.md)
  - [ServerPolicy](docs/ServerPolicy.md)
  - [SubmitDerived](docs/SubmitDerived.md)
