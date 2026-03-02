@@ -188,6 +188,7 @@ impl DecisionsApi for DecisionsApiClient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidDecisionPostError {
+    Status401(models::ErrorResponse),
     Status409(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
@@ -196,6 +197,7 @@ pub enum AssetsUuidDecisionPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidReopenPostError {
+    Status401(models::ErrorResponse),
     Status409(),
     UnknownValue(serde_json::Value),
 }
@@ -204,6 +206,7 @@ pub enum AssetsUuidReopenPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum DecisionsApplyPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -211,6 +214,7 @@ pub enum DecisionsApplyPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum DecisionsPreviewPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 

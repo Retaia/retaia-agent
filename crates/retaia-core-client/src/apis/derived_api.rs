@@ -238,6 +238,7 @@ impl DerivedApi for DerivedApiClient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidDerivedGetError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -245,6 +246,7 @@ pub enum AssetsUuidDerivedGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidDerivedKindGetError {
+    Status401(models::ErrorResponse),
     Status404(),
     UnknownValue(serde_json::Value),
 }
@@ -253,6 +255,7 @@ pub enum AssetsUuidDerivedKindGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidDerivedUploadCompletePostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -260,6 +263,7 @@ pub enum AssetsUuidDerivedUploadCompletePostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidDerivedUploadInitPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -267,6 +271,7 @@ pub enum AssetsUuidDerivedUploadInitPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidDerivedUploadPartPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 

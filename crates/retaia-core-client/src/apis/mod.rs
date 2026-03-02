@@ -118,6 +118,7 @@ pub mod batches_api;
 pub mod decisions_api;
 pub mod derived_api;
 pub mod jobs_api;
+pub mod ops_api;
 pub mod purge_api;
 
 pub mod configuration;

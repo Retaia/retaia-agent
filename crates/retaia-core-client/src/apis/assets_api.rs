@@ -251,6 +251,7 @@ impl AssetsApi for AssetsApiClient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsGetError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -258,6 +259,7 @@ pub enum AssetsGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidGetError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -265,6 +267,7 @@ pub enum AssetsUuidGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidPatchError {
+    Status401(models::ErrorResponse),
     Status410(),
     UnknownValue(serde_json::Value),
 }
@@ -273,6 +276,7 @@ pub enum AssetsUuidPatchError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AssetsUuidReprocessPostError {
+    Status401(models::ErrorResponse),
     Status409(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }

@@ -253,6 +253,7 @@ impl JobsApi for JobsApiClient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JobsGetError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -260,6 +261,7 @@ pub enum JobsGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JobsJobIdClaimPostError {
+    Status401(models::ErrorResponse),
     Status409(),
     UnknownValue(serde_json::Value),
 }
@@ -268,6 +270,7 @@ pub enum JobsJobIdClaimPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JobsJobIdFailPostError {
+    Status401(models::ErrorResponse),
     Status409(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
@@ -276,6 +279,7 @@ pub enum JobsJobIdFailPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JobsJobIdHeartbeatPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -283,6 +287,7 @@ pub enum JobsJobIdHeartbeatPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JobsJobIdSubmitPostError {
+    Status401(models::ErrorResponse),
     Status409(models::ErrorResponse),
     Status423(models::ErrorResponse),
     UnknownValue(serde_json::Value),

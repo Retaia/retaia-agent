@@ -1203,6 +1203,7 @@ pub enum AuthMeGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AuthVerifyEmailAdminConfirmPostError {
+    Status401(models::ErrorResponse),
     Status403(models::ErrorResponse),
     Status404(models::ErrorResponse),
     Status422(models::ErrorResponse),

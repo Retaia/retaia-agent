@@ -159,6 +159,7 @@ impl BatchesApi for BatchesApiClient {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum BatchesMovesBatchIdGetError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -166,6 +167,7 @@ pub enum BatchesMovesBatchIdGetError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum BatchesMovesPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -173,6 +175,7 @@ pub enum BatchesMovesPostError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum BatchesMovesPreviewPostError {
+    Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
