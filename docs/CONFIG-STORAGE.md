@@ -38,6 +38,21 @@ Contraintes:
 - trailing slash normalisé côté agent (pas imposé côté Core),
 - champ optionnel/backward compatible (config legacy sans `storage_mounts` reste valide).
 
+### Storage Marker Contract (`/.retaia`)
+
+Pour chaque mount déclaré dans `storage_mounts`, l'agent lit et valide un marker JSON `/.retaia` à la racine du mount.
+
+Règles opératoires:
+- le marker est créé et maintenu par Core,
+- l'agent ne crée pas, ne modifie pas, ne répare pas ce marker,
+- `source.storage_id` doit matcher strictement `/.retaia.storage_id`,
+- `paths.inbox|archive|rejects` doivent être des chemins relatifs sûrs (pas de `..`, pas d'absolu, pas de byte nul),
+- marker absent/invalide/incohérent => échec explicite de résolution du path source.
+
+Politique de roots appliquée:
+- marker `version=1` => seul `INBOX/...` est autorisé,
+- marker `version>=2` => `INBOX/...`, `ARCHIVE/...`, `REJECTS/...` sont autorisés.
+
 ## System Location
 
 Default path is resolved with `ProjectDirs::from("io", "Retaia", "retaia-agent")`:

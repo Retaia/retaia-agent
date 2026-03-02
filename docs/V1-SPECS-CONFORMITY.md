@@ -1,6 +1,6 @@
 # V1 Specs Conformity Matrix
 
-Last reviewed: 2026-02-24
+Last reviewed: 2026-03-03
 
 ## Scope
 
@@ -19,6 +19,7 @@ Statuts:
 | `specs/workflows/AGENT-PROTOCOL.md` | Actions mutatrices seulement après état compatible lu par polling | Covered | `tests/tdd_runtime/runtime_orchestration.rs`, `tests/tdd_runtime/runtime_sync.rs`, `src/application/runtime_sync.rs` |
 | `specs/workflows/AGENT-PROTOCOL.md` | Register agent + capabilities déclarées | Covered | `tests/tdd_capabilities/agent_registration.rs`, `tests/bdd_specs/agent_registration.rs`, `tests/e2e_flow/agent_registration_flow.rs`, `src/application/agent_registration.rs` |
 | `specs/workflows/AGENT-PROTOCOL.md` + `specs/definitions/CAPABILITIES.md` | Matching strict `required_capabilities ⊆ capabilities` | Covered | `tests/tdd_capabilities/capabilities.rs`, `tests/bdd_specs/core_api_gateway.rs`, `tests/e2e_flow/core_api_gateway_flow.rs`, `src/application/core_api_gateway.rs` |
+| `specs/workflows/AGENT-PROTOCOL.md` (`storage_mounts` + `/.retaia`) | Résolution source basée sur marker (`storage_id` match, roots validées, échec explicite si marker absent/invalide) | Covered | `tests/tdd_runtime/source_path_resolver.rs`, `tests/tdd_runtime/source_staging.rs`, `src/domain/configuration.rs`, `src/application/source_staging.rs` |
 | `specs/workflows/AGENT-PROTOCOL.md` + `specs/policies/AUTHZ-MATRIX.md` | `MCP` ne traite jamais de jobs processing | Covered | `tests/tdd_capabilities/feature_flags.rs`, `tests/bdd_capabilities_authz.rs`, `tests/e2e_authz_capabilities.rs`, `src/domain/feature_flags.rs` |
 | `specs/workflows/AGENT-PROTOCOL.md` | Claim atomique + heartbeat + submit/fail via gateways dédiés | Covered | `tests/tdd_runtime/derived_processing_gateway.rs`, `tests/e2e_flow/derived_processing_gateway_flow.rs`, `src/infrastructure/openapi_derived_processing_gateway.rs` |
 | `specs/api/API-CONTRACTS.md` (`/jobs`, `/jobs/*`, `/derived/upload/*`, `/agents/register`) | Mapping erreurs HTTP transport (`401/429/422/5xx`) + payload invalides | Covered | `tests/e2e_openapi_http_flow.rs`, `src/infrastructure/openapi_jobs_gateway.rs`, `src/infrastructure/openapi_derived_processing_gateway.rs`, `src/infrastructure/openapi_agent_registration_gateway.rs` |

@@ -58,6 +58,15 @@ cargo run --bin agentctl -- config validate
 cargo run --bin agentctl -- config validate --check-respond
 ```
 
+Storage marker prerequisite (RC):
+
+- For each configured `storage_mounts[storage_id]`, the mount root must contain `/.retaia`.
+- The marker is owned by Core. Agent reads/validates it and never creates/repairs it.
+- Current resolver behavior:
+  - marker `version=1`: only `INBOX/...` is accepted,
+  - marker `version>=2`: `INBOX/...`, `ARCHIVE/...`, `REJECTS/...` are accepted.
+- If marker is missing/invalid/incoherent, source resolution fails explicitly.
+
 NAS/LAN profile (Core private behind UI gateway):
 
 - if Core is not exposed directly, use the NAS UI/Caddy gateway URL
