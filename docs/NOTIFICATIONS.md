@@ -17,8 +17,8 @@
 - Adapter infra de base: `StdoutNotificationSink`
 - Sélecteur runtime: `select_notification_sink(profile)` + `notification_sink_profile_for_target(target)`
   - `AGENT`/`MCP` => profil `HeadlessCli` (`StdoutNotificationSink`)
-  - `UI_WEB`/`UI_MOBILE` => profil `DesktopSystem` (`SystemNotificationSink`)
+  - `AGENT_UI` => profil `DesktopSystem` (`SystemNotificationSink`)
 - Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
 - Façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)` pour enchaîner projection + dispatch dans le flux agent.
-- Intégration shell desktop (`agent-desktop-shell`): dispatch via `dispatch_notifications(...)` + `select_notification_sink(notification_sink_profile_for_target(UI_WEB))`.
+- Intégration shell desktop (`agent-desktop-shell`): dispatch via `dispatch_notifications(...)` + `select_notification_sink(notification_sink_profile_for_target(AGENT_UI))`.
 - Regle: la deduplication reste dans le domaine, le bridge ne doit pas reintroduire de logique metier.

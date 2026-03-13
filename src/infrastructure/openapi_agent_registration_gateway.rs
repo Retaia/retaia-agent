@@ -14,6 +14,8 @@ use retaia_core_client::apis::agents_api::{AgentsApi, AgentsApiClient, AgentsReg
 #[cfg(feature = "core-api-client")]
 use retaia_core_client::apis::configuration::Configuration;
 #[cfg(feature = "core-api-client")]
+use retaia_core_client::models::_agents_register_post_request::{Arch, OsName};
+#[cfg(feature = "core-api-client")]
 use retaia_core_client::models::AgentsRegisterPostRequest;
 
 #[cfg(feature = "core-api-client")]
@@ -41,12 +43,20 @@ impl AgentRegistrationGateway for OpenApiAgentRegistrationGateway {
             .build()
             .map_err(|error| AgentRegistrationError::Transport(error.to_string()))?;
 
+        let agent_id = uuid::Uuid::parse_str(&command.agent_id)
+            .map_err(|error| AgentRegistrationError::Transport(error.to_string()))?;
+        let os_name = map_os_name(&command.os_name)?;
+        let arch = map_arch(&command.arch)?;
+
         let mut request = AgentsRegisterPostRequest::new(
+            agent_id,
             command.agent_name.clone(),
             command.agent_version.clone(),
+            os_name,
+            command.os_version.clone(),
+            arch,
             command.capabilities.clone(),
         );
-        request.platform = command.platform.clone();
         request.client_feature_flags_contract_version =
             command.client_feature_flags_contract_version.clone();
         request.max_parallel_jobs = command.max_parallel_jobs.map(i32::from);
@@ -56,10 +66,35 @@ impl AgentRegistrationGateway for OpenApiAgentRegistrationGateway {
             .map_err(map_openapi_register_error)?;
 
         Ok(AgentRegistrationOutcome {
-            agent_id: response.agent_id,
+            agent_id: response.agent_id.map(|value| value.to_string()),
             effective_capabilities: response.effective_capabilities.unwrap_or_default(),
             capability_warnings: response.capability_warnings.unwrap_or_default(),
         })
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_os_name(value: &str) -> Result<OsName, AgentRegistrationError> {
+    match value {
+        "linux" => Ok(OsName::Linux),
+        "macos" => Ok(OsName::Macos),
+        "windows" => Ok(OsName::Windows),
+        other => Err(AgentRegistrationError::Transport(format!(
+            "unsupported os_name: {other}"
+        ))),
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_arch(value: &str) -> Result<Arch, AgentRegistrationError> {
+    match value {
+        "x86_64" => Ok(Arch::X8664),
+        "arm64" => Ok(Arch::Arm64),
+        "armv7" => Ok(Arch::Armv7),
+        "other" => Ok(Arch::Other),
+        other => Err(AgentRegistrationError::Transport(format!(
+            "unsupported arch: {other}"
+        ))),
     }
 }
 

@@ -29,9 +29,12 @@ impl AgentRegistrationGateway for MemoryRegistrationGateway {
 fn e2e_agent_registration_flow_builds_declared_capabilities_and_returns_effective_set() {
     let gateway = MemoryRegistrationGateway::default();
     let intent = AgentRegistrationIntent {
+        agent_id: "550e8400-e29b-41d4-a716-446655440001".to_string(),
         agent_name: "retaia-agent".to_string(),
         agent_version: "0.1.0".to_string(),
-        platform: Some("windows-x86_64".to_string()),
+        os_name: "windows".to_string(),
+        os_version: "11".to_string(),
+        arch: "x86_64".to_string(),
         client_feature_flags_contract_version: Some("1.0.0".to_string()),
         max_parallel_jobs: Some(3),
     };

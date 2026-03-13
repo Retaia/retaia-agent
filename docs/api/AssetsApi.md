@@ -6,7 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**assets_get**](AssetsApi.md#assets_get) | **GET** /assets | List assets
 [**assets_uuid_get**](AssetsApi.md#assets_uuid_get) | **GET** /assets/{uuid} | Get one asset detail
-[**assets_uuid_patch**](AssetsApi.md#assets_uuid_patch) | **PATCH** /assets/{uuid} | Update human metadata on one asset
+[**assets_uuid_patch**](AssetsApi.md#assets_uuid_patch) | **PATCH** /assets/{uuid} | Update one asset (metadata and lifecycle transitions)
 [**assets_uuid_reprocess_post**](AssetsApi.md#assets_uuid_reprocess_post) | **POST** /assets/{uuid}/reprocess | Trigger explicit reprocess
 
 
@@ -26,7 +26,7 @@ Name | Type | Description  | Required | Notes
 **tags** | Option<**String**> |  |  |
 **has_proxy** | Option<**bool**> |  |  |
 **tags_mode** | Option<**String**> |  |  |
-**q** | Option<**String**> | Full-text query over filename, notes and transcript_text (available in v1). |  |
+**q** | Option<**String**> | Full-text query over filename and notes (v1 baseline). |  |
 **location_country** | Option<**String**> | Country-level location filter (uses secure derived search index). |  |
 **location_city** | Option<**String**> | City-level location filter (uses secure derived search index). |  |
 **geo_bbox** | Option<**String**> | Bounding box filter `min_lon,min_lat,max_lon,max_lat` (uses secure derived spatial index). |  |
@@ -42,7 +42,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[UserBearerAuth](../README.md#UserBearerAuth), [OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[UserBearerAuth](../README.md#UserBearerAuth), [TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -70,7 +70,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[UserBearerAuth](../README.md#UserBearerAuth), [OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[UserBearerAuth](../README.md#UserBearerAuth), [TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -83,7 +83,7 @@ Name | Type | Description  | Required | Notes
 ## assets_uuid_patch
 
 > assets_uuid_patch(uuid, assets_uuid_patch_request)
-Update human metadata on one asset
+Update one asset (metadata and lifecycle transitions)
 
 ### Parameters
 

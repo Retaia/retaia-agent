@@ -11,7 +11,6 @@
 | DecisionPending | DECISION_PENDING |
 | DecidedKeep | DECIDED_KEEP |
 | DecidedReject | DECIDED_REJECT |
-| MoveQueued | MOVE_QUEUED |
 | Archived | ARCHIVED |
 | Rejected | REJECTED |
 | Purged | PURGED |

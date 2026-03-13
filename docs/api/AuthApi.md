@@ -7,6 +7,7 @@ Method | HTTP request | Description
 [**app_features_get**](AuthApi.md#app_features_get) | **GET** /app/features | Get effective app feature switches
 [**app_features_patch**](AuthApi.md#app_features_patch) | **PATCH** /app/features | Update effective app feature switches
 [**app_policy_get**](AuthApi.md#app_policy_get) | **GET** /app/policy | Get runtime app policy
+[**app_policy_post**](AuthApi.md#app_policy_post) | **POST** /app/policy | Update runtime app policy
 [**auth2fa_disable_post**](AuthApi.md#auth2fa_disable_post) | **POST** /auth/2fa/disable | Disable TOTP 2FA
 [**auth2fa_enable_post**](AuthApi.md#auth2fa_enable_post) | **POST** /auth/2fa/enable | Confirm and enable TOTP 2FA
 [**auth2fa_recovery_codes_regenerate_post**](AuthApi.md#auth2fa_recovery_codes_regenerate_post) | **POST** /auth/2fa/recovery-codes/regenerate | Regenerate backup recovery codes for current user
@@ -92,7 +93,7 @@ Name | Type | Description  | Required | Notes
 > models::AppPolicyResponse app_policy_get(client_feature_flags_contract_version)
 Get runtime app policy
 
-Returns runtime `server_policy` including `feature_flags`. This endpoint is the canonical runtime policy transport for UI_WEB, UI_MOBILE, AGENT, and MCP clients. Clients may optionally send their supported feature-flags contract version for compatibility negotiation. 
+Returns runtime `server_policy` including `feature_flags`. This endpoint is the canonical runtime policy transport for UI_WEB, AGENT, and MCP clients. Clients may optionally send their supported feature-flags contract version for compatibility negotiation. 
 
 ### Parameters
 
@@ -107,11 +108,41 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[UserBearerAuth](../README.md#UserBearerAuth), [OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[UserBearerAuth](../README.md#UserBearerAuth), [TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## app_policy_post
+
+> models::AppPolicyResponse app_policy_post(app_policy_update_request)
+Update runtime app policy
+
+Updates runtime `feature_flags` when they are persisted in a mutable backend controlled by Core. Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. Flags still in `code-backed` introduction/validation phase are visible in `GET /app/policy` but MUST be rejected by this endpoint with `409 STATE_CONFLICT`. 
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**app_policy_update_request** | [**AppPolicyUpdateRequest**](AppPolicyUpdateRequest.md) |  | [required] |
+
+### Return type
+
+[**models::AppPolicyResponse**](AppPolicyResponse.md)
+
+### Authorization
+
+[UserBearerAuth](../README.md#UserBearerAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -348,7 +379,7 @@ No authorization required
 > models::AuthDeviceStartResponse auth_clients_device_start_post(auth_device_start_request)
 Start device authorization flow for technical client bootstrap
 
-Starts a browser-assisted authorization flow (GitHub-style) for `AGENT`/`MCP`. User validation (and optional 2FA) happens via `verification_uri`. Runtime gate: when `app_feature_enabled.features.ai=false`, `client_kind=MCP` MUST be rejected. 
+Starts a browser-assisted authorization flow (GitHub-style) for `AGENT_TECHNICAL`. User validation (and optional 2FA) happens via `verification_uri`. 
 
 ### Parameters
 
@@ -378,7 +409,7 @@ No authorization required
 > models::AuthClientTokenSuccess auth_clients_token_post(auth_client_token_request)
 Mint client bearer token from secret key
 
-Exchanges `(client_id, secret_key)` for a bearer token. Normative rule: one active token per technical client_id; minting a new token revokes the previous one. This endpoint is for technical non-interactive clients only. Runtime gate: when `app_feature_enabled.features.ai=false`, `client_kind=MCP` MUST be rejected. 
+Exchanges `(client_id, secret_key)` for a bearer token. Normative rule: one active token per AGENT technical client_id; minting a new token revokes the previous one. This endpoint is for `AGENT_TECHNICAL` only. 
 
 ### Parameters
 
@@ -408,7 +439,7 @@ No authorization required
 > models::AuthLoginSuccess auth_login_post(auth_login_request)
 User login with email and password
 
-Interactive login endpoint for supported human-operated clients (`UI_WEB`, `UI_MOBILE`, and `AGENT`). Supports optional TOTP 2FA code when enabled.
+Interactive login endpoint for supported human-operated clients (`UI_WEB` and `AGENT`). Supports optional TOTP 2FA code when enabled.
 
 ### Parameters
 

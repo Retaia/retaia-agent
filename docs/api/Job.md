@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 **asset_uuid** | **String** |  | 
 **source** | [**models::AssetPaths**](AssetPaths.md) | Source locator (relative paths + storage id) for local media access. | 
 **required_capabilities** | **Vec<String>** |  | 
-**claimed_by** | Option<**String**> |  | [optional]
+**claimed_by** | Option<**uuid::Uuid**> |  | [optional]
 **lock_token** | Option<**String**> |  | [optional]
 **locked_until** | Option<**String**> |  | [optional]
 
