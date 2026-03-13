@@ -14,7 +14,7 @@ fn bdd_given_ui_web_when_client_token_requested_then_forbidden_actor() {
 }
 
 #[test]
-fn bdd_given_ui_mobile_when_client_token_requested_then_forbidden_actor() {
+fn bdd_given_agent_ui_when_client_token_requested_then_forbidden_actor() {
     let allowed = can_issue_client_token(ClientKind::UiMobile, true);
     assert!(!allowed);
 }

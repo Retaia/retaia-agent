@@ -47,7 +47,7 @@ fn e2e_mcp_global_ai_off_blocks_client_token_flow() {
 }
 
 #[test]
-fn e2e_ui_web_and_ui_mobile_cannot_issue_technical_client_tokens_or_process_jobs() {
+fn e2e_interactive_clients_cannot_issue_technical_client_tokens_or_process_jobs() {
     assert!(!can_issue_client_token(ClientKind::UiWeb, true));
     assert!(!can_issue_client_token(ClientKind::UiMobile, true));
     assert!(!can_process_jobs(ClientKind::UiWeb));
