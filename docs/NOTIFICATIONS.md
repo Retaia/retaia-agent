@@ -1,40 +1,11 @@
-# Notifications
+# Notifications (Agent local)
+
+> Cadrage fonctionnel global: `retaia-docs/agent/NOTIFICATIONS-UX.md`
 
 ## Principle
 
 - Notifications émises sur événement/transition.
 - Aucune répétition en boucle sur polling stable.
-
-## Required Notifications
-
-- `New job received`
-  - émission à l'arrivée d'un nouveau job (nouveau `job_id` ou file vide -> non vide)
-  - pas de répétition pour le même job
-- `All jobs done`
-  - émission unique sur transition `has_running_jobs=true -> false`
-  - pas de répétition tant que l'état reste sans job actif
-- `Job failed`
-  - émission à l'échec d'un job
-  - inclure un code court + action suggérée si disponible
-- `Agent disconnected / reconnecting`
-  - émission sur perte de connexion backend et démarrage de reconnexion
-- `Auth expired / re-auth required`
-  - émission quand l'auth runtime ne permet plus les appels
-- `Settings saved`
-  - émission après sauvegarde valide
-- `Settings invalid`
-  - émission sur erreur de validation config (ex: endpoint injoignable)
-
-## Optional Notification
-
-- `Updates available`
-  - émission lors de la détection d'une nouvelle version agent
-- `Daemon started`
-  - émission sur action GUI/tray de démarrage daemon réussie
-- `Daemon stopped`
-  - émission sur action GUI/tray d'arrêt daemon réussie
-- `Daemon status refreshed`
-  - émission après rafraîchissement explicite du statut daemon depuis GUI/tray
 
 ## Bridge DDD
 
@@ -50,4 +21,4 @@
 - Adapter GUI: `TauriNotificationSink` (feature `tauri-notifications`)
 - Façade runtime: `RuntimeSession::update_snapshot_and_dispatch(...)` pour enchaîner projection + dispatch dans le flux agent.
 - Intégration shell desktop (`agent-desktop-shell`): dispatch via `dispatch_notifications(...)` + `select_notification_sink(notification_sink_profile_for_target(UI_WEB))`.
-- Règle: la déduplication reste dans le domaine (`AgentUiRuntime`), le bridge ne doit pas réintroduire de logique métier.
+- Regle: la deduplication reste dans le domaine, le bridge ne doit pas reintroduire de logique metier.

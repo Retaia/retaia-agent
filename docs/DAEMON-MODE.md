@@ -1,16 +1,16 @@
-# Daemon Mode
+# Daemon Mode (Agent local)
+
+> Cadrage fonctionnel global: `retaia-docs/agent/DAEMON-OPERATIONS.md`
 
 ## Objectif
 
-Le runtime agent doit pouvoir tourner en arrière-plan et démarrer au boot, avec un seul daemon pilotable depuis CLI ou GUI.
+Documenter les choix d'implementation locaux du mode daemon dans `retaia-agent`.
 
-## Contrat
+## Details locaux
 
-- Une instance de daemon partagée (pas de runtime parallèle CLI vs GUI).
-- Gestion lifecycle unifiée: `install`, `start`, `stop`, `status`, `uninstall`.
-- Publication des stats runtime par le daemon dans un store local (`daemon-stats.json`).
-- Historique long-terme de debug dans SQLite (`daemon-history.sqlite3`).
-- Support Linux/macOS/Windows via service manager natif (lib `service-manager`).
+- stats courantes dans `daemon-stats.json`
+- historique long-terme dans `daemon-history.sqlite3`
+- support Linux/macOS/Windows via `service-manager`
 
 ## Commandes CLI
 
@@ -47,7 +47,7 @@ cargo run --bin agentctl -- daemon stop
 cargo run --bin agentctl -- daemon uninstall
 ```
 
-## Runtime daemon
+## Runtime daemon local
 
 Le daemon exécute `agent-runtime` en mode service:
 
@@ -100,10 +100,10 @@ Auth bearer pour polling API (build avec feature `core-api-client`):
 
 - env var optionnelle: `RETAIA_AGENT_BEARER_TOKEN`.
 
-Le mode interactif local est volontairement désactivé: seul `agent-runtime -- daemon` exécute le runtime.
-CLI et GUI jouent le rôle de clients de contrôle/observabilité du daemon.
+Le mode interactif local est desactive: seul `agent-runtime -- daemon` execute le runtime.
+CLI et GUI jouent le role de clients de controle/observabilite du daemon.
 
-## Notes d'intégration GUI
+## Notes d'integration GUI
 
 - La GUI doit appeler le même contrat applicatif de gestion daemon que la CLI.
 - Les actions menu système (`start/stop/status`) doivent refléter l'état réel du daemon installé.

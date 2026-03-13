@@ -11,9 +11,7 @@ Point d'entrée pour les agents IA.
 
 - `docs/PRE-V1-STATUS.md`
 - `docs/RUNTIME-CONSTRAINTS.md`
-- `docs/UX-SYSTEM-TRAY.md`
-- `docs/NOTIFICATIONS.md`
-- `docs/CONFIGURATION-PANEL.md`
+- `https://github.com/Retaia/retaia-docs/tree/master/agent`
 - `docs/CI-QUALITY-GATES.md`
 
 ## Règles d'exécution
