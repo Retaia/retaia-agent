@@ -30,7 +30,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[UserBearerAuth](../README.md#UserBearerAuth), [OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[UserBearerAuth](../README.md#UserBearerAuth), [TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -59,7 +59,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[UserBearerAuth](../README.md#UserBearerAuth), [OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[UserBearerAuth](../README.md#UserBearerAuth), [TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -89,7 +89,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -121,7 +121,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -150,7 +150,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 

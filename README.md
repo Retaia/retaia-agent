@@ -27,6 +27,7 @@ Rust agent client for the Retaia platform.
 - `locales/`: data-driven i18n locale files (`en.json`, `fr.json`)
 - `tests/`: automated test suite
 - `docs/`: implementation and operations docs
+- `retaia-docs/agent`: functional agent docs shared across projects
 - `AGENT.md`: normative rules for agent implementation
 - `specs/`: contract source of truth (git submodule)
 
@@ -218,6 +219,7 @@ See:
 
 - `CONTRIBUTING.md`
 - `AGENT.md`
+- `https://github.com/Retaia/retaia-docs/tree/master/agent`
 - `docs/README.md`
 - `docs/CONFIG-STORAGE.md`
 

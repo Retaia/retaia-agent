@@ -35,9 +35,12 @@ impl AgentRegistrationGateway for StubGateway {
 
 fn intent() -> AgentRegistrationIntent {
     AgentRegistrationIntent {
+        agent_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
         agent_name: "retaia-agent".to_string(),
         agent_version: "0.1.0".to_string(),
-        platform: Some("macos-arm64".to_string()),
+        os_name: "macos".to_string(),
+        os_version: "15.3".to_string(),
+        arch: "arm64".to_string(),
         client_feature_flags_contract_version: Some("1.0.0".to_string()),
         max_parallel_jobs: Some(2),
     }
@@ -46,6 +49,7 @@ fn intent() -> AgentRegistrationIntent {
 #[test]
 fn tdd_build_agent_registration_command_includes_declared_capabilities() {
     let command = build_agent_registration_command(intent());
+    assert_eq!(command.agent_id, "550e8400-e29b-41d4-a716-446655440000");
     assert_eq!(command.agent_name, "retaia-agent");
     assert_eq!(command.agent_version, "0.1.0");
     assert!(command.capabilities.contains(&"media.facts@1".to_string()));

@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **max_parallel_jobs_allowed** | Option<**i32**> |  | [optional]
 **allowed_job_types** | Option<**Vec<String>**> |  | [optional]
 **quiet_hours** | Option<**std::collections::HashMap<String, serde_json::Value>**> |  | [optional]
-**feature_flags** | [**models::FeatureFlags**](FeatureFlags.md) |  | 
+**feature_flags** | **std::collections::HashMap<String, bool>** | Runtime flags controlled by Core. Client semantics: missing flag = false, unknown flags are ignored, safe-by-default.  | 
 **feature_flags_contract_version** | **String** | Latest feature-flags contract version served by Core (SemVer). | 
 **accepted_feature_flags_contract_versions** | **Vec<String>** | Feature-flags contract versions still accepted by Core for compatibility. | 
 **effective_feature_flags_contract_version** | **String** | Feature-flags contract version effectively served to this client request (SemVer). | 

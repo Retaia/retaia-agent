@@ -4,18 +4,24 @@ use crate::domain::capabilities::declared_agent_capabilities;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentRegistrationIntent {
+    pub agent_id: String,
     pub agent_name: String,
     pub agent_version: String,
-    pub platform: Option<String>,
+    pub os_name: String,
+    pub os_version: String,
+    pub arch: String,
     pub client_feature_flags_contract_version: Option<String>,
     pub max_parallel_jobs: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentRegistrationCommand {
+    pub agent_id: String,
     pub agent_name: String,
     pub agent_version: String,
-    pub platform: Option<String>,
+    pub os_name: String,
+    pub os_version: String,
+    pub arch: String,
     pub capabilities: Vec<String>,
     pub client_feature_flags_contract_version: Option<String>,
     pub max_parallel_jobs: Option<u16>,
@@ -56,9 +62,12 @@ pub fn build_agent_registration_command(
     capabilities.sort();
 
     AgentRegistrationCommand {
+        agent_id: intent.agent_id,
         agent_name: intent.agent_name,
         agent_version: intent.agent_version,
-        platform: intent.platform,
+        os_name: intent.os_name,
+        os_version: intent.os_version,
+        arch: intent.arch,
         capabilities,
         client_feature_flags_contract_version: intent.client_feature_flags_contract_version,
         max_parallel_jobs: intent.max_parallel_jobs,

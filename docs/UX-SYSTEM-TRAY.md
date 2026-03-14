@@ -1,4 +1,6 @@
-# UX System Tray
+# UX System Tray (Agent local)
+
+> Cadrage fonctionnel global: `retaia-docs/agent/DESKTOP-SHELL.md`
 
 ## Target
 
@@ -9,9 +11,9 @@
 - État visible en permanence via stats daemon publiées (`running`, `paused`, `stopped`).
 - Accès rapide au statut et logs.
 
-## Actions
+## Actions locales exposees
 
-- Toggle `Start/Stop Daemon` (selon état service)
+- `Start/Stop Daemon`
 - `Refresh Daemon Status`
 - `Open Window`
 - `Open Status`
@@ -46,15 +48,7 @@
   - open status, open preferences,
   - quit.
 
-## Architecture Rule
+## Details d'integration locale
 
-- `CLI === GUI` pour le périmètre opérateur:
-  - mêmes capacités exposées: contrôle daemon + consultation stats daemon,
-  - aucune exécution runtime métier locale côté CLI/GUI.
-- La GUI et la CLI ne doivent jamais implémenter une logique runtime parallèle.
-- Le moteur de processing est unique et partagé.
-- Le daemon `agent-runtime -- daemon` est l'unique exécuteur runtime.
-- GUI/CLI exposent uniquement:
-  - contrôle daemon (`start/stop/status/refresh`),
-  - consultation des stats daemon persistées (`daemon-stats.json`).
-- Le daemon runtime (boot + arrière-plan) est unique; son lifecycle est pilotable depuis CLI et GUI.
+- GUI et CLI s'appuient sur le meme daemon local
+- les stats lues viennent du store daemon local (`daemon-stats.json`)
