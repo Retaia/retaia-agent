@@ -56,10 +56,6 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**auth_logout_post**](docs/AuthApi.md#auth_logout_post) | **POST** /auth/logout | Logout current user token session
 *AuthApi* | [**auth_lost_password_request_post**](docs/AuthApi.md#auth_lost_password_request_post) | **POST** /auth/lost-password/request | Request lost password reset email
 *AuthApi* | [**auth_lost_password_reset_post**](docs/AuthApi.md#auth_lost_password_reset_post) | **POST** /auth/lost-password/reset | Reset password with token
-*AuthApi* | [**auth_mcp_challenge_post**](docs/AuthApi.md#auth_mcp_challenge_post) | **POST** /auth/mcp/challenge | Create MCP technical auth challenge
-*AuthApi* | [**auth_mcp_client_id_rotate_key_post**](docs/AuthApi.md#auth_mcp_client_id_rotate_key_post) | **POST** /auth/mcp/{client_id}/rotate-key | Rotate MCP public key
-*AuthApi* | [**auth_mcp_register_post**](docs/AuthApi.md#auth_mcp_register_post) | **POST** /auth/mcp/register | Register MCP technical client public key
-*AuthApi* | [**auth_mcp_token_post**](docs/AuthApi.md#auth_mcp_token_post) | **POST** /auth/mcp/token | Mint MCP bearer token from signed challenge
 *AuthApi* | [**auth_me_features_get**](docs/AuthApi.md#auth_me_features_get) | **GET** /auth/me/features | Get current user feature preferences
 *AuthApi* | [**auth_me_features_patch**](docs/AuthApi.md#auth_me_features_patch) | **PATCH** /auth/me/features | Update current user feature preferences
 *AuthApi* | [**auth_me_get**](docs/AuthApi.md#auth_me_get) | **GET** /auth/me | Get current authenticated user
