@@ -357,9 +357,12 @@ fn e2e_openapi_agent_registration_gateway_maps_426_from_real_http_response() {
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiAgentRegistrationGateway::new(client);
     let command = AgentRegistrationCommand {
+        agent_id: "550e8400-e29b-41d4-a716-446655440010".to_string(),
         agent_name: "retaia-agent".to_string(),
         agent_version: "1.0.0".to_string(),
-        platform: Some("macos".to_string()),
+        os_name: "macos".to_string(),
+        os_version: "15.3".to_string(),
+        arch: "arm64".to_string(),
         capabilities: vec!["media.facts@1".to_string()],
         client_feature_flags_contract_version: Some("v1".to_string()),
         max_parallel_jobs: Some(2),
@@ -385,9 +388,12 @@ fn e2e_openapi_agent_registration_gateway_maps_401_from_http_response() {
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiAgentRegistrationGateway::new(client);
     let command = AgentRegistrationCommand {
+        agent_id: "550e8400-e29b-41d4-a716-446655440011".to_string(),
         agent_name: "retaia-agent".to_string(),
         agent_version: "1.0.0".to_string(),
-        platform: Some("linux".to_string()),
+        os_name: "linux".to_string(),
+        os_version: "6.8".to_string(),
+        arch: "x86_64".to_string(),
         capabilities: vec!["media.facts@1".to_string()],
         client_feature_flags_contract_version: Some("v1".to_string()),
         max_parallel_jobs: Some(2),
@@ -413,9 +419,12 @@ fn e2e_openapi_agent_registration_gateway_maps_500_from_http_response() {
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiAgentRegistrationGateway::new(client);
     let command = AgentRegistrationCommand {
+        agent_id: "550e8400-e29b-41d4-a716-446655440012".to_string(),
         agent_name: "retaia-agent".to_string(),
         agent_version: "1.0.0".to_string(),
-        platform: Some("linux".to_string()),
+        os_name: "linux".to_string(),
+        os_version: "6.8".to_string(),
+        arch: "x86_64".to_string(),
         capabilities: vec!["media.facts@1".to_string()],
         client_feature_flags_contract_version: Some("v1".to_string()),
         max_parallel_jobs: Some(2),
@@ -566,9 +575,12 @@ fn e2e_openapi_agent_registration_gateway_maps_invalid_success_payload_to_transp
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiAgentRegistrationGateway::new(client);
     let command = AgentRegistrationCommand {
+        agent_id: "550e8400-e29b-41d4-a716-446655440013".to_string(),
         agent_name: "retaia-agent".to_string(),
         agent_version: "1.0.0".to_string(),
-        platform: Some("linux".to_string()),
+        os_name: "linux".to_string(),
+        os_version: "6.8".to_string(),
+        arch: "x86_64".to_string(),
         capabilities: vec!["media.facts@1".to_string()],
         client_feature_flags_contract_version: Some("v1".to_string()),
         max_parallel_jobs: Some(2),

@@ -5,7 +5,6 @@
 | Name | Value |
 |---- | -----|
 | UiWeb | UI_WEB |
-| UiMobile | UI_MOBILE |
 | Agent | AGENT |
 
 

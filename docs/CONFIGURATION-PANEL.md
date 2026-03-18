@@ -1,4 +1,6 @@
-# Configuration Panel
+# Configuration Panel (Agent local)
+
+> Cadrage fonctionnel global: `retaia-docs/agent/CONFIGURATION-UX.md`
 
 ## Access
 
@@ -7,7 +9,7 @@
 - Accessible en CLI-only (SSH, serveur Linux, Raspberry Pi sans GUI) avec le même contrat de config.
 - Le daemon runtime est unique et doit être pilotable via CLI ou GUI (même instance de service).
 
-## Minimal Fields
+## Champs et commandes locales
 
 - URL Core/Agent API
 - URL Ollama
@@ -28,20 +30,12 @@ Déploiement NAS + workstations:
 - ne pas configurer un hostname Docker interne côté agent (`core:9000`, `app-prod:9000`).
 - profil de déploiement normatif: `specs/architecture/DEPLOYMENT-TOPOLOGY.md`.
 
-## UX Rules
+## Details locaux
 
-- Validation explicite des champs.
-- Message de succès à la sauvegarde (`Settings saved`).
-- Message d'erreur sur config invalide (`Settings invalid`).
+- persistance systeme et conventions de chemin: `CONFIG-STORAGE.md`
+- la validation s'appuie sur le meme contrat d'application dans GUI et CLI
 
-## Parity Rule (GUI/CLI)
-
-- Les champs supportés sont identiques en GUI et CLI.
-- La validation est identique en GUI et CLI (mêmes erreurs, mêmes invariants).
-- Cible d'exécution: Linux/macOS/Windows, y compris environnements headless.
-- Persistance système et convention de chemin: voir `CONFIG-STORAGE.md`.
-
-## CLI-Only Commands (headless)
+## Commandes CLI-only (headless)
 
 - `agentctl config path`: affiche le chemin de config résolu.
 - `agentctl config show`: affiche la config active (secret masqué).

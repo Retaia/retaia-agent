@@ -29,7 +29,7 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -57,7 +57,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -87,7 +87,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -116,7 +116,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 
@@ -148,7 +148,7 @@ Name | Type | Description  | Required | Notes
 
 ### Authorization
 
-[OAuth2ClientCredentials](../README.md#OAuth2ClientCredentials)
+[TechnicalBearerAuth](../README.md#TechnicalBearerAuth)
 
 ### HTTP request headers
 

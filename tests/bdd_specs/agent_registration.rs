@@ -33,9 +33,12 @@ impl AgentRegistrationGateway for CaptureGateway {
 fn bdd_given_agent_registration_when_building_command_then_first_capability_is_declared() {
     let gateway = CaptureGateway::new();
     let intent = AgentRegistrationIntent {
+        agent_id: "550e8400-e29b-41d4-a716-446655440002".to_string(),
         agent_name: "retaia-agent".to_string(),
         agent_version: "0.1.0".to_string(),
-        platform: Some("linux-x86_64".to_string()),
+        os_name: "linux".to_string(),
+        os_version: "6.8".to_string(),
+        arch: "x86_64".to_string(),
         client_feature_flags_contract_version: None,
         max_parallel_jobs: Some(1),
     };

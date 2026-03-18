@@ -139,7 +139,7 @@ Ce document sert de référence de suivi pré-v1 (implémentation + qualité) po
 
 1. Maintenir la matrice externe avec nouveaux cas négatifs/variantes codecs sans régression de temps pipeline.
 2. Garder la stabilité de la gate dédiée fixtures externes dans les prochains incréments.
-3. Ouvrir les chantiers v1.1/v1.2 hors scope v1 (AI/transcription/providers, mobile push) selon roadmap specs.
+3. Ouvrir les chantiers v1.1+ hors scope v1 (AI/transcription/providers et autres pistes non planifiées) selon la roadmap specs.
 
 ## Fixture Roadmap (Pre-v1)
 
