@@ -38,7 +38,7 @@ pub trait AssetsApi: Send + Sync {
     /// POST /assets/{uuid}/reprocess
     ///
     /// 
-    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key, 'if_match2>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, if_match2: &'if_match2 str) -> Result<(), Error<AssetsUuidReprocessPostError>>;
+    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>>;
 }
 
 pub struct AssetsApiClient {
@@ -205,7 +205,7 @@ impl AssetsApi for AssetsApiClient {
         }
     }
 
-    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key, 'if_match2>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, if_match2: &'if_match2 str) -> Result<(), Error<AssetsUuidReprocessPostError>> {
+    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -218,7 +218,6 @@ impl AssetsApi for AssetsApiClient {
         }
         local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
-        local_var_req_builder = local_var_req_builder.header("If-Match", if_match2.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };

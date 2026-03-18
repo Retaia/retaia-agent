@@ -91,7 +91,7 @@ Update one asset (metadata and lifecycle transitions)
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
-**if_match** | **String** | Strong opaque asset revision tag for optimistic concurrency on asset mutations. | [required] |
+**if_match** | **String** |  | [required] |
 **assets_uuid_patch_request** | [**AssetsUuidPatchRequest**](AssetsUuidPatchRequest.md) |  | [required] |
 
 ### Return type
@@ -112,7 +112,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_reprocess_post
 
-> assets_uuid_reprocess_post(uuid, if_match, idempotency_key, if_match2)
+> assets_uuid_reprocess_post(uuid, if_match, idempotency_key)
 Trigger explicit reprocess
 
 ### Parameters
@@ -123,7 +123,6 @@ Name | Type | Description  | Required | Notes
 **uuid** | **String** |  | [required] |
 **if_match** | **String** |  | [required] |
 **idempotency_key** | **String** |  | [required] |
-**if_match2** | **String** | Strong opaque asset revision tag for optimistic concurrency on asset mutations. | [required] |
 
 ### Return type
 

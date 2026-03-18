@@ -19,7 +19,7 @@ Reopen archived or rejected asset to decision pending
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
-**if_match** | **String** | Strong opaque asset revision tag for optimistic concurrency on asset mutations. | [required] |
+**if_match** | **String** |  | [required] |
 
 ### Return type
 
