@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 ## assets_uuid_purge_post
 
-> assets_uuid_purge_post(uuid, idempotency_key, assets_uuid_purge_post_request)
+> assets_uuid_purge_post(uuid, if_match, idempotency_key, assets_uuid_purge_post_request)
 Purge one rejected asset
 
 ### Parameters
@@ -20,6 +20,7 @@ Purge one rejected asset
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**if_match** | **String** |  | [required] |
 **idempotency_key** | **String** |  | [required] |
 **assets_uuid_purge_post_request** | [**AssetsUuidPurgePostRequest**](AssetsUuidPurgePostRequest.md) |  | [required] |
 

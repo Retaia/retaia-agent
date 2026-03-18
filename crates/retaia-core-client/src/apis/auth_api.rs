@@ -22,7 +22,7 @@ pub trait AuthApi: Send + Sync {
 
     /// GET /app/features
     ///
-    /// Returns global app switches (`app_feature_enabled`). Also returns dependency/escalation metadata for deterministic client behavior. Effective global availability requires Core `feature_flags` AND `app_feature_enabled`. Normative gate: when `app_feature_enabled.features.ai=false`, `client_kind=MCP` is disabled at runtime. Admin-only endpoint. Runtime payload contract is stable: `app_feature_enabled`, `feature_governance`, `core_v1_global_features`. 
+    /// Returns global app switches (`app_feature_enabled`). Also returns dependency/escalation metadata for deterministic client behavior. Effective global availability requires Core `feature_flags` AND `app_feature_enabled`. Normative gate: when `app_feature_enabled.features.ai=false`, only MCP functions that depend on AI are disabled at runtime. Admin-only endpoint. Runtime payload contract is stable: `app_feature_enabled`, `feature_governance`, `core_v1_global_features`. 
     async fn app_features_get<>(&self, ) -> Result<models::AppFeaturesResponse, Error<AppFeaturesGetError>>;
 
     /// PATCH /app/features
@@ -92,7 +92,7 @@ pub trait AuthApi: Send + Sync {
 
     /// POST /auth/login
     ///
-    /// Interactive login endpoint for supported human-operated clients (`UI_WEB` and `AGENT`). Supports optional TOTP 2FA code when enabled.
+    /// Interactive bootstrap/recovery login endpoint for supported human-operated clients (`UI_WEB` and `AGENT`). Supports optional TOTP 2FA code when enabled.
     async fn auth_login_post<'auth_login_request>(&self, auth_login_request: models::AuthLoginRequest) -> Result<models::AuthLoginSuccess, Error<AuthLoginPostError>>;
 
     /// POST /auth/logout
@@ -110,6 +110,26 @@ pub trait AuthApi: Send + Sync {
     /// 
     async fn auth_lost_password_reset_post<'auth_lost_password_reset_request>(&self, auth_lost_password_reset_request: models::AuthLostPasswordResetRequest) -> Result<(), Error<AuthLostPasswordResetPostError>>;
 
+    /// POST /auth/mcp/challenge
+    ///
+    /// Creates a one-shot challenge for `MCP_TECHNICAL`. The challenge must expire within 5 minutes and must be rejected after first successful use or replay. 
+    async fn auth_mcp_challenge_post<'auth_mcp_challenge_request>(&self, auth_mcp_challenge_request: models::AuthMcpChallengeRequest) -> Result<models::AuthMcpChallengeResponse, Error<AuthMcpChallengePostError>>;
+
+    /// POST /auth/mcp/{client_id}/rotate-key
+    ///
+    /// 
+    async fn auth_mcp_client_id_rotate_key_post<'client_id, 'auth_mcp_register_request>(&self, client_id: &'client_id str, auth_mcp_register_request: models::AuthMcpRegisterRequest) -> Result<models::AuthMcpRegisterResponse, Error<AuthMcpClientIdRotateKeyPostError>>;
+
+    /// POST /auth/mcp/register
+    ///
+    /// 
+    async fn auth_mcp_register_post<'auth_mcp_register_request>(&self, auth_mcp_register_request: models::AuthMcpRegisterRequest) -> Result<models::AuthMcpRegisterResponse, Error<AuthMcpRegisterPostError>>;
+
+    /// POST /auth/mcp/token
+    ///
+    /// Mints a technical bearer token for `MCP_TECHNICAL` from a valid signature over a still-valid one-shot challenge. Expired, replayed or already-consumed challenges must be rejected. 
+    async fn auth_mcp_token_post<'auth_mcp_token_request>(&self, auth_mcp_token_request: models::AuthMcpTokenRequest) -> Result<models::AuthClientTokenSuccess, Error<AuthMcpTokenPostError>>;
+
     /// GET /auth/me/features
     ///
     /// Returns user-level feature preferences (`user_feature_enabled`) and effective availability. Effective availability is computed with AND semantics: `feature_flags` AND `app_feature_enabled` AND `user_feature_enabled` AND dependency constraints. 
@@ -125,6 +145,11 @@ pub trait AuthApi: Send + Sync {
     /// 
     async fn auth_me_get<>(&self, ) -> Result<models::AuthCurrentUser, Error<AuthMeGetError>>;
 
+    /// POST /auth/refresh
+    ///
+    /// 
+    async fn auth_refresh_post<'auth_refresh_request>(&self, auth_refresh_request: models::AuthRefreshRequest) -> Result<models::AuthLoginSuccess, Error<AuthRefreshPostError>>;
+
     /// POST /auth/verify-email/admin-confirm
     ///
     /// Requires an authenticated admin actor, per AUTHZ matrix (FORBIDDEN_ACTOR or FORBIDDEN_SCOPE on authz failure).
@@ -139,6 +164,26 @@ pub trait AuthApi: Send + Sync {
     ///
     /// 
     async fn auth_verify_email_request_post<'auth_email_request>(&self, auth_email_request: models::AuthEmailRequest) -> Result<(), Error<AuthVerifyEmailRequestPostError>>;
+
+    /// POST /auth/webauthn/authenticate/options
+    ///
+    /// Returns one-shot WebAuthn authentication options for a previously enrolled device/browser. The returned challenge/options must expire within 5 minutes and must be rejected after first successful use or replay. 
+    async fn auth_webauthn_authenticate_options_post<'web_authn_authenticate_options_request>(&self, web_authn_authenticate_options_request: Option<models::WebAuthnAuthenticateOptionsRequest>) -> Result<models::WebAuthnPublicKeyOptionsResponse, Error<AuthWebauthnAuthenticateOptionsPostError>>;
+
+    /// POST /auth/webauthn/authenticate/verify
+    ///
+    /// Verifies a WebAuthn assertion against a still-valid one-shot authentication challenge. Successful verification consumes the challenge permanently. 
+    async fn auth_webauthn_authenticate_verify_post<'web_authn_authenticate_verify_request>(&self, web_authn_authenticate_verify_request: models::WebAuthnAuthenticateVerifyRequest) -> Result<models::AuthLoginSuccess, Error<AuthWebauthnAuthenticateVerifyPostError>>;
+
+    /// POST /auth/webauthn/register/options
+    ///
+    /// Returns one-shot WebAuthn registration options for the authenticated user. The returned challenge/options must expire within 5 minutes and must be rejected after first successful use or replay. 
+    async fn auth_webauthn_register_options_post<>(&self, ) -> Result<models::WebAuthnPublicKeyOptionsResponse, Error<AuthWebauthnRegisterOptionsPostError>>;
+
+    /// POST /auth/webauthn/register/verify
+    ///
+    /// Verifies a WebAuthn attestation against a still-valid one-shot registration challenge. Successful verification consumes the challenge permanently. 
+    async fn auth_webauthn_register_verify_post<'web_authn_register_verify_request>(&self, web_authn_register_verify_request: models::WebAuthnRegisterVerifyRequest) -> Result<models::WebAuthnDeviceResponse, Error<AuthWebauthnRegisterVerifyPostError>>;
 }
 
 pub struct AuthApiClient {
@@ -155,7 +200,7 @@ impl AuthApiClient {
 
 #[async_trait]
 impl AuthApi for AuthApiClient {
-    /// Returns global app switches (`app_feature_enabled`). Also returns dependency/escalation metadata for deterministic client behavior. Effective global availability requires Core `feature_flags` AND `app_feature_enabled`. Normative gate: when `app_feature_enabled.features.ai=false`, `client_kind=MCP` is disabled at runtime. Admin-only endpoint. Runtime payload contract is stable: `app_feature_enabled`, `feature_governance`, `core_v1_global_features`. 
+    /// Returns global app switches (`app_feature_enabled`). Also returns dependency/escalation metadata for deterministic client behavior. Effective global availability requires Core `feature_flags` AND `app_feature_enabled`. Normative gate: when `app_feature_enabled.features.ai=false`, only MCP functions that depend on AI are disabled at runtime. Admin-only endpoint. Runtime payload contract is stable: `app_feature_enabled`, `feature_governance`, `core_v1_global_features`. 
     async fn app_features_get<>(&self, ) -> Result<models::AppFeaturesResponse, Error<AppFeaturesGetError>> {
         let local_var_configuration = &self.configuration;
 
@@ -717,7 +762,7 @@ impl AuthApi for AuthApiClient {
         }
     }
 
-    /// Interactive login endpoint for supported human-operated clients (`UI_WEB` and `AGENT`). Supports optional TOTP 2FA code when enabled.
+    /// Interactive bootstrap/recovery login endpoint for supported human-operated clients (`UI_WEB` and `AGENT`). Supports optional TOTP 2FA code when enabled.
     async fn auth_login_post<'auth_login_request>(&self, auth_login_request: models::AuthLoginRequest) -> Result<models::AuthLoginSuccess, Error<AuthLoginPostError>> {
         let local_var_configuration = &self.configuration;
 
@@ -837,6 +882,166 @@ impl AuthApi for AuthApiClient {
             Ok(())
         } else {
             let local_var_entity: Option<AuthLostPasswordResetPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    /// Creates a one-shot challenge for `MCP_TECHNICAL`. The challenge must expire within 5 minutes and must be rejected after first successful use or replay. 
+    async fn auth_mcp_challenge_post<'auth_mcp_challenge_request>(&self, auth_mcp_challenge_request: models::AuthMcpChallengeRequest) -> Result<models::AuthMcpChallengeResponse, Error<AuthMcpChallengePostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/mcp/challenge", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        local_var_req_builder = local_var_req_builder.json(&auth_mcp_challenge_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AuthMcpChallengeResponse`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AuthMcpChallengeResponse`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthMcpChallengePostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    async fn auth_mcp_client_id_rotate_key_post<'client_id, 'auth_mcp_register_request>(&self, client_id: &'client_id str, auth_mcp_register_request: models::AuthMcpRegisterRequest) -> Result<models::AuthMcpRegisterResponse, Error<AuthMcpClientIdRotateKeyPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/mcp/{client_id}/rotate-key", local_var_configuration.base_path, client_id=crate::apis::urlencode(client_id));
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
+            local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
+        };
+        local_var_req_builder = local_var_req_builder.json(&auth_mcp_register_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AuthMcpRegisterResponse`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AuthMcpRegisterResponse`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthMcpClientIdRotateKeyPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    async fn auth_mcp_register_post<'auth_mcp_register_request>(&self, auth_mcp_register_request: models::AuthMcpRegisterRequest) -> Result<models::AuthMcpRegisterResponse, Error<AuthMcpRegisterPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/mcp/register", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
+            local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
+        };
+        local_var_req_builder = local_var_req_builder.json(&auth_mcp_register_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AuthMcpRegisterResponse`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AuthMcpRegisterResponse`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthMcpRegisterPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    /// Mints a technical bearer token for `MCP_TECHNICAL` from a valid signature over a still-valid one-shot challenge. Expired, replayed or already-consumed challenges must be rejected. 
+    async fn auth_mcp_token_post<'auth_mcp_token_request>(&self, auth_mcp_token_request: models::AuthMcpTokenRequest) -> Result<models::AuthClientTokenSuccess, Error<AuthMcpTokenPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/mcp/token", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        local_var_req_builder = local_var_req_builder.json(&auth_mcp_token_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AuthClientTokenSuccess`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AuthClientTokenSuccess`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthMcpTokenPostError> = serde_json::from_str(&local_var_content).ok();
             let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
             Err(Error::ResponseError(local_var_error))
         }
@@ -965,6 +1170,44 @@ impl AuthApi for AuthApiClient {
         }
     }
 
+    async fn auth_refresh_post<'auth_refresh_request>(&self, auth_refresh_request: models::AuthRefreshRequest) -> Result<models::AuthLoginSuccess, Error<AuthRefreshPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/refresh", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        local_var_req_builder = local_var_req_builder.json(&auth_refresh_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AuthLoginSuccess`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AuthLoginSuccess`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthRefreshPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
     /// Requires an authenticated admin actor, per AUTHZ matrix (FORBIDDEN_ACTOR or FORBIDDEN_SCOPE on authz failure).
     async fn auth_verify_email_admin_confirm_post<'auth_email_request>(&self, auth_email_request: models::AuthEmailRequest) -> Result<(), Error<AuthVerifyEmailAdminConfirmPostError>> {
         let local_var_configuration = &self.configuration;
@@ -1048,6 +1291,167 @@ impl AuthApi for AuthApiClient {
             Ok(())
         } else {
             let local_var_entity: Option<AuthVerifyEmailRequestPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    /// Returns one-shot WebAuthn authentication options for a previously enrolled device/browser. The returned challenge/options must expire within 5 minutes and must be rejected after first successful use or replay. 
+    async fn auth_webauthn_authenticate_options_post<'web_authn_authenticate_options_request>(&self, web_authn_authenticate_options_request: Option<models::WebAuthnAuthenticateOptionsRequest>) -> Result<models::WebAuthnPublicKeyOptionsResponse, Error<AuthWebauthnAuthenticateOptionsPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/webauthn/authenticate/options", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        local_var_req_builder = local_var_req_builder.json(&web_authn_authenticate_options_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::WebAuthnPublicKeyOptionsResponse`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::WebAuthnPublicKeyOptionsResponse`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthWebauthnAuthenticateOptionsPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    /// Verifies a WebAuthn assertion against a still-valid one-shot authentication challenge. Successful verification consumes the challenge permanently. 
+    async fn auth_webauthn_authenticate_verify_post<'web_authn_authenticate_verify_request>(&self, web_authn_authenticate_verify_request: models::WebAuthnAuthenticateVerifyRequest) -> Result<models::AuthLoginSuccess, Error<AuthWebauthnAuthenticateVerifyPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/webauthn/authenticate/verify", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        local_var_req_builder = local_var_req_builder.json(&web_authn_authenticate_verify_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AuthLoginSuccess`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AuthLoginSuccess`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthWebauthnAuthenticateVerifyPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    /// Returns one-shot WebAuthn registration options for the authenticated user. The returned challenge/options must expire within 5 minutes and must be rejected after first successful use or replay. 
+    async fn auth_webauthn_register_options_post<>(&self, ) -> Result<models::WebAuthnPublicKeyOptionsResponse, Error<AuthWebauthnRegisterOptionsPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/webauthn/register/options", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
+            local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
+        };
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::WebAuthnPublicKeyOptionsResponse`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::WebAuthnPublicKeyOptionsResponse`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthWebauthnRegisterOptionsPostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    /// Verifies a WebAuthn attestation against a still-valid one-shot registration challenge. Successful verification consumes the challenge permanently. 
+    async fn auth_webauthn_register_verify_post<'web_authn_register_verify_request>(&self, web_authn_register_verify_request: models::WebAuthnRegisterVerifyRequest) -> Result<models::WebAuthnDeviceResponse, Error<AuthWebauthnRegisterVerifyPostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/auth/webauthn/register/verify", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
+            local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
+        };
+        local_var_req_builder = local_var_req_builder.json(&web_authn_register_verify_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::WebAuthnDeviceResponse`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::WebAuthnDeviceResponse`")))),
+            }
+        } else {
+            let local_var_entity: Option<AuthWebauthnRegisterVerifyPostError> = serde_json::from_str(&local_var_content).ok();
             let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
             Err(Error::ResponseError(local_var_error))
         }
@@ -1231,6 +1635,49 @@ pub enum AuthLostPasswordResetPostError {
     UnknownValue(serde_json::Value),
 }
 
+/// struct for typed errors of method [`AuthApi::auth_mcp_challenge_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthMcpChallengePostError {
+    Status401(models::ErrorResponse),
+    Status422(models::ErrorResponse),
+    Status429(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_mcp_client_id_rotate_key_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthMcpClientIdRotateKeyPostError {
+    Status401(models::ErrorResponse),
+    Status403(models::ErrorResponse),
+    Status409(models::ErrorResponse),
+    Status422(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_mcp_register_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthMcpRegisterPostError {
+    Status401(models::ErrorResponse),
+    Status403(models::ErrorResponse),
+    Status409(models::ErrorResponse),
+    Status422(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_mcp_token_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthMcpTokenPostError {
+    Status401(models::ErrorResponse),
+    Status403(models::ErrorResponse),
+    Status422(models::ErrorResponse),
+    Status429(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
 /// struct for typed errors of method [`AuthApi::auth_me_features_get`]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -1254,6 +1701,16 @@ pub enum AuthMeFeaturesPatchError {
 #[serde(untagged)]
 pub enum AuthMeGetError {
     Status401(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_refresh_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthRefreshPostError {
+    Status401(models::ErrorResponse),
+    Status422(models::ErrorResponse),
+    Status429(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -1283,6 +1740,45 @@ pub enum AuthVerifyEmailConfirmPostError {
 pub enum AuthVerifyEmailRequestPostError {
     Status422(models::ErrorResponse),
     Status429(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_webauthn_authenticate_options_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthWebauthnAuthenticateOptionsPostError {
+    Status401(models::ErrorResponse),
+    Status422(models::ErrorResponse),
+    Status429(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_webauthn_authenticate_verify_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthWebauthnAuthenticateVerifyPostError {
+    Status401(models::ErrorResponse),
+    Status422(models::ErrorResponse),
+    Status429(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_webauthn_register_options_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthWebauthnRegisterOptionsPostError {
+    Status401(models::ErrorResponse),
+    Status409(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
+}
+
+/// struct for typed errors of method [`AuthApi::auth_webauthn_register_verify_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AuthWebauthnRegisterVerifyPostError {
+    Status401(models::ErrorResponse),
+    Status409(models::ErrorResponse),
+    Status422(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 

@@ -28,22 +28,22 @@ pub trait JobsApi: Send + Sync {
     /// POST /jobs/{job_id}/claim
     ///
     /// 
-    async fn jobs_job_id_claim_post<'job_id>(&self, job_id: &'job_id str) -> Result<models::Job, Error<JobsJobIdClaimPostError>>;
+    async fn jobs_job_id_claim_post<'job_id, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce>(&self, job_id: &'job_id str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str) -> Result<models::Job, Error<JobsJobIdClaimPostError>>;
 
     /// POST /jobs/{job_id}/fail
     ///
     /// 
-    async fn jobs_job_id_fail_post<'job_id, 'idempotency_key, 'jobs_job_id_fail_post_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, jobs_job_id_fail_post_request: models::JobsJobIdFailPostRequest) -> Result<(), Error<JobsJobIdFailPostError>>;
+    async fn jobs_job_id_fail_post<'job_id, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'jobs_job_id_fail_post_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, jobs_job_id_fail_post_request: models::JobsJobIdFailPostRequest) -> Result<(), Error<JobsJobIdFailPostError>>;
 
     /// POST /jobs/{job_id}/heartbeat
     ///
     /// 
-    async fn jobs_job_id_heartbeat_post<'job_id, 'jobs_job_id_heartbeat_post_request>(&self, job_id: &'job_id str, jobs_job_id_heartbeat_post_request: models::JobsJobIdHeartbeatPostRequest) -> Result<models::JobsJobIdHeartbeatPost200Response, Error<JobsJobIdHeartbeatPostError>>;
+    async fn jobs_job_id_heartbeat_post<'job_id, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'jobs_job_id_heartbeat_post_request>(&self, job_id: &'job_id str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, jobs_job_id_heartbeat_post_request: models::JobsJobIdHeartbeatPostRequest) -> Result<models::JobsJobIdHeartbeatPost200Response, Error<JobsJobIdHeartbeatPostError>>;
 
     /// POST /jobs/{job_id}/submit
     ///
     /// Submits one job result patch. 
-    async fn jobs_job_id_submit_post<'job_id, 'idempotency_key, 'job_submit_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, job_submit_request: models::JobSubmitRequest) -> Result<(), Error<JobsJobIdSubmitPostError>>;
+    async fn jobs_job_id_submit_post<'job_id, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'job_submit_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, job_submit_request: models::JobSubmitRequest) -> Result<(), Error<JobsJobIdSubmitPostError>>;
 }
 
 pub struct JobsApiClient {
@@ -101,7 +101,7 @@ impl JobsApi for JobsApiClient {
         }
     }
 
-    async fn jobs_job_id_claim_post<'job_id>(&self, job_id: &'job_id str) -> Result<models::Job, Error<JobsJobIdClaimPostError>> {
+    async fn jobs_job_id_claim_post<'job_id, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce>(&self, job_id: &'job_id str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str) -> Result<models::Job, Error<JobsJobIdClaimPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -112,6 +112,11 @@ impl JobsApi for JobsApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Agent-Id", x_retaia_agent_id.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-OpenPGP-Fingerprint", x_retaia_open_pgp_fingerprint.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -141,7 +146,7 @@ impl JobsApi for JobsApiClient {
         }
     }
 
-    async fn jobs_job_id_fail_post<'job_id, 'idempotency_key, 'jobs_job_id_fail_post_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, jobs_job_id_fail_post_request: models::JobsJobIdFailPostRequest) -> Result<(), Error<JobsJobIdFailPostError>> {
+    async fn jobs_job_id_fail_post<'job_id, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'jobs_job_id_fail_post_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, jobs_job_id_fail_post_request: models::JobsJobIdFailPostRequest) -> Result<(), Error<JobsJobIdFailPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -153,6 +158,11 @@ impl JobsApi for JobsApiClient {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Agent-Id", x_retaia_agent_id.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-OpenPGP-Fingerprint", x_retaia_open_pgp_fingerprint.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -173,7 +183,7 @@ impl JobsApi for JobsApiClient {
         }
     }
 
-    async fn jobs_job_id_heartbeat_post<'job_id, 'jobs_job_id_heartbeat_post_request>(&self, job_id: &'job_id str, jobs_job_id_heartbeat_post_request: models::JobsJobIdHeartbeatPostRequest) -> Result<models::JobsJobIdHeartbeatPost200Response, Error<JobsJobIdHeartbeatPostError>> {
+    async fn jobs_job_id_heartbeat_post<'job_id, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'jobs_job_id_heartbeat_post_request>(&self, job_id: &'job_id str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, jobs_job_id_heartbeat_post_request: models::JobsJobIdHeartbeatPostRequest) -> Result<models::JobsJobIdHeartbeatPost200Response, Error<JobsJobIdHeartbeatPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -184,6 +194,11 @@ impl JobsApi for JobsApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Agent-Id", x_retaia_agent_id.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-OpenPGP-Fingerprint", x_retaia_open_pgp_fingerprint.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -215,7 +230,7 @@ impl JobsApi for JobsApiClient {
     }
 
     /// Submits one job result patch. 
-    async fn jobs_job_id_submit_post<'job_id, 'idempotency_key, 'job_submit_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, job_submit_request: models::JobSubmitRequest) -> Result<(), Error<JobsJobIdSubmitPostError>> {
+    async fn jobs_job_id_submit_post<'job_id, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'job_submit_request>(&self, job_id: &'job_id str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, job_submit_request: models::JobSubmitRequest) -> Result<(), Error<JobsJobIdSubmitPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -227,6 +242,11 @@ impl JobsApi for JobsApiClient {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Agent-Id", x_retaia_agent_id.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-OpenPGP-Fingerprint", x_retaia_open_pgp_fingerprint.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };

@@ -19,6 +19,14 @@ use retaia_core_client::models::_agents_register_post_request::{Arch, OsName};
 use retaia_core_client::models::AgentsRegisterPostRequest;
 
 #[cfg(feature = "core-api-client")]
+const PLACEHOLDER_OPENPGP_PUBLIC_KEY: &str =
+    "-----BEGIN PGP PUBLIC KEY BLOCK-----\nplaceholder\n-----END PGP PUBLIC KEY BLOCK-----";
+#[cfg(feature = "core-api-client")]
+const PLACEHOLDER_OPENPGP_FINGERPRINT: &str = "0000000000000000000000000000000000000000";
+#[cfg(feature = "core-api-client")]
+const PLACEHOLDER_SIGNATURE: &str = "placeholder-signature";
+
+#[cfg(feature = "core-api-client")]
 #[derive(Debug, Clone)]
 pub struct OpenApiAgentRegistrationGateway {
     configuration: Configuration,
@@ -52,6 +60,8 @@ impl AgentRegistrationGateway for OpenApiAgentRegistrationGateway {
             agent_id,
             command.agent_name.clone(),
             command.agent_version.clone(),
+            PLACEHOLDER_OPENPGP_PUBLIC_KEY.to_string(),
+            PLACEHOLDER_OPENPGP_FINGERPRINT.to_string(),
             os_name,
             command.os_version.clone(),
             arch,
@@ -61,8 +71,17 @@ impl AgentRegistrationGateway for OpenApiAgentRegistrationGateway {
             command.client_feature_flags_contract_version.clone();
         request.max_parallel_jobs = command.max_parallel_jobs.map(i32::from);
 
+        let signature_timestamp = signature_timestamp_rfc3339_utc();
+        let signature_nonce = uuid::Uuid::new_v4().to_string();
         let response = runtime
-            .block_on(api.agents_register_post(request))
+            .block_on(api.agents_register_post(
+                &command.agent_id,
+                PLACEHOLDER_OPENPGP_FINGERPRINT,
+                PLACEHOLDER_SIGNATURE,
+                signature_timestamp,
+                &signature_nonce,
+                request,
+            ))
             .map_err(map_openapi_register_error)?;
 
         Ok(AgentRegistrationOutcome {
@@ -71,6 +90,11 @@ impl AgentRegistrationGateway for OpenApiAgentRegistrationGateway {
             capability_warnings: response.capability_warnings.unwrap_or_default(),
         })
     }
+}
+
+#[cfg(feature = "core-api-client")]
+fn signature_timestamp_rfc3339_utc() -> String {
+    "1970-01-01T00:00:00Z".to_string()
 }
 
 #[cfg(feature = "core-api-client")]

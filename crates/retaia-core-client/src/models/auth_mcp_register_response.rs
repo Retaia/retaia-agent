@@ -12,41 +12,40 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AuthClientTokenSuccess {
+pub struct AuthMcpRegisterResponse {
     #[serde(rename = "client_id")]
     pub client_id: String,
     #[serde(rename = "client_kind")]
-    pub client_kind: models::TechnicalClientKind,
-    #[serde(rename = "access_token")]
-    pub access_token: String,
-    #[serde(rename = "token_type")]
-    pub token_type: TokenType,
-    /// Access token lifetime in seconds.
-    #[serde(rename = "expires_in", skip_serializing_if = "Option::is_none")]
-    pub expires_in: Option<i32>,
+    pub client_kind: ClientKind,
+    #[serde(rename = "openpgp_fingerprint")]
+    pub openpgp_fingerprint: String,
+    #[serde(rename = "registered_at", skip_serializing_if = "Option::is_none")]
+    pub registered_at: Option<String>,
+    #[serde(rename = "rotated_at", skip_serializing_if = "Option::is_none")]
+    pub rotated_at: Option<String>,
 }
 
-impl AuthClientTokenSuccess {
-    pub fn new(client_id: String, client_kind: models::TechnicalClientKind, access_token: String, token_type: TokenType) -> AuthClientTokenSuccess {
-        AuthClientTokenSuccess {
+impl AuthMcpRegisterResponse {
+    pub fn new(client_id: String, client_kind: ClientKind, openpgp_fingerprint: String) -> AuthMcpRegisterResponse {
+        AuthMcpRegisterResponse {
             client_id,
             client_kind,
-            access_token,
-            token_type,
-            expires_in: None,
+            openpgp_fingerprint,
+            registered_at: None,
+            rotated_at: None,
         }
     }
 }
 /// 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub enum TokenType {
-    #[serde(rename = "Bearer")]
-    Bearer,
+pub enum ClientKind {
+    #[serde(rename = "MCP")]
+    Mcp,
 }
 
-impl Default for TokenType {
-    fn default() -> TokenType {
-        Self::Bearer
+impl Default for ClientKind {
+    fn default() -> ClientKind {
+        Self::Mcp
     }
 }
 

@@ -22,12 +22,21 @@ Method | HTTP request | Description
 [**auth_logout_post**](AuthApi.md#auth_logout_post) | **POST** /auth/logout | Logout current user token session
 [**auth_lost_password_request_post**](AuthApi.md#auth_lost_password_request_post) | **POST** /auth/lost-password/request | Request lost password reset email
 [**auth_lost_password_reset_post**](AuthApi.md#auth_lost_password_reset_post) | **POST** /auth/lost-password/reset | Reset password with token
+[**auth_mcp_challenge_post**](AuthApi.md#auth_mcp_challenge_post) | **POST** /auth/mcp/challenge | Create MCP technical auth challenge
+[**auth_mcp_client_id_rotate_key_post**](AuthApi.md#auth_mcp_client_id_rotate_key_post) | **POST** /auth/mcp/{client_id}/rotate-key | Rotate MCP public key
+[**auth_mcp_register_post**](AuthApi.md#auth_mcp_register_post) | **POST** /auth/mcp/register | Register MCP technical client public key
+[**auth_mcp_token_post**](AuthApi.md#auth_mcp_token_post) | **POST** /auth/mcp/token | Mint MCP bearer token from signed challenge
 [**auth_me_features_get**](AuthApi.md#auth_me_features_get) | **GET** /auth/me/features | Get current user feature preferences
 [**auth_me_features_patch**](AuthApi.md#auth_me_features_patch) | **PATCH** /auth/me/features | Update current user feature preferences
 [**auth_me_get**](AuthApi.md#auth_me_get) | **GET** /auth/me | Get current authenticated user
+[**auth_refresh_post**](AuthApi.md#auth_refresh_post) | **POST** /auth/refresh | Refresh interactive user bearer token
 [**auth_verify_email_admin_confirm_post**](AuthApi.md#auth_verify_email_admin_confirm_post) | **POST** /auth/verify-email/admin-confirm | Admin confirms user email verification
 [**auth_verify_email_confirm_post**](AuthApi.md#auth_verify_email_confirm_post) | **POST** /auth/verify-email/confirm | Confirm email verification token
 [**auth_verify_email_request_post**](AuthApi.md#auth_verify_email_request_post) | **POST** /auth/verify-email/request | Request verification email
+[**auth_webauthn_authenticate_options_post**](AuthApi.md#auth_webauthn_authenticate_options_post) | **POST** /auth/webauthn/authenticate/options | Start WebAuthn authentication
+[**auth_webauthn_authenticate_verify_post**](AuthApi.md#auth_webauthn_authenticate_verify_post) | **POST** /auth/webauthn/authenticate/verify | Verify WebAuthn authentication
+[**auth_webauthn_register_options_post**](AuthApi.md#auth_webauthn_register_options_post) | **POST** /auth/webauthn/register/options | Start WebAuthn device registration
+[**auth_webauthn_register_verify_post**](AuthApi.md#auth_webauthn_register_verify_post) | **POST** /auth/webauthn/register/verify | Verify WebAuthn device registration
 
 
 
@@ -36,7 +45,7 @@ Method | HTTP request | Description
 > models::AppFeaturesResponse app_features_get()
 Get effective app feature switches
 
-Returns global app switches (`app_feature_enabled`). Also returns dependency/escalation metadata for deterministic client behavior. Effective global availability requires Core `feature_flags` AND `app_feature_enabled`. Normative gate: when `app_feature_enabled.features.ai=false`, `client_kind=MCP` is disabled at runtime. Admin-only endpoint. Runtime payload contract is stable: `app_feature_enabled`, `feature_governance`, `core_v1_global_features`. 
+Returns global app switches (`app_feature_enabled`). Also returns dependency/escalation metadata for deterministic client behavior. Effective global availability requires Core `feature_flags` AND `app_feature_enabled`. Normative gate: when `app_feature_enabled.features.ai=false`, only MCP functions that depend on AI are disabled at runtime. Admin-only endpoint. Runtime payload contract is stable: `app_feature_enabled`, `feature_governance`, `core_v1_global_features`. 
 
 ### Parameters
 
@@ -439,7 +448,7 @@ No authorization required
 > models::AuthLoginSuccess auth_login_post(auth_login_request)
 User login with email and password
 
-Interactive login endpoint for supported human-operated clients (`UI_WEB` and `AGENT`). Supports optional TOTP 2FA code when enabled.
+Interactive bootstrap/recovery login endpoint for supported human-operated clients (`UI_WEB` and `AGENT`). Supports optional TOTP 2FA code when enabled.
 
 ### Parameters
 
@@ -545,6 +554,123 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
+## auth_mcp_challenge_post
+
+> models::AuthMcpChallengeResponse auth_mcp_challenge_post(auth_mcp_challenge_request)
+Create MCP technical auth challenge
+
+Creates a one-shot challenge for `MCP_TECHNICAL`. The challenge must expire within 5 minutes and must be rejected after first successful use or replay. 
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**auth_mcp_challenge_request** | [**AuthMcpChallengeRequest**](AuthMcpChallengeRequest.md) |  | [required] |
+
+### Return type
+
+[**models::AuthMcpChallengeResponse**](AuthMcpChallengeResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## auth_mcp_client_id_rotate_key_post
+
+> models::AuthMcpRegisterResponse auth_mcp_client_id_rotate_key_post(client_id, auth_mcp_register_request)
+Rotate MCP public key
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**client_id** | **String** |  | [required] |
+**auth_mcp_register_request** | [**AuthMcpRegisterRequest**](AuthMcpRegisterRequest.md) |  | [required] |
+
+### Return type
+
+[**models::AuthMcpRegisterResponse**](AuthMcpRegisterResponse.md)
+
+### Authorization
+
+[UserBearerAuth](../README.md#UserBearerAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## auth_mcp_register_post
+
+> models::AuthMcpRegisterResponse auth_mcp_register_post(auth_mcp_register_request)
+Register MCP technical client public key
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**auth_mcp_register_request** | [**AuthMcpRegisterRequest**](AuthMcpRegisterRequest.md) |  | [required] |
+
+### Return type
+
+[**models::AuthMcpRegisterResponse**](AuthMcpRegisterResponse.md)
+
+### Authorization
+
+[UserBearerAuth](../README.md#UserBearerAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## auth_mcp_token_post
+
+> models::AuthClientTokenSuccess auth_mcp_token_post(auth_mcp_token_request)
+Mint MCP bearer token from signed challenge
+
+Mints a technical bearer token for `MCP_TECHNICAL` from a valid signature over a still-valid one-shot challenge. Expired, replayed or already-consumed challenges must be rejected. 
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**auth_mcp_token_request** | [**AuthMcpTokenRequest**](AuthMcpTokenRequest.md) |  | [required] |
+
+### Return type
+
+[**models::AuthClientTokenSuccess**](AuthClientTokenSuccess.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
 ## auth_me_features_get
 
 > models::UserFeaturesResponse auth_me_features_get()
@@ -627,6 +753,34 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
+## auth_refresh_post
+
+> models::AuthLoginSuccess auth_refresh_post(auth_refresh_request)
+Refresh interactive user bearer token
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**auth_refresh_request** | [**AuthRefreshRequest**](AuthRefreshRequest.md) |  | [required] |
+
+### Return type
+
+[**models::AuthLoginSuccess**](AuthLoginSuccess.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
 ## auth_verify_email_admin_confirm_post
 
 > auth_verify_email_admin_confirm_post(auth_email_request)
@@ -704,6 +858,123 @@ Name | Type | Description  | Required | Notes
 ### Authorization
 
 No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## auth_webauthn_authenticate_options_post
+
+> models::WebAuthnPublicKeyOptionsResponse auth_webauthn_authenticate_options_post(web_authn_authenticate_options_request)
+Start WebAuthn authentication
+
+Returns one-shot WebAuthn authentication options for a previously enrolled device/browser. The returned challenge/options must expire within 5 minutes and must be rejected after first successful use or replay. 
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**web_authn_authenticate_options_request** | Option<[**WebAuthnAuthenticateOptionsRequest**](WebAuthnAuthenticateOptionsRequest.md)> |  |  |
+
+### Return type
+
+[**models::WebAuthnPublicKeyOptionsResponse**](WebAuthnPublicKeyOptionsResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## auth_webauthn_authenticate_verify_post
+
+> models::AuthLoginSuccess auth_webauthn_authenticate_verify_post(web_authn_authenticate_verify_request)
+Verify WebAuthn authentication
+
+Verifies a WebAuthn assertion against a still-valid one-shot authentication challenge. Successful verification consumes the challenge permanently. 
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**web_authn_authenticate_verify_request** | [**WebAuthnAuthenticateVerifyRequest**](WebAuthnAuthenticateVerifyRequest.md) |  | [required] |
+
+### Return type
+
+[**models::AuthLoginSuccess**](AuthLoginSuccess.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## auth_webauthn_register_options_post
+
+> models::WebAuthnPublicKeyOptionsResponse auth_webauthn_register_options_post()
+Start WebAuthn device registration
+
+Returns one-shot WebAuthn registration options for the authenticated user. The returned challenge/options must expire within 5 minutes and must be rejected after first successful use or replay. 
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**models::WebAuthnPublicKeyOptionsResponse**](WebAuthnPublicKeyOptionsResponse.md)
+
+### Authorization
+
+[UserBearerAuth](../README.md#UserBearerAuth)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+
+## auth_webauthn_register_verify_post
+
+> models::WebAuthnDeviceResponse auth_webauthn_register_verify_post(web_authn_register_verify_request)
+Verify WebAuthn device registration
+
+Verifies a WebAuthn attestation against a still-valid one-shot registration challenge. Successful verification consumes the challenge permanently. 
+
+### Parameters
+
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**web_authn_register_verify_request** | [**WebAuthnRegisterVerifyRequest**](WebAuthnRegisterVerifyRequest.md) |  | [required] |
+
+### Return type
+
+[**models::WebAuthnDeviceResponse**](WebAuthnDeviceResponse.md)
+
+### Authorization
+
+[UserBearerAuth](../README.md#UserBearerAuth)
 
 ### HTTP request headers
 

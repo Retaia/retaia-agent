@@ -17,8 +17,12 @@ pub struct AssetTranscript {
     pub status: Option<Status>,
     #[serde(rename = "text_preview", skip_serializing_if = "Option::is_none")]
     pub text_preview: Option<String>,
+    /// Timestamp of the last accepted business mutation on this asset. Informational only; not a write precondition.
     #[serde(rename = "updated_at", skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
+    /// Strong opaque asset revision tag to be reused in `If-Match` for the next mutation.
+    #[serde(rename = "revision_etag", skip_serializing_if = "Option::is_none")]
+    pub revision_etag: Option<String>,
 }
 
 impl AssetTranscript {
@@ -27,6 +31,7 @@ impl AssetTranscript {
             status: None,
             text_preview: None,
             updated_at: None,
+            revision_etag: None,
         }
     }
 }

@@ -10,7 +10,7 @@ Method | HTTP request | Description
 
 ## assets_uuid_reopen_post
 
-> assets_uuid_reopen_post(uuid)
+> assets_uuid_reopen_post(uuid, if_match)
 Reopen archived or rejected asset to decision pending
 
 ### Parameters
@@ -19,6 +19,7 @@ Reopen archived or rejected asset to decision pending
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**if_match** | **String** |  | [required] |
 
 ### Return type
 

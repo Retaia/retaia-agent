@@ -23,7 +23,7 @@ pub trait DecisionsApi: Send + Sync {
     /// POST /assets/{uuid}/reopen
     ///
     /// 
-    async fn assets_uuid_reopen_post<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidReopenPostError>>;
+    async fn assets_uuid_reopen_post<'uuid, 'if_match>(&self, uuid: &'uuid str, if_match: &'if_match str) -> Result<(), Error<AssetsUuidReopenPostError>>;
 }
 
 pub struct DecisionsApiClient {
@@ -40,7 +40,7 @@ impl DecisionsApiClient {
 
 #[async_trait]
 impl DecisionsApi for DecisionsApiClient {
-    async fn assets_uuid_reopen_post<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidReopenPostError>> {
+    async fn assets_uuid_reopen_post<'uuid, 'if_match>(&self, uuid: &'uuid str, if_match: &'if_match str) -> Result<(), Error<AssetsUuidReopenPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -51,6 +51,7 @@ impl DecisionsApi for DecisionsApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -77,7 +78,9 @@ impl DecisionsApi for DecisionsApiClient {
 #[serde(untagged)]
 pub enum AssetsUuidReopenPostError {
     Status401(models::ErrorResponse),
-    Status409(),
+    Status412(models::ErrorResponse),
+    Status428(models::ErrorResponse),
+    Status409(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 

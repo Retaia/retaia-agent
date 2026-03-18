@@ -17,6 +17,7 @@ pub struct ErrorResponse {
     pub code: Code,
     #[serde(rename = "message")]
     pub message: String,
+    /// May include endpoint-specific structured fields such as `current_revision_etag` and `current_state` for asset state conflicts.
     #[serde(rename = "details", skip_serializing_if = "Option::is_none")]
     pub details: Option<std::collections::HashMap<String, serde_json::Value>>,
     #[serde(rename = "retryable")]
@@ -89,6 +90,10 @@ pub enum Code {
     RateLimited,
     #[serde(rename = "TEMPORARY_UNAVAILABLE")]
     TemporaryUnavailable,
+    #[serde(rename = "PRECONDITION_REQUIRED")]
+    PreconditionRequired,
+    #[serde(rename = "PRECONDITION_FAILED")]
+    PreconditionFailed,
 }
 
 impl Default for Code {

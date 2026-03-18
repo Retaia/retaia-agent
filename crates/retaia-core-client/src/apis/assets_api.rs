@@ -28,17 +28,17 @@ pub trait AssetsApi: Send + Sync {
     /// GET /assets/{uuid}
     ///
     /// 
-    async fn assets_uuid_get<'uuid>(&self, uuid: &'uuid str) -> Result<models::AssetDetail, Error<AssetsUuidGetError>>;
+    async fn assets_uuid_get<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidGetError>>;
 
     /// PATCH /assets/{uuid}
     ///
     /// 
-    async fn assets_uuid_patch<'uuid, 'assets_uuid_patch_request>(&self, uuid: &'uuid str, assets_uuid_patch_request: models::AssetsUuidPatchRequest) -> Result<(), Error<AssetsUuidPatchError>>;
+    async fn assets_uuid_patch<'uuid, 'if_match, 'assets_uuid_patch_request>(&self, uuid: &'uuid str, if_match: &'if_match str, assets_uuid_patch_request: models::AssetsUuidPatchRequest) -> Result<(), Error<AssetsUuidPatchError>>;
 
     /// POST /assets/{uuid}/reprocess
     ///
     /// 
-    async fn assets_uuid_reprocess_post<'uuid, 'idempotency_key>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>>;
+    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>>;
 }
 
 pub struct AssetsApiClient {
@@ -140,7 +140,7 @@ impl AssetsApi for AssetsApiClient {
         }
     }
 
-    async fn assets_uuid_get<'uuid>(&self, uuid: &'uuid str) -> Result<models::AssetDetail, Error<AssetsUuidGetError>> {
+    async fn assets_uuid_get<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -162,20 +162,10 @@ impl AssetsApi for AssetsApiClient {
         let local_var_resp = local_var_client.execute(local_var_req).await?;
 
         let local_var_status = local_var_resp.status();
-        let local_var_content_type = local_var_resp
-            .headers()
-            .get("content-type")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("application/octet-stream");
-        let local_var_content_type = super::ContentType::from(local_var_content_type);
         let local_var_content = local_var_resp.text().await?;
 
         if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-            match local_var_content_type {
-                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
-                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AssetDetail`"))),
-                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AssetDetail`")))),
-            }
+            Ok(())
         } else {
             let local_var_entity: Option<AssetsUuidGetError> = serde_json::from_str(&local_var_content).ok();
             let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
@@ -183,7 +173,7 @@ impl AssetsApi for AssetsApiClient {
         }
     }
 
-    async fn assets_uuid_patch<'uuid, 'assets_uuid_patch_request>(&self, uuid: &'uuid str, assets_uuid_patch_request: models::AssetsUuidPatchRequest) -> Result<(), Error<AssetsUuidPatchError>> {
+    async fn assets_uuid_patch<'uuid, 'if_match, 'assets_uuid_patch_request>(&self, uuid: &'uuid str, if_match: &'if_match str, assets_uuid_patch_request: models::AssetsUuidPatchRequest) -> Result<(), Error<AssetsUuidPatchError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -194,6 +184,7 @@ impl AssetsApi for AssetsApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -214,7 +205,7 @@ impl AssetsApi for AssetsApiClient {
         }
     }
 
-    async fn assets_uuid_reprocess_post<'uuid, 'idempotency_key>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>> {
+    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -225,6 +216,7 @@ impl AssetsApi for AssetsApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -268,7 +260,11 @@ pub enum AssetsUuidGetError {
 #[serde(untagged)]
 pub enum AssetsUuidPatchError {
     Status401(models::ErrorResponse),
+    Status409(models::ErrorResponse),
+    Status412(models::ErrorResponse),
+    Status428(models::ErrorResponse),
     Status410(),
+    Status422(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
 
@@ -277,6 +273,8 @@ pub enum AssetsUuidPatchError {
 #[serde(untagged)]
 pub enum AssetsUuidReprocessPostError {
     Status401(models::ErrorResponse),
+    Status412(models::ErrorResponse),
+    Status428(models::ErrorResponse),
     Status409(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }

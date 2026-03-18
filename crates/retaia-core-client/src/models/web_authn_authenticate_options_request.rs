@@ -12,16 +12,21 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AppFeaturesUpdateRequest {
-    /// Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` controls MCP AI-dependent capabilities (false => MCP AI-dependent functions disabled). 
-    #[serde(rename = "app_feature_enabled")]
-    pub app_feature_enabled: std::collections::HashMap<String, bool>,
+pub struct WebAuthnAuthenticateOptionsRequest {
+    #[serde(rename = "email", skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(rename = "client_id", skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    #[serde(rename = "client_kind", skip_serializing_if = "Option::is_none")]
+    pub client_kind: Option<models::ClientKind>,
 }
 
-impl AppFeaturesUpdateRequest {
-    pub fn new(app_feature_enabled: std::collections::HashMap<String, bool>) -> AppFeaturesUpdateRequest {
-        AppFeaturesUpdateRequest {
-            app_feature_enabled,
+impl WebAuthnAuthenticateOptionsRequest {
+    pub fn new() -> WebAuthnAuthenticateOptionsRequest {
+        WebAuthnAuthenticateOptionsRequest {
+            email: None,
+            client_id: None,
+            client_kind: None,
         }
     }
 }
