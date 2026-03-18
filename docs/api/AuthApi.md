@@ -22,10 +22,6 @@ Method | HTTP request | Description
 [**auth_logout_post**](AuthApi.md#auth_logout_post) | **POST** /auth/logout | Logout current user token session
 [**auth_lost_password_request_post**](AuthApi.md#auth_lost_password_request_post) | **POST** /auth/lost-password/request | Request lost password reset email
 [**auth_lost_password_reset_post**](AuthApi.md#auth_lost_password_reset_post) | **POST** /auth/lost-password/reset | Reset password with token
-[**auth_mcp_challenge_post**](AuthApi.md#auth_mcp_challenge_post) | **POST** /auth/mcp/challenge | Create MCP technical auth challenge
-[**auth_mcp_client_id_rotate_key_post**](AuthApi.md#auth_mcp_client_id_rotate_key_post) | **POST** /auth/mcp/{client_id}/rotate-key | Rotate MCP public key
-[**auth_mcp_register_post**](AuthApi.md#auth_mcp_register_post) | **POST** /auth/mcp/register | Register MCP technical client public key
-[**auth_mcp_token_post**](AuthApi.md#auth_mcp_token_post) | **POST** /auth/mcp/token | Mint MCP bearer token from signed challenge
 [**auth_me_features_get**](AuthApi.md#auth_me_features_get) | **GET** /auth/me/features | Get current user feature preferences
 [**auth_me_features_patch**](AuthApi.md#auth_me_features_patch) | **PATCH** /auth/me/features | Update current user feature preferences
 [**auth_me_get**](AuthApi.md#auth_me_get) | **GET** /auth/me | Get current authenticated user
@@ -541,123 +537,6 @@ Name | Type | Description  | Required | Notes
 ### Return type
 
  (empty response body)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-
-## auth_mcp_challenge_post
-
-> models::AuthMcpChallengeResponse auth_mcp_challenge_post(auth_mcp_challenge_request)
-Create MCP technical auth challenge
-
-Creates a one-shot challenge for `MCP_TECHNICAL`. The challenge must expire within 5 minutes and must be rejected after first successful use or replay. 
-
-### Parameters
-
-
-Name | Type | Description  | Required | Notes
-------------- | ------------- | ------------- | ------------- | -------------
-**auth_mcp_challenge_request** | [**AuthMcpChallengeRequest**](AuthMcpChallengeRequest.md) |  | [required] |
-
-### Return type
-
-[**models::AuthMcpChallengeResponse**](AuthMcpChallengeResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-
-## auth_mcp_client_id_rotate_key_post
-
-> models::AuthMcpRegisterResponse auth_mcp_client_id_rotate_key_post(client_id, auth_mcp_register_request)
-Rotate MCP public key
-
-### Parameters
-
-
-Name | Type | Description  | Required | Notes
-------------- | ------------- | ------------- | ------------- | -------------
-**client_id** | **String** |  | [required] |
-**auth_mcp_register_request** | [**AuthMcpRegisterRequest**](AuthMcpRegisterRequest.md) |  | [required] |
-
-### Return type
-
-[**models::AuthMcpRegisterResponse**](AuthMcpRegisterResponse.md)
-
-### Authorization
-
-[UserBearerAuth](../README.md#UserBearerAuth)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-
-## auth_mcp_register_post
-
-> models::AuthMcpRegisterResponse auth_mcp_register_post(auth_mcp_register_request)
-Register MCP technical client public key
-
-### Parameters
-
-
-Name | Type | Description  | Required | Notes
-------------- | ------------- | ------------- | ------------- | -------------
-**auth_mcp_register_request** | [**AuthMcpRegisterRequest**](AuthMcpRegisterRequest.md) |  | [required] |
-
-### Return type
-
-[**models::AuthMcpRegisterResponse**](AuthMcpRegisterResponse.md)
-
-### Authorization
-
-[UserBearerAuth](../README.md#UserBearerAuth)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-
-## auth_mcp_token_post
-
-> models::AuthClientTokenSuccess auth_mcp_token_post(auth_mcp_token_request)
-Mint MCP bearer token from signed challenge
-
-Mints a technical bearer token for `MCP_TECHNICAL` from a valid signature over a still-valid one-shot challenge. Expired, replayed or already-consumed challenges must be rejected. 
-
-### Parameters
-
-
-Name | Type | Description  | Required | Notes
-------------- | ------------- | ------------- | ------------- | -------------
-**auth_mcp_token_request** | [**AuthMcpTokenRequest**](AuthMcpTokenRequest.md) |  | [required] |
-
-### Return type
-
-[**models::AuthClientTokenSuccess**](AuthClientTokenSuccess.md)
 
 ### Authorization
 
