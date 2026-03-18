@@ -26,6 +26,13 @@ use retaia_core_client::apis::jobs_api::{
 use retaia_core_client::models;
 
 #[cfg(feature = "core-api-client")]
+const PLACEHOLDER_OPENPGP_FINGERPRINT: &str = "0000000000000000000000000000000000000000";
+#[cfg(feature = "core-api-client")]
+const PLACEHOLDER_SIGNATURE: &str = "placeholder-signature";
+#[cfg(feature = "core-api-client")]
+const PLACEHOLDER_IF_MATCH: &str = "*";
+
+#[cfg(feature = "core-api-client")]
 #[derive(Debug, Clone)]
 pub struct OpenApiDerivedProcessingGateway {
     configuration: Configuration,
@@ -48,7 +55,14 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
         let job = runtime
-            .block_on(api.jobs_job_id_claim_post(job_id))
+            .block_on(api.jobs_job_id_claim_post(
+                job_id,
+                job_id,
+                PLACEHOLDER_OPENPGP_FINGERPRINT,
+                PLACEHOLDER_SIGNATURE,
+                signature_timestamp_rfc3339_utc(),
+                &signature_nonce(),
+            ))
             .map_err(map_claim_error)?;
 
         let lock_token = job
@@ -80,7 +94,15 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
 
         let request = models::JobsJobIdHeartbeatPostRequest::new(lock_token.to_string());
         let response = runtime
-            .block_on(api.jobs_job_id_heartbeat_post(job_id, request))
+            .block_on(api.jobs_job_id_heartbeat_post(
+                job_id,
+                job_id,
+                PLACEHOLDER_OPENPGP_FINGERPRINT,
+                PLACEHOLDER_SIGNATURE,
+                signature_timestamp_rfc3339_utc(),
+                &signature_nonce(),
+                request,
+            ))
             .map_err(map_heartbeat_error)?;
 
         Ok(HeartbeatReceipt {
@@ -114,6 +136,11 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 .block_on(api.jobs_job_id_submit_post(
                     job_id,
                     idempotency_key,
+                    job_id,
+                    PLACEHOLDER_OPENPGP_FINGERPRINT,
+                    PLACEHOLDER_SIGNATURE,
+                    signature_timestamp_rfc3339_utc(),
+                    &signature_nonce(),
                     models::JobSubmitRequest::SubmitExtractFacts(Box::new(submit)),
                 ))
                 .map_err(map_submit_error);
@@ -134,6 +161,11 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             .block_on(api.jobs_job_id_submit_post(
                 job_id,
                 idempotency_key,
+                job_id,
+                PLACEHOLDER_OPENPGP_FINGERPRINT,
+                PLACEHOLDER_SIGNATURE,
+                signature_timestamp_rfc3339_utc(),
+                &signature_nonce(),
                 models::JobSubmitRequest::SubmitDerived(Box::new(submit)),
             ))
             .map_err(map_submit_error)
@@ -162,7 +194,13 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         runtime
             .block_on(api.assets_uuid_derived_upload_init_post(
                 &request.asset_uuid,
+                PLACEHOLDER_IF_MATCH,
                 &request.idempotency_key,
+                &request.asset_uuid,
+                PLACEHOLDER_OPENPGP_FINGERPRINT,
+                PLACEHOLDER_SIGNATURE,
+                signature_timestamp_rfc3339_utc(),
+                &signature_nonce(),
                 payload,
             ))
             .map_err(map_upload_init_error)
@@ -185,7 +223,16 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         );
 
         runtime
-            .block_on(api.assets_uuid_derived_upload_part_post(&request.asset_uuid, payload))
+            .block_on(api.assets_uuid_derived_upload_part_post(
+                &request.asset_uuid,
+                PLACEHOLDER_IF_MATCH,
+                &request.asset_uuid,
+                PLACEHOLDER_OPENPGP_FINGERPRINT,
+                PLACEHOLDER_SIGNATURE,
+                signature_timestamp_rfc3339_utc(),
+                &signature_nonce(),
+                payload,
+            ))
             .map_err(map_upload_part_error)
     }
 
@@ -206,11 +253,27 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         runtime
             .block_on(api.assets_uuid_derived_upload_complete_post(
                 &request.asset_uuid,
+                PLACEHOLDER_IF_MATCH,
                 &request.idempotency_key,
+                &request.asset_uuid,
+                PLACEHOLDER_OPENPGP_FINGERPRINT,
+                PLACEHOLDER_SIGNATURE,
+                signature_timestamp_rfc3339_utc(),
+                &signature_nonce(),
                 payload,
             ))
             .map_err(map_upload_complete_error)
     }
+}
+
+#[cfg(feature = "core-api-client")]
+fn signature_nonce() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+#[cfg(feature = "core-api-client")]
+fn signature_timestamp_rfc3339_utc() -> String {
+    "1970-01-01T00:00:00Z".to_string()
 }
 
 #[cfg(feature = "core-api-client")]

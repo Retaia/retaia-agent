@@ -12,16 +12,21 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AppFeaturesUpdateRequest {
-    /// Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` controls MCP AI-dependent capabilities (false => MCP AI-dependent functions disabled). 
-    #[serde(rename = "app_feature_enabled")]
-    pub app_feature_enabled: std::collections::HashMap<String, bool>,
+pub struct WebAuthnDeviceResponse {
+    #[serde(rename = "device_id")]
+    pub device_id: uuid::Uuid,
+    #[serde(rename = "device_label", skip_serializing_if = "Option::is_none")]
+    pub device_label: Option<String>,
+    #[serde(rename = "webauthn_fingerprint", skip_serializing_if = "Option::is_none")]
+    pub webauthn_fingerprint: Option<String>,
 }
 
-impl AppFeaturesUpdateRequest {
-    pub fn new(app_feature_enabled: std::collections::HashMap<String, bool>) -> AppFeaturesUpdateRequest {
-        AppFeaturesUpdateRequest {
-            app_feature_enabled,
+impl WebAuthnDeviceResponse {
+    pub fn new(device_id: uuid::Uuid) -> WebAuthnDeviceResponse {
+        WebAuthnDeviceResponse {
+            device_id,
+            device_label: None,
+            webauthn_fingerprint: None,
         }
     }
 }

@@ -19,7 +19,7 @@ pub struct AssetDerived {
     pub proxy_audio_url: Option<String>,
     #[serde(rename = "proxy_photo_url", skip_serializing_if = "Option::is_none")]
     pub proxy_photo_url: Option<String>,
-    /// Optional server-generated waveform file URL. If absent, UI clients must render a simple local waveform from audio (pure JS). 
+    /// Required for any asset with an exploitable audio track once state progresses beyond READY. If `media_type=AUDIO` or facts reveal an exploitable audio track, this field MUST be present in all business states beyond READY. UI local fallback may exist for degraded playback UX but never replaces the required server/agent-derived waveform. 
     #[serde(rename = "waveform_url", skip_serializing_if = "Option::is_none")]
     pub waveform_url: Option<String>,
     #[serde(rename = "thumbs", skip_serializing_if = "Option::is_none")]

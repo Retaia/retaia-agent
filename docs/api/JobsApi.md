@@ -41,7 +41,7 @@ This endpoint does not need any parameter.
 
 ## jobs_job_id_claim_post
 
-> models::Job jobs_job_id_claim_post(job_id)
+> models::Job jobs_job_id_claim_post(job_id, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce)
 Claim a job (atomic lease)
 
 ### Parameters
@@ -50,6 +50,11 @@ Claim a job (atomic lease)
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **job_id** | **String** |  | [required] |
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 
 ### Return type
 
@@ -69,7 +74,7 @@ Name | Type | Description  | Required | Notes
 
 ## jobs_job_id_fail_post
 
-> jobs_job_id_fail_post(job_id, idempotency_key, jobs_job_id_fail_post_request)
+> jobs_job_id_fail_post(job_id, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, jobs_job_id_fail_post_request)
 Mark job as failed
 
 ### Parameters
@@ -79,6 +84,11 @@ Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **job_id** | **String** |  | [required] |
 **idempotency_key** | **String** |  | [required] |
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 **jobs_job_id_fail_post_request** | [**JobsJobIdFailPostRequest**](JobsJobIdFailPostRequest.md) |  | [required] |
 
 ### Return type
@@ -99,7 +109,7 @@ Name | Type | Description  | Required | Notes
 
 ## jobs_job_id_heartbeat_post
 
-> models::JobsJobIdHeartbeatPost200Response jobs_job_id_heartbeat_post(job_id, jobs_job_id_heartbeat_post_request)
+> models::JobsJobIdHeartbeatPost200Response jobs_job_id_heartbeat_post(job_id, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, jobs_job_id_heartbeat_post_request)
 Extend job lease
 
 ### Parameters
@@ -108,6 +118,11 @@ Extend job lease
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **job_id** | **String** |  | [required] |
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 **jobs_job_id_heartbeat_post_request** | [**JobsJobIdHeartbeatPostRequest**](JobsJobIdHeartbeatPostRequest.md) |  | [required] |
 
 ### Return type
@@ -128,7 +143,7 @@ Name | Type | Description  | Required | Notes
 
 ## jobs_job_id_submit_post
 
-> jobs_job_id_submit_post(job_id, idempotency_key, job_submit_request)
+> jobs_job_id_submit_post(job_id, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, job_submit_request)
 Submit job result patch
 
 Submits one job result patch. 
@@ -140,6 +155,11 @@ Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **job_id** | **String** |  | [required] |
 **idempotency_key** | **String** |  | [required] |
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 **job_submit_request** | [**JobSubmitRequest**](JobSubmitRequest.md) |  | [required] |
 
 ### Return type

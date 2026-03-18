@@ -192,7 +192,7 @@ fn e2e_openapi_assets_get_parses_asset_summary_name_and_updated_at() {
         path: "/api/v1/assets?limit=1",
         status: 200,
         content_type: "application/json",
-        body: r#"{"items":[{"uuid":"asset-1","name":"IMG_0001.JPG","media_type":"PHOTO","state":"DECISION_PENDING","created_at":"2026-02-26T00:00:00Z","updated_at":"2026-02-26T01:00:00Z"}],"next_cursor":null}"#,
+        body: r#"{"items":[{"uuid":"asset-1","name":"IMG_0001.JPG","media_type":"PHOTO","state":"DECISION_PENDING","created_at":"2026-02-26T00:00:00Z","updated_at":"2026-02-26T01:00:00Z","revision_etag":"rev-1"}],"next_cursor":null}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));
@@ -224,7 +224,7 @@ fn e2e_openapi_assets_get_parses_asset_summary_name_and_updated_at() {
     assert_eq!(items.len(), 1);
     let first = &items[0];
     assert_eq!(first.name.as_deref(), Some("IMG_0001.JPG"));
-    assert_eq!(first.updated_at.as_deref(), Some("2026-02-26T01:00:00Z"));
+    assert_eq!(first.updated_at, "2026-02-26T01:00:00Z");
 
     server.join().expect("server thread");
 }

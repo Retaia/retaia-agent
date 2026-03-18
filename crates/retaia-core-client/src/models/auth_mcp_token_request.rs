@@ -12,16 +12,24 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AppFeaturesUpdateRequest {
-    /// Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` controls MCP AI-dependent capabilities (false => MCP AI-dependent functions disabled). 
-    #[serde(rename = "app_feature_enabled")]
-    pub app_feature_enabled: std::collections::HashMap<String, bool>,
+pub struct AuthMcpTokenRequest {
+    #[serde(rename = "client_id")]
+    pub client_id: String,
+    #[serde(rename = "openpgp_fingerprint")]
+    pub openpgp_fingerprint: String,
+    #[serde(rename = "challenge_id")]
+    pub challenge_id: String,
+    #[serde(rename = "signature")]
+    pub signature: String,
 }
 
-impl AppFeaturesUpdateRequest {
-    pub fn new(app_feature_enabled: std::collections::HashMap<String, bool>) -> AppFeaturesUpdateRequest {
-        AppFeaturesUpdateRequest {
-            app_feature_enabled,
+impl AuthMcpTokenRequest {
+    pub fn new(client_id: String, openpgp_fingerprint: String, challenge_id: String, signature: String) -> AuthMcpTokenRequest {
+        AuthMcpTokenRequest {
+            client_id,
+            openpgp_fingerprint,
+            challenge_id,
+            signature,
         }
     }
 }

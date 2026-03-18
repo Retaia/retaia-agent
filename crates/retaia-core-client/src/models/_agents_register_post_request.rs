@@ -20,6 +20,12 @@ pub struct AgentsRegisterPostRequest {
     pub agent_name: String,
     #[serde(rename = "agent_version")]
     pub agent_version: String,
+    /// Agent OpenPGP public key in ASCII-armored format.
+    #[serde(rename = "openpgp_public_key")]
+    pub openpgp_public_key: String,
+    /// Canonical OpenPGP fingerprint of the active agent signing key.
+    #[serde(rename = "openpgp_fingerprint")]
+    pub openpgp_fingerprint: String,
     #[serde(rename = "os_name")]
     pub os_name: OsName,
     #[serde(rename = "os_version")]
@@ -36,11 +42,13 @@ pub struct AgentsRegisterPostRequest {
 }
 
 impl AgentsRegisterPostRequest {
-    pub fn new(agent_id: uuid::Uuid, agent_name: String, agent_version: String, os_name: OsName, os_version: String, arch: Arch, capabilities: Vec<String>) -> AgentsRegisterPostRequest {
+    pub fn new(agent_id: uuid::Uuid, agent_name: String, agent_version: String, openpgp_public_key: String, openpgp_fingerprint: String, os_name: OsName, os_version: String, arch: Arch, capabilities: Vec<String>) -> AgentsRegisterPostRequest {
         AgentsRegisterPostRequest {
             agent_id,
             agent_name,
             agent_version,
+            openpgp_public_key,
+            openpgp_fingerprint,
             os_name,
             os_version,
             arch,

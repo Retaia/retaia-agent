@@ -33,17 +33,17 @@ pub trait DerivedApi: Send + Sync {
     /// POST /assets/{uuid}/derived/upload/complete
     ///
     /// 
-    async fn assets_uuid_derived_upload_complete_post<'uuid, 'idempotency_key, 'assets_uuid_derived_upload_complete_post_request>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>>;
+    async fn assets_uuid_derived_upload_complete_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_complete_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>>;
 
     /// POST /assets/{uuid}/derived/upload/init
     ///
     /// Initializes upload for one derived file. Normative media profile constraints: - `proxy_video`: `video/mp4` (H.264/AVC, browser-compatible), source framerate preserved. - `proxy_audio`: `audio/mp4` (AAC-LC) or `audio/mpeg`. - `proxy_photo` / `thumb`: `image/jpeg` or `image/webp`. - `waveform`: `application/json` (preferred) or `application/octet-stream`. 
-    async fn assets_uuid_derived_upload_init_post<'uuid, 'idempotency_key, 'assets_uuid_derived_upload_init_post_request>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>>;
+    async fn assets_uuid_derived_upload_init_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_init_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>>;
 
     /// POST /assets/{uuid}/derived/upload/part
     ///
     /// 
-    async fn assets_uuid_derived_upload_part_post<'uuid, 'assets_uuid_derived_upload_part_post_request>(&self, uuid: &'uuid str, assets_uuid_derived_upload_part_post_request: models::AssetsUuidDerivedUploadPartPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadPartPostError>>;
+    async fn assets_uuid_derived_upload_part_post<'uuid, 'if_match, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_part_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_part_post_request: models::AssetsUuidDerivedUploadPartPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadPartPostError>>;
 }
 
 pub struct DerivedApiClient {
@@ -136,7 +136,7 @@ impl DerivedApi for DerivedApiClient {
         }
     }
 
-    async fn assets_uuid_derived_upload_complete_post<'uuid, 'idempotency_key, 'assets_uuid_derived_upload_complete_post_request>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>> {
+    async fn assets_uuid_derived_upload_complete_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_complete_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -147,7 +147,13 @@ impl DerivedApi for DerivedApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Agent-Id", x_retaia_agent_id.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-OpenPGP-Fingerprint", x_retaia_open_pgp_fingerprint.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -169,7 +175,7 @@ impl DerivedApi for DerivedApiClient {
     }
 
     /// Initializes upload for one derived file. Normative media profile constraints: - `proxy_video`: `video/mp4` (H.264/AVC, browser-compatible), source framerate preserved. - `proxy_audio`: `audio/mp4` (AAC-LC) or `audio/mpeg`. - `proxy_photo` / `thumb`: `image/jpeg` or `image/webp`. - `waveform`: `application/json` (preferred) or `application/octet-stream`. 
-    async fn assets_uuid_derived_upload_init_post<'uuid, 'idempotency_key, 'assets_uuid_derived_upload_init_post_request>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>> {
+    async fn assets_uuid_derived_upload_init_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_init_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -180,7 +186,13 @@ impl DerivedApi for DerivedApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Agent-Id", x_retaia_agent_id.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-OpenPGP-Fingerprint", x_retaia_open_pgp_fingerprint.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -201,7 +213,7 @@ impl DerivedApi for DerivedApiClient {
         }
     }
 
-    async fn assets_uuid_derived_upload_part_post<'uuid, 'assets_uuid_derived_upload_part_post_request>(&self, uuid: &'uuid str, assets_uuid_derived_upload_part_post_request: models::AssetsUuidDerivedUploadPartPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadPartPostError>> {
+    async fn assets_uuid_derived_upload_part_post<'uuid, 'if_match, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_part_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_part_post_request: models::AssetsUuidDerivedUploadPartPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadPartPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -212,6 +224,12 @@ impl DerivedApi for DerivedApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Agent-Id", x_retaia_agent_id.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-OpenPGP-Fingerprint", x_retaia_open_pgp_fingerprint.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
+        local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };

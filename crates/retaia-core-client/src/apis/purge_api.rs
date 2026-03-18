@@ -23,7 +23,7 @@ pub trait PurgeApi: Send + Sync {
     /// POST /assets/{uuid}/purge
     ///
     /// 
-    async fn assets_uuid_purge_post<'uuid, 'idempotency_key, 'assets_uuid_purge_post_request>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest) -> Result<(), Error<AssetsUuidPurgePostError>>;
+    async fn assets_uuid_purge_post<'uuid, 'if_match, 'idempotency_key, 'assets_uuid_purge_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest) -> Result<(), Error<AssetsUuidPurgePostError>>;
 
     /// POST /assets/{uuid}/purge/preview
     ///
@@ -45,7 +45,7 @@ impl PurgeApiClient {
 
 #[async_trait]
 impl PurgeApi for PurgeApiClient {
-    async fn assets_uuid_purge_post<'uuid, 'idempotency_key, 'assets_uuid_purge_post_request>(&self, uuid: &'uuid str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest) -> Result<(), Error<AssetsUuidPurgePostError>> {
+    async fn assets_uuid_purge_post<'uuid, 'if_match, 'idempotency_key, 'assets_uuid_purge_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest) -> Result<(), Error<AssetsUuidPurgePostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -56,6 +56,7 @@ impl PurgeApi for PurgeApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());

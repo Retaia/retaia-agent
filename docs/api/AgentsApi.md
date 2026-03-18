@@ -10,7 +10,7 @@ Method | HTTP request | Description
 
 ## agents_register_post
 
-> models::AgentsRegisterPost200Response agents_register_post(agents_register_post_request)
+> models::AgentsRegisterPost200Response agents_register_post(x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, agents_register_post_request)
 Register a processing agent
 
 ### Parameters
@@ -18,6 +18,11 @@ Register a processing agent
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 **agents_register_post_request** | [**AgentsRegisterPostRequest**](AgentsRegisterPostRequest.md) |  | [required] |
 
 ### Return type

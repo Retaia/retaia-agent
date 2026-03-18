@@ -71,7 +71,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_derived_upload_complete_post
 
-> assets_uuid_derived_upload_complete_post(uuid, idempotency_key, assets_uuid_derived_upload_complete_post_request)
+> assets_uuid_derived_upload_complete_post(uuid, if_match, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_complete_post_request)
 Complete derived upload
 
 ### Parameters
@@ -80,7 +80,13 @@ Complete derived upload
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**if_match** | **String** |  | [required] |
 **idempotency_key** | **String** |  | [required] |
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 **assets_uuid_derived_upload_complete_post_request** | [**AssetsUuidDerivedUploadCompletePostRequest**](AssetsUuidDerivedUploadCompletePostRequest.md) |  | [required] |
 
 ### Return type
@@ -101,7 +107,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_derived_upload_init_post
 
-> assets_uuid_derived_upload_init_post(uuid, idempotency_key, assets_uuid_derived_upload_init_post_request)
+> assets_uuid_derived_upload_init_post(uuid, if_match, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_init_post_request)
 Initialize derived upload
 
 Initializes upload for one derived file. Normative media profile constraints: - `proxy_video`: `video/mp4` (H.264/AVC, browser-compatible), source framerate preserved. - `proxy_audio`: `audio/mp4` (AAC-LC) or `audio/mpeg`. - `proxy_photo` / `thumb`: `image/jpeg` or `image/webp`. - `waveform`: `application/json` (preferred) or `application/octet-stream`. 
@@ -112,7 +118,13 @@ Initializes upload for one derived file. Normative media profile constraints: - 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**if_match** | **String** |  | [required] |
 **idempotency_key** | **String** |  | [required] |
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 **assets_uuid_derived_upload_init_post_request** | [**AssetsUuidDerivedUploadInitPostRequest**](AssetsUuidDerivedUploadInitPostRequest.md) |  | [required] |
 
 ### Return type
@@ -133,7 +145,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_derived_upload_part_post
 
-> assets_uuid_derived_upload_part_post(uuid, assets_uuid_derived_upload_part_post_request)
+> assets_uuid_derived_upload_part_post(uuid, if_match, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_part_post_request)
 Upload one part
 
 ### Parameters
@@ -142,6 +154,12 @@ Upload one part
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**if_match** | **String** |  | [required] |
+**x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
+**x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
+**x_retaia_signature** | **String** |  | [required] |
+**x_retaia_signature_timestamp** | **String** |  | [required] |
+**x_retaia_signature_nonce** | **String** |  | [required] |
 **assets_uuid_derived_upload_part_post_request** | [**AssetsUuidDerivedUploadPartPostRequest**](AssetsUuidDerivedUploadPartPostRequest.md) |  | [required] |
 
 ### Return type

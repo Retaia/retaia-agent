@@ -23,8 +23,12 @@ pub struct AssetSummary {
     pub state: models::AssetState,
     #[serde(rename = "created_at")]
     pub created_at: String,
-    #[serde(rename = "updated_at", skip_serializing_if = "Option::is_none")]
-    pub updated_at: Option<String>,
+    /// Timestamp of the last accepted business mutation on this asset. Informational only; not a write precondition.
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
+    /// Strong opaque asset revision tag to be reused in `If-Match` for the next mutation. Changes on any accepted human-visible business mutation and stays stable for purely technical noise with no review/operator impact.
+    #[serde(rename = "revision_etag")]
+    pub revision_etag: String,
     #[serde(rename = "captured_at", skip_serializing_if = "Option::is_none")]
     pub captured_at: Option<String>,
     #[serde(rename = "duration", skip_serializing_if = "Option::is_none")]
@@ -38,14 +42,15 @@ pub struct AssetSummary {
 }
 
 impl AssetSummary {
-    pub fn new(uuid: String, media_type: MediaType, state: models::AssetState, created_at: String) -> AssetSummary {
+    pub fn new(uuid: String, media_type: MediaType, state: models::AssetState, created_at: String, updated_at: String, revision_etag: String) -> AssetSummary {
         AssetSummary {
             uuid,
             name: None,
             media_type,
             state,
             created_at,
-            updated_at: None,
+            updated_at,
+            revision_etag,
             captured_at: None,
             duration: None,
             tags: None,

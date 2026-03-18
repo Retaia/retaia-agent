@@ -15,6 +15,7 @@ docker run --rm \
   -i /local/specs/api/openapi/v1.yaml \
   -g rust \
   -o /local/crates/retaia-core-client \
+  --skip-validate-spec \
   --additional-properties=library=reqwest-trait,supportAsync=true,packageName=retaia_core_client,packageVersion=0.1.0
 
 rm -rf "$OUT_DIR/target" "$OUT_DIR/.travis.yml" "$OUT_DIR/git_push.sh"

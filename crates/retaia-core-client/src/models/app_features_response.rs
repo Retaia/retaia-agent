@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AppFeaturesResponse {
-    /// Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` controls MCP global availability (false => MCP disabled). 
+    /// Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` controls MCP AI-dependent capabilities (false => MCP AI-dependent functions disabled). 
     #[serde(rename = "app_feature_enabled")]
     pub app_feature_enabled: std::collections::HashMap<String, bool>,
     /// Canonical list of non-disableable v1 global core feature keys.

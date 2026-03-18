@@ -54,7 +54,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_get
 
-> models::AssetDetail assets_uuid_get(uuid)
+> assets_uuid_get(uuid)
 Get one asset detail
 
 ### Parameters
@@ -66,7 +66,7 @@ Name | Type | Description  | Required | Notes
 
 ### Return type
 
-[**models::AssetDetail**](AssetDetail.md)
+ (empty response body)
 
 ### Authorization
 
@@ -82,7 +82,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_patch
 
-> assets_uuid_patch(uuid, assets_uuid_patch_request)
+> assets_uuid_patch(uuid, if_match, assets_uuid_patch_request)
 Update one asset (metadata and lifecycle transitions)
 
 ### Parameters
@@ -91,6 +91,7 @@ Update one asset (metadata and lifecycle transitions)
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**if_match** | **String** | Strong opaque asset revision tag for optimistic concurrency on asset mutations. | [required] |
 **assets_uuid_patch_request** | [**AssetsUuidPatchRequest**](AssetsUuidPatchRequest.md) |  | [required] |
 
 ### Return type
@@ -111,7 +112,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_reprocess_post
 
-> assets_uuid_reprocess_post(uuid, idempotency_key)
+> assets_uuid_reprocess_post(uuid, if_match, idempotency_key, if_match2)
 Trigger explicit reprocess
 
 ### Parameters
@@ -120,7 +121,9 @@ Trigger explicit reprocess
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**if_match** | **String** |  | [required] |
 **idempotency_key** | **String** |  | [required] |
+**if_match2** | **String** | Strong opaque asset revision tag for optimistic concurrency on asset mutations. | [required] |
 
 ### Return type
 
