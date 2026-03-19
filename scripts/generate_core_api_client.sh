@@ -8,14 +8,31 @@ DOCS_OUT_DIR="$ROOT_DIR/docs/api"
 rm -rf "$OUT_DIR"
 rm -rf "$DOCS_OUT_DIR"/*.md
 
-docker run --rm \
-  -u "$(id -u):$(id -g)" \
-  -v "$ROOT_DIR:/local" \
-  openapitools/openapi-generator-cli generate \
-  -i /local/specs/api/openapi/v1.yaml \
-  -g rust \
-  -o /local/crates/retaia-core-client \
-  --additional-properties=library=reqwest-trait,supportAsync=true,packageName=retaia_core_client,packageVersion=0.1.0
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$ROOT_DIR:/local" \
+    openapitools/openapi-generator-cli validate \
+    -i /local/specs/api/openapi/v1.yaml
+
+  docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$ROOT_DIR:/local" \
+    openapitools/openapi-generator-cli generate \
+    -i /local/specs/api/openapi/v1.yaml \
+    -g rust \
+    -o /local/crates/retaia-core-client \
+    --additional-properties=library=reqwest-trait,supportAsync=true,packageName=retaia_core_client,packageVersion=0.1.0
+else
+  npx -y @openapitools/openapi-generator-cli validate \
+    -i "$ROOT_DIR/specs/api/openapi/v1.yaml"
+
+  npx -y @openapitools/openapi-generator-cli generate \
+    -i "$ROOT_DIR/specs/api/openapi/v1.yaml" \
+    -g rust \
+    -o "$OUT_DIR" \
+    --additional-properties=library=reqwest-trait,supportAsync=true,packageName=retaia_core_client,packageVersion=0.1.0
+fi
 
 rm -rf "$OUT_DIR/target" "$OUT_DIR/.travis.yml" "$OUT_DIR/git_push.sh"
 mkdir -p "$DOCS_OUT_DIR"

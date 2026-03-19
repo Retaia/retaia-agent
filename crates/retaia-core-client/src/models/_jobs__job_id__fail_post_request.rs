@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 pub struct JobsJobIdFailPostRequest {
     #[serde(rename = "lock_token")]
     pub lock_token: String,
+    #[serde(rename = "fencing_token")]
+    pub fencing_token: i32,
     #[serde(rename = "error_code")]
     pub error_code: String,
     #[serde(rename = "message", skip_serializing_if = "Option::is_none")]
@@ -24,9 +26,10 @@ pub struct JobsJobIdFailPostRequest {
 }
 
 impl JobsJobIdFailPostRequest {
-    pub fn new(lock_token: String, error_code: String, retryable: bool) -> JobsJobIdFailPostRequest {
+    pub fn new(lock_token: String, fencing_token: i32, error_code: String, retryable: bool) -> JobsJobIdFailPostRequest {
         JobsJobIdFailPostRequest {
             lock_token,
+            fencing_token,
             error_code,
             message: None,
             retryable,

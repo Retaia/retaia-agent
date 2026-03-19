@@ -22,15 +22,23 @@ pub struct AuthDevicePollApproved {
     /// One-shot credential shown only once after approval.
     #[serde(rename = "secret_key")]
     pub secret_key: String,
+    /// Timestamp of the human approval performed in UI_WEB.
+    #[serde(rename = "approved_at")]
+    pub approved_at: String,
+    /// Audit identifier of the human approver in UI_WEB.
+    #[serde(rename = "approved_by_user_id")]
+    pub approved_by_user_id: uuid::Uuid,
 }
 
 impl AuthDevicePollApproved {
-    pub fn new(status: Status, client_id: String, client_kind: models::NonUiClientKind, secret_key: String) -> AuthDevicePollApproved {
+    pub fn new(status: Status, client_id: String, client_kind: models::NonUiClientKind, secret_key: String, approved_at: String, approved_by_user_id: uuid::Uuid) -> AuthDevicePollApproved {
         AuthDevicePollApproved {
             status,
             client_id,
             client_kind,
             secret_key,
+            approved_at,
+            approved_by_user_id,
         }
     }
 }

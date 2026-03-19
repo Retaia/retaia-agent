@@ -13,20 +13,20 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AssetDecisionsHistoryInner {
-    #[serde(rename = "action", skip_serializing_if = "Option::is_none")]
-    pub action: Option<Action>,
-    #[serde(rename = "at", skip_serializing_if = "Option::is_none")]
-    pub at: Option<String>,
-    #[serde(rename = "by", skip_serializing_if = "Option::is_none")]
-    pub by: Option<String>,
+    #[serde(rename = "action")]
+    pub action: Action,
+    #[serde(rename = "at")]
+    pub at: String,
+    #[serde(rename = "by")]
+    pub by: String,
 }
 
 impl AssetDecisionsHistoryInner {
-    pub fn new() -> AssetDecisionsHistoryInner {
+    pub fn new(action: Action, at: String, by: String) -> AssetDecisionsHistoryInner {
         AssetDecisionsHistoryInner {
-            action: None,
-            at: None,
-            by: None,
+            action,
+            at,
+            by,
         }
     }
 }

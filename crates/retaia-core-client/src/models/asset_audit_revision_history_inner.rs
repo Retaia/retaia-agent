@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 pub struct AssetAuditRevisionHistoryInner {
     #[serde(rename = "revision")]
     pub revision: i32,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
     #[serde(rename = "is_current")]
     pub is_current: bool,
     #[serde(rename = "published_at", skip_serializing_if = "Option::is_none")]
@@ -24,9 +26,10 @@ pub struct AssetAuditRevisionHistoryInner {
 }
 
 impl AssetAuditRevisionHistoryInner {
-    pub fn new(revision: i32, is_current: bool, validation_status: ValidationStatus) -> AssetAuditRevisionHistoryInner {
+    pub fn new(revision: i32, created_at: String, is_current: bool, validation_status: ValidationStatus) -> AssetAuditRevisionHistoryInner {
         AssetAuditRevisionHistoryInner {
             revision,
+            created_at,
             is_current,
             published_at: None,
             validation_status,

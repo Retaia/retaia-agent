@@ -23,7 +23,7 @@ pub trait AgentsApi: Send + Sync {
     /// POST /agents/register
     ///
     /// 
-    async fn agents_register_post<'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'agents_register_post_request>(&self, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, agents_register_post_request: models::AgentsRegisterPostRequest) -> Result<models::AgentsRegisterPost200Response, Error<AgentsRegisterPostError>>;
+    async fn agents_register_post<'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'agents_register_post_request, 'accept_language>(&self, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, agents_register_post_request: models::AgentsRegisterPostRequest, accept_language: Option<&'accept_language str>) -> Result<models::AgentsRegisterPost200Response, Error<AgentsRegisterPostError>>;
 }
 
 pub struct AgentsApiClient {
@@ -40,7 +40,7 @@ impl AgentsApiClient {
 
 #[async_trait]
 impl AgentsApi for AgentsApiClient {
-    async fn agents_register_post<'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'agents_register_post_request>(&self, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, agents_register_post_request: models::AgentsRegisterPostRequest) -> Result<models::AgentsRegisterPost200Response, Error<AgentsRegisterPostError>> {
+    async fn agents_register_post<'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'agents_register_post_request, 'accept_language>(&self, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, agents_register_post_request: models::AgentsRegisterPostRequest, accept_language: Option<&'accept_language str>) -> Result<models::AgentsRegisterPost200Response, Error<AgentsRegisterPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -56,6 +56,9 @@ impl AgentsApi for AgentsApiClient {
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };

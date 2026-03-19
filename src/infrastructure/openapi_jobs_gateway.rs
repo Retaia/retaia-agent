@@ -38,7 +38,7 @@ impl CoreApiGateway for OpenApiJobsGateway {
             .map_err(|error| CoreApiGatewayError::Transport(error.to_string()))?;
 
         let jobs = runtime
-            .block_on(api.jobs_get())
+            .block_on(api.jobs_get(None))
             .map_err(map_openapi_jobs_error)?;
 
         Ok(jobs

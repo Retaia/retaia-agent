@@ -23,7 +23,7 @@ pub trait DecisionsApi: Send + Sync {
     /// POST /assets/{uuid}/reopen
     ///
     /// 
-    async fn assets_uuid_reopen_post<'uuid, 'if_match>(&self, uuid: &'uuid str, if_match: &'if_match str) -> Result<(), Error<AssetsUuidReopenPostError>>;
+    async fn assets_uuid_reopen_post<'uuid, 'if_match, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidReopenPostError>>;
 }
 
 pub struct DecisionsApiClient {
@@ -40,7 +40,7 @@ impl DecisionsApiClient {
 
 #[async_trait]
 impl DecisionsApi for DecisionsApiClient {
-    async fn assets_uuid_reopen_post<'uuid, 'if_match>(&self, uuid: &'uuid str, if_match: &'if_match str) -> Result<(), Error<AssetsUuidReopenPostError>> {
+    async fn assets_uuid_reopen_post<'uuid, 'if_match, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidReopenPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -52,6 +52,9 @@ impl DecisionsApi for DecisionsApiClient {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
         local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };

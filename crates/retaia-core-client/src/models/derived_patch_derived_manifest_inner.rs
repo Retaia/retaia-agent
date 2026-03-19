@@ -36,12 +36,12 @@ impl DerivedPatchDerivedManifestInner {
 /// 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum Kind {
-    #[serde(rename = "proxy_video")]
-    ProxyVideo,
-    #[serde(rename = "proxy_audio")]
-    ProxyAudio,
-    #[serde(rename = "proxy_photo")]
-    ProxyPhoto,
+    #[serde(rename = "preview_video")]
+    PreviewVideo,
+    #[serde(rename = "preview_audio")]
+    PreviewAudio,
+    #[serde(rename = "preview_photo")]
+    PreviewPhoto,
     #[serde(rename = "thumb")]
     Thumb,
     #[serde(rename = "waveform")]
@@ -50,7 +50,7 @@ pub enum Kind {
 
 impl Default for Kind {
     fn default() -> Kind {
-        Self::ProxyVideo
+        Self::PreviewVideo
     }
 }
 

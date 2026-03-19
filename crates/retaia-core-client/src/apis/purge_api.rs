@@ -20,15 +20,20 @@ use crate::apis::ContentType;
 #[async_trait]
 pub trait PurgeApi: Send + Sync {
 
+    /// POST /assets/purge
+    ///
+    /// 
+    async fn assets_purge_post<'idempotency_key, 'assets_purge_post_request, 'accept_language>(&self, idempotency_key: &'idempotency_key str, assets_purge_post_request: models::AssetsPurgePostRequest, accept_language: Option<&'accept_language str>) -> Result<models::AssetsPurgePost200Response, Error<AssetsPurgePostError>>;
+
     /// POST /assets/{uuid}/purge
     ///
     /// 
-    async fn assets_uuid_purge_post<'uuid, 'if_match, 'idempotency_key, 'assets_uuid_purge_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest) -> Result<(), Error<AssetsUuidPurgePostError>>;
+    async fn assets_uuid_purge_post<'uuid, 'if_match, 'idempotency_key, 'assets_uuid_purge_post_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidPurgePostError>>;
 
     /// POST /assets/{uuid}/purge/preview
     ///
     /// 
-    async fn assets_uuid_purge_preview_post<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidPurgePreviewPostError>>;
+    async fn assets_uuid_purge_preview_post<'uuid, 'accept_language>(&self, uuid: &'uuid str, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidPurgePreviewPostError>>;
 }
 
 pub struct PurgeApiClient {
@@ -45,7 +50,52 @@ impl PurgeApiClient {
 
 #[async_trait]
 impl PurgeApi for PurgeApiClient {
-    async fn assets_uuid_purge_post<'uuid, 'if_match, 'idempotency_key, 'assets_uuid_purge_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest) -> Result<(), Error<AssetsUuidPurgePostError>> {
+    async fn assets_purge_post<'idempotency_key, 'assets_purge_post_request, 'accept_language>(&self, idempotency_key: &'idempotency_key str, assets_purge_post_request: models::AssetsPurgePostRequest, accept_language: Option<&'accept_language str>) -> Result<models::AssetsPurgePost200Response, Error<AssetsPurgePostError>> {
+        let local_var_configuration = &self.configuration;
+
+        let local_var_client = &local_var_configuration.client;
+
+        let local_var_uri_str = format!("{}/assets/purge", local_var_configuration.base_path);
+        let mut local_var_req_builder = local_var_client.request(reqwest::Method::POST, local_var_uri_str.as_str());
+
+        if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
+            local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
+        if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
+            local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
+        };
+        local_var_req_builder = local_var_req_builder.json(&assets_purge_post_request);
+
+        let local_var_req = local_var_req_builder.build()?;
+        let local_var_resp = local_var_client.execute(local_var_req).await?;
+
+        let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
+        let local_var_content = local_var_resp.text().await?;
+
+        if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AssetsPurgePost200Response`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AssetsPurgePost200Response`")))),
+            }
+        } else {
+            let local_var_entity: Option<AssetsPurgePostError> = serde_json::from_str(&local_var_content).ok();
+            let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
+            Err(Error::ResponseError(local_var_error))
+        }
+    }
+
+    async fn assets_uuid_purge_post<'uuid, 'if_match, 'idempotency_key, 'assets_uuid_purge_post_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, assets_uuid_purge_post_request: models::AssetsUuidPurgePostRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidPurgePostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -58,6 +108,9 @@ impl PurgeApi for PurgeApiClient {
         }
         local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -78,7 +131,7 @@ impl PurgeApi for PurgeApiClient {
         }
     }
 
-    async fn assets_uuid_purge_preview_post<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidPurgePreviewPostError>> {
+    async fn assets_uuid_purge_preview_post<'uuid, 'accept_language>(&self, uuid: &'uuid str, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidPurgePreviewPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -88,6 +141,9 @@ impl PurgeApi for PurgeApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -108,6 +164,15 @@ impl PurgeApi for PurgeApiClient {
         }
     }
 
+}
+
+/// struct for typed errors of method [`PurgeApi::assets_purge_post`]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AssetsPurgePostError {
+    Status401(models::ErrorResponse),
+    Status409(models::ErrorResponse),
+    UnknownValue(serde_json::Value),
 }
 
 /// struct for typed errors of method [`PurgeApi::assets_uuid_purge_post`]

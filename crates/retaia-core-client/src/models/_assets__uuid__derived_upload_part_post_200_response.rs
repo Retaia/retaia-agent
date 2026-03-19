@@ -12,18 +12,15 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AuthMcpChallengeRequest {
-    #[serde(rename = "client_id")]
-    pub client_id: String,
-    #[serde(rename = "openpgp_fingerprint")]
-    pub openpgp_fingerprint: String,
+pub struct AssetsUuidDerivedUploadPartPost200Response {
+    #[serde(rename = "part_etag")]
+    pub part_etag: String,
 }
 
-impl AuthMcpChallengeRequest {
-    pub fn new(client_id: String, openpgp_fingerprint: String) -> AuthMcpChallengeRequest {
-        AuthMcpChallengeRequest {
-            client_id,
-            openpgp_fingerprint,
+impl AssetsUuidDerivedUploadPartPost200Response {
+    pub fn new(part_etag: String) -> AssetsUuidDerivedUploadPartPost200Response {
+        AssetsUuidDerivedUploadPartPost200Response {
+            part_etag,
         }
     }
 }

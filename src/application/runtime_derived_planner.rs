@@ -74,6 +74,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
                 asset_uuid: claimed.asset_uuid.clone(),
                 upload_id: upload_id.clone(),
                 part_number: 1,
+                chunk_path: source_path.to_path_buf(),
             }],
             complete: DerivedUploadComplete {
                 asset_uuid: claimed.asset_uuid.clone(),

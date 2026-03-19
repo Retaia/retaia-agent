@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::application::derived_processing_gateway::{
     ClaimedDerivedJob, DerivedJobType, DerivedManifestItem, DerivedProcessingError,
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload, validate_derived_upload_init,
+    HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart, validate_derived_upload_init,
 };
 
 #[cfg(feature = "core-api-client")]
@@ -62,18 +62,23 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 PLACEHOLDER_SIGNATURE,
                 signature_timestamp_rfc3339_utc(),
                 &signature_nonce(),
+                None,
             ))
             .map_err(map_claim_error)?;
 
         let lock_token = job
             .lock_token
             .ok_or(DerivedProcessingError::MissingLockToken)?;
+        let fencing_token = job
+            .fencing_token
+            .ok_or(DerivedProcessingError::MissingFencingToken)?;
         let job_type = map_job_type(job.job_type)?;
 
         Ok(ClaimedDerivedJob {
             job_id: job.job_id,
             asset_uuid: job.asset_uuid,
             lock_token,
+            fencing_token,
             job_type,
             source_storage_id: job.source.storage_id.clone(),
             source_original_relative: job.source.original_relative.clone(),
@@ -85,6 +90,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         &self,
         job_id: &str,
         lock_token: &str,
+        fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         let api = JobsApiClient::new(Arc::new(self.configuration.clone()));
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -92,7 +98,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             .build()
             .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
-        let request = models::JobsJobIdHeartbeatPostRequest::new(lock_token.to_string());
+        let request =
+            models::JobsJobIdHeartbeatPostRequest::new(lock_token.to_string(), fencing_token);
         let response = runtime
             .block_on(api.jobs_job_id_heartbeat_post(
                 job_id,
@@ -102,11 +109,13 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 signature_timestamp_rfc3339_utc(),
                 &signature_nonce(),
                 request,
+                None,
             ))
             .map_err(map_heartbeat_error)?;
 
         Ok(HeartbeatReceipt {
-            locked_until: response.locked_until,
+            locked_until: Some(response.locked_until),
+            fencing_token: response.fencing_token,
         })
     }
 
@@ -114,6 +123,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         &self,
         job_id: &str,
         lock_token: &str,
+        fencing_token: i32,
         idempotency_key: &str,
         payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -129,6 +139,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             result.metrics = payload.metrics.clone();
             let submit = models::SubmitExtractFacts::new(
                 lock_token.to_string(),
+                fencing_token,
                 models::submit_extract_facts::JobType::ExtractFacts,
                 result,
             );
@@ -142,6 +153,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                     signature_timestamp_rfc3339_utc(),
                     &signature_nonce(),
                     models::JobSubmitRequest::SubmitExtractFacts(Box::new(submit)),
+                    None,
                 ))
                 .map_err(map_submit_error);
         }
@@ -153,6 +165,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
 
         let submit = models::SubmitDerived::new(
             lock_token.to_string(),
+            fencing_token,
             map_submit_job_type(payload.job_type),
             result,
         );
@@ -167,6 +180,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 signature_timestamp_rfc3339_utc(),
                 &signature_nonce(),
                 models::JobSubmitRequest::SubmitDerived(Box::new(submit)),
+                None,
             ))
             .map_err(map_submit_error)
     }
@@ -202,11 +216,15 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 signature_timestamp_rfc3339_utc(),
                 &signature_nonce(),
                 payload,
+                None,
             ))
             .map_err(map_upload_init_error)
     }
 
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         let api = DerivedApiClient::new(Arc::new(self.configuration.clone()));
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -217,12 +235,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             DerivedProcessingError::NumericOverflow("part_number > i32::MAX".to_string())
         })?;
 
-        let payload = models::AssetsUuidDerivedUploadPartPostRequest::new(
-            request.upload_id.clone(),
-            part_number,
-        );
-
-        runtime
+        let response = runtime
             .block_on(api.assets_uuid_derived_upload_part_post(
                 &request.asset_uuid,
                 PLACEHOLDER_IF_MATCH,
@@ -231,9 +244,17 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 PLACEHOLDER_SIGNATURE,
                 signature_timestamp_rfc3339_utc(),
                 &signature_nonce(),
-                payload,
+                &request.upload_id,
+                part_number,
+                request.chunk_path.clone(),
+                None,
             ))
-            .map_err(map_upload_part_error)
+            .map_err(map_upload_part_error)?;
+
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: response.part_etag,
+        })
     }
 
     fn upload_complete(
@@ -248,7 +269,16 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
 
         let mut payload =
             models::AssetsUuidDerivedUploadCompletePostRequest::new(request.upload_id.clone());
-        payload.parts = request.parts.clone();
+        payload.parts = request.parts.as_ref().map(|parts| {
+            parts.iter()
+                .map(|part| {
+                    models::AssetsUuidDerivedUploadCompletePostRequestPartsInner::new(
+                        i32::try_from(part.part_number).unwrap_or(i32::MAX),
+                        part.part_etag.clone(),
+                    )
+                })
+                .collect()
+        });
 
         runtime
             .block_on(api.assets_uuid_derived_upload_complete_post(
@@ -261,6 +291,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 signature_timestamp_rfc3339_utc(),
                 &signature_nonce(),
                 payload,
+                None,
             ))
             .map_err(map_upload_complete_error)
     }
@@ -280,7 +311,7 @@ fn signature_timestamp_rfc3339_utc() -> String {
 fn map_job_type(job_type: models::job::JobType) -> Result<DerivedJobType, DerivedProcessingError> {
     match job_type {
         models::job::JobType::ExtractFacts => Ok(DerivedJobType::ExtractFacts),
-        models::job::JobType::GenerateProxy => Ok(DerivedJobType::GenerateProxy),
+        models::job::JobType::GeneratePreview => Ok(DerivedJobType::GenerateProxy),
         models::job::JobType::GenerateThumbnails => Ok(DerivedJobType::GenerateThumbnails),
         models::job::JobType::GenerateAudioWaveform => Ok(DerivedJobType::GenerateAudioWaveform),
     }
@@ -292,7 +323,7 @@ fn map_submit_job_type(job_type: DerivedJobType) -> models::submit_derived::JobT
         DerivedJobType::ExtractFacts => {
             unreachable!("extract_facts must be submitted via SubmitExtractFacts")
         }
-        DerivedJobType::GenerateProxy => models::submit_derived::JobType::GenerateProxy,
+        DerivedJobType::GenerateProxy => models::submit_derived::JobType::GeneratePreview,
         DerivedJobType::GenerateThumbnails => models::submit_derived::JobType::GenerateThumbnails,
         DerivedJobType::GenerateAudioWaveform => {
             models::submit_derived::JobType::GenerateAudioWaveform
@@ -306,13 +337,13 @@ fn map_upload_kind(
 ) -> models::_assets__uuid__derived_upload_init_post_request::Kind {
     match kind {
         crate::application::derived_processing_gateway::DerivedKind::ProxyVideo => {
-            models::_assets__uuid__derived_upload_init_post_request::Kind::ProxyVideo
+            models::_assets__uuid__derived_upload_init_post_request::Kind::PreviewVideo
         }
         crate::application::derived_processing_gateway::DerivedKind::ProxyAudio => {
-            models::_assets__uuid__derived_upload_init_post_request::Kind::ProxyAudio
+            models::_assets__uuid__derived_upload_init_post_request::Kind::PreviewAudio
         }
         crate::application::derived_processing_gateway::DerivedKind::ProxyPhoto => {
-            models::_assets__uuid__derived_upload_init_post_request::Kind::ProxyPhoto
+            models::_assets__uuid__derived_upload_init_post_request::Kind::PreviewPhoto
         }
         crate::application::derived_processing_gateway::DerivedKind::Thumb => {
             models::_assets__uuid__derived_upload_init_post_request::Kind::Thumb
@@ -334,13 +365,13 @@ fn build_derived_patch(
         let mut mapped = models::DerivedPatchDerivedManifestInner::new(
             match item.kind {
                 crate::application::derived_processing_gateway::DerivedKind::ProxyVideo => {
-                    models::derived_patch_derived_manifest_inner::Kind::ProxyVideo
+                    models::derived_patch_derived_manifest_inner::Kind::PreviewVideo
                 }
                 crate::application::derived_processing_gateway::DerivedKind::ProxyAudio => {
-                    models::derived_patch_derived_manifest_inner::Kind::ProxyAudio
+                    models::derived_patch_derived_manifest_inner::Kind::PreviewAudio
                 }
                 crate::application::derived_processing_gateway::DerivedKind::ProxyPhoto => {
-                    models::derived_patch_derived_manifest_inner::Kind::ProxyPhoto
+                    models::derived_patch_derived_manifest_inner::Kind::PreviewPhoto
                 }
                 crate::application::derived_processing_gateway::DerivedKind::Thumb => {
                     models::derived_patch_derived_manifest_inner::Kind::Thumb

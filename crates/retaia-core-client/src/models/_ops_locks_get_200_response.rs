@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 pub struct OpsLocksGet200Response {
     #[serde(rename = "items")]
     pub items: Vec<models::OpsLocksGet200ResponseItemsInner>,
-    /// Total count after filters, before pagination.
+    /// Total count after filters, before pagination. Items are returned by canonical default order `acquired_at DESC`.
     #[serde(rename = "total")]
     pub total: i32,
 }

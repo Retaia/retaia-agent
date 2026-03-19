@@ -23,22 +23,22 @@ pub trait AssetsApi: Send + Sync {
     /// GET /assets
     ///
     /// 
-    async fn assets_get<'state, 'media_type, 'tags, 'has_proxy, 'tags_mode, 'q, 'location_country, 'location_city, 'geo_bbox, 'sort, 'captured_at_from, 'captured_at_to, 'limit, 'cursor>(&self, state: Option<models::AssetState>, media_type: Option<&'media_type str>, tags: Option<&'tags str>, has_proxy: Option<bool>, tags_mode: Option<&'tags_mode str>, q: Option<&'q str>, location_country: Option<&'location_country str>, location_city: Option<&'location_city str>, geo_bbox: Option<&'geo_bbox str>, sort: Option<&'sort str>, captured_at_from: Option<String>, captured_at_to: Option<String>, limit: Option<i32>, cursor: Option<&'cursor str>) -> Result<models::AssetsGet200Response, Error<AssetsGetError>>;
+    async fn assets_get<'state, 'media_type, 'tags, 'has_preview, 'tags_mode, 'q, 'location_country, 'location_city, 'geo_bbox, 'sort, 'captured_at_from, 'captured_at_to, 'limit, 'cursor, 'accept_language>(&self, state: Option<Vec<models::AssetState>>, media_type: Option<&'media_type str>, tags: Option<Vec<String>>, has_preview: Option<bool>, tags_mode: Option<&'tags_mode str>, q: Option<&'q str>, location_country: Option<&'location_country str>, location_city: Option<&'location_city str>, geo_bbox: Option<&'geo_bbox str>, sort: Option<&'sort str>, captured_at_from: Option<String>, captured_at_to: Option<String>, limit: Option<i32>, cursor: Option<&'cursor str>, accept_language: Option<&'accept_language str>) -> Result<models::AssetsGet200Response, Error<AssetsGetError>>;
 
     /// GET /assets/{uuid}
     ///
     /// 
-    async fn assets_uuid_get<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidGetError>>;
+    async fn assets_uuid_get<'uuid, 'accept_language>(&self, uuid: &'uuid str, accept_language: Option<&'accept_language str>) -> Result<models::AssetDetail, Error<AssetsUuidGetError>>;
 
     /// PATCH /assets/{uuid}
     ///
-    /// 
-    async fn assets_uuid_patch<'uuid, 'if_match, 'assets_uuid_patch_request>(&self, uuid: &'uuid str, if_match: &'if_match str, assets_uuid_patch_request: models::AssetsUuidPatchRequest) -> Result<(), Error<AssetsUuidPatchError>>;
+    /// Partial human mutation. Only the provided fields are updated; omitted fields stay unchanged. 
+    async fn assets_uuid_patch<'uuid, 'if_match, 'assets_uuid_patch_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, assets_uuid_patch_request: models::AssetsUuidPatchRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidPatchError>>;
 
     /// POST /assets/{uuid}/reprocess
     ///
     /// 
-    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>>;
+    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidReprocessPostError>>;
 }
 
 pub struct AssetsApiClient {
@@ -55,7 +55,7 @@ impl AssetsApiClient {
 
 #[async_trait]
 impl AssetsApi for AssetsApiClient {
-    async fn assets_get<'state, 'media_type, 'tags, 'has_proxy, 'tags_mode, 'q, 'location_country, 'location_city, 'geo_bbox, 'sort, 'captured_at_from, 'captured_at_to, 'limit, 'cursor>(&self, state: Option<models::AssetState>, media_type: Option<&'media_type str>, tags: Option<&'tags str>, has_proxy: Option<bool>, tags_mode: Option<&'tags_mode str>, q: Option<&'q str>, location_country: Option<&'location_country str>, location_city: Option<&'location_city str>, geo_bbox: Option<&'geo_bbox str>, sort: Option<&'sort str>, captured_at_from: Option<String>, captured_at_to: Option<String>, limit: Option<i32>, cursor: Option<&'cursor str>) -> Result<models::AssetsGet200Response, Error<AssetsGetError>> {
+    async fn assets_get<'state, 'media_type, 'tags, 'has_preview, 'tags_mode, 'q, 'location_country, 'location_city, 'geo_bbox, 'sort, 'captured_at_from, 'captured_at_to, 'limit, 'cursor, 'accept_language>(&self, state: Option<Vec<models::AssetState>>, media_type: Option<&'media_type str>, tags: Option<Vec<String>>, has_preview: Option<bool>, tags_mode: Option<&'tags_mode str>, q: Option<&'q str>, location_country: Option<&'location_country str>, location_city: Option<&'location_city str>, geo_bbox: Option<&'geo_bbox str>, sort: Option<&'sort str>, captured_at_from: Option<String>, captured_at_to: Option<String>, limit: Option<i32>, cursor: Option<&'cursor str>, accept_language: Option<&'accept_language str>) -> Result<models::AssetsGet200Response, Error<AssetsGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -64,16 +64,22 @@ impl AssetsApi for AssetsApiClient {
         let mut local_var_req_builder = local_var_client.request(reqwest::Method::GET, local_var_uri_str.as_str());
 
         if let Some(ref param_value) = state {
-            local_var_req_builder = local_var_req_builder.query(&[("state", &param_value.to_string())]);
+            local_var_req_builder = match "csv" {
+                "multi" => local_var_req_builder.query(&param_value.into_iter().map(|p| ("state".to_owned(), p.to_string())).collect::<Vec<(std::string::String, std::string::String)>>()),
+                _ => local_var_req_builder.query(&[("state", &param_value.into_iter().map(|p| p.to_string()).collect::<Vec<String>>().join(",").to_string())]),
+            };
         }
         if let Some(ref param_value) = media_type {
             local_var_req_builder = local_var_req_builder.query(&[("media_type", &param_value.to_string())]);
         }
         if let Some(ref param_value) = tags {
-            local_var_req_builder = local_var_req_builder.query(&[("tags", &param_value.to_string())]);
+            local_var_req_builder = match "csv" {
+                "multi" => local_var_req_builder.query(&param_value.into_iter().map(|p| ("tags".to_owned(), p.to_string())).collect::<Vec<(std::string::String, std::string::String)>>()),
+                _ => local_var_req_builder.query(&[("tags", &param_value.into_iter().map(|p| p.to_string()).collect::<Vec<String>>().join(",").to_string())]),
+            };
         }
-        if let Some(ref param_value) = has_proxy {
-            local_var_req_builder = local_var_req_builder.query(&[("has_proxy", &param_value.to_string())]);
+        if let Some(ref param_value) = has_preview {
+            local_var_req_builder = local_var_req_builder.query(&[("has_preview", &param_value.to_string())]);
         }
         if let Some(ref param_value) = tags_mode {
             local_var_req_builder = local_var_req_builder.query(&[("tags_mode", &param_value.to_string())]);
@@ -108,6 +114,9 @@ impl AssetsApi for AssetsApiClient {
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -140,7 +149,7 @@ impl AssetsApi for AssetsApiClient {
         }
     }
 
-    async fn assets_uuid_get<'uuid>(&self, uuid: &'uuid str) -> Result<(), Error<AssetsUuidGetError>> {
+    async fn assets_uuid_get<'uuid, 'accept_language>(&self, uuid: &'uuid str, accept_language: Option<&'accept_language str>) -> Result<models::AssetDetail, Error<AssetsUuidGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -150,6 +159,9 @@ impl AssetsApi for AssetsApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -162,10 +174,20 @@ impl AssetsApi for AssetsApiClient {
         let local_var_resp = local_var_client.execute(local_var_req).await?;
 
         let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
         let local_var_content = local_var_resp.text().await?;
 
         if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-            Ok(())
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AssetDetail`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AssetDetail`")))),
+            }
         } else {
             let local_var_entity: Option<AssetsUuidGetError> = serde_json::from_str(&local_var_content).ok();
             let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
@@ -173,7 +195,8 @@ impl AssetsApi for AssetsApiClient {
         }
     }
 
-    async fn assets_uuid_patch<'uuid, 'if_match, 'assets_uuid_patch_request>(&self, uuid: &'uuid str, if_match: &'if_match str, assets_uuid_patch_request: models::AssetsUuidPatchRequest) -> Result<(), Error<AssetsUuidPatchError>> {
+    /// Partial human mutation. Only the provided fields are updated; omitted fields stay unchanged. 
+    async fn assets_uuid_patch<'uuid, 'if_match, 'assets_uuid_patch_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, assets_uuid_patch_request: models::AssetsUuidPatchRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidPatchError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -185,6 +208,9 @@ impl AssetsApi for AssetsApiClient {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
         }
         local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -205,7 +231,7 @@ impl AssetsApi for AssetsApiClient {
         }
     }
 
-    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str) -> Result<(), Error<AssetsUuidReprocessPostError>> {
+    async fn assets_uuid_reprocess_post<'uuid, 'if_match, 'idempotency_key, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidReprocessPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -218,6 +244,9 @@ impl AssetsApi for AssetsApiClient {
         }
         local_var_req_builder = local_var_req_builder.header("If-Match", if_match.to_string());
         local_var_req_builder = local_var_req_builder.header("Idempotency-Key", idempotency_key.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };

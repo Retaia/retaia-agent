@@ -13,15 +13,19 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AssetDerived {
-    #[serde(rename = "proxy_video_url", skip_serializing_if = "Option::is_none")]
-    pub proxy_video_url: Option<String>,
-    #[serde(rename = "proxy_audio_url", skip_serializing_if = "Option::is_none")]
-    pub proxy_audio_url: Option<String>,
-    #[serde(rename = "proxy_photo_url", skip_serializing_if = "Option::is_none")]
-    pub proxy_photo_url: Option<String>,
-    /// Required for any asset with an exploitable audio track once state progresses beyond READY. If `media_type=AUDIO` or facts reveal an exploitable audio track, this field MUST be present in all business states beyond READY. UI local fallback may exist for degraded playback UX but never replaces the required server/agent-derived waveform. 
+    /// Stable Core URL for the current video preview. Served directly by Core in v1.
+    #[serde(rename = "preview_video_url", skip_serializing_if = "Option::is_none")]
+    pub preview_video_url: Option<String>,
+    /// Stable Core URL for the current audio preview. Served directly by Core in v1.
+    #[serde(rename = "preview_audio_url", skip_serializing_if = "Option::is_none")]
+    pub preview_audio_url: Option<String>,
+    /// Stable Core URL for the current photo preview. Served directly by Core in v1.
+    #[serde(rename = "preview_photo_url", skip_serializing_if = "Option::is_none")]
+    pub preview_photo_url: Option<String>,
+    /// Stable Core URL for the current waveform payload. Required when the effective processing profile requires waveform data beyond READY.
     #[serde(rename = "waveform_url", skip_serializing_if = "Option::is_none")]
     pub waveform_url: Option<String>,
+    /// Video-only thumbnails.
     #[serde(rename = "thumbs", skip_serializing_if = "Option::is_none")]
     pub thumbs: Option<Vec<String>>,
 }
@@ -29,9 +33,9 @@ pub struct AssetDerived {
 impl AssetDerived {
     pub fn new() -> AssetDerived {
         AssetDerived {
-            proxy_video_url: None,
-            proxy_audio_url: None,
-            proxy_photo_url: None,
+            preview_video_url: None,
+            preview_audio_url: None,
+            preview_photo_url: None,
             waveform_url: None,
             thumbs: None,
         }

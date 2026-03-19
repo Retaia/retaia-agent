@@ -23,27 +23,27 @@ pub trait DerivedApi: Send + Sync {
     /// GET /assets/{uuid}/derived
     ///
     /// 
-    async fn assets_uuid_derived_get<'uuid>(&self, uuid: &'uuid str) -> Result<std::collections::HashMap<String, serde_json::Value>, Error<AssetsUuidDerivedGetError>>;
+    async fn assets_uuid_derived_get<'uuid, 'accept_language>(&self, uuid: &'uuid str, accept_language: Option<&'accept_language str>) -> Result<models::AssetDerived, Error<AssetsUuidDerivedGetError>>;
 
     /// GET /assets/{uuid}/derived/{kind}
     ///
-    /// 
-    async fn assets_uuid_derived_kind_get<'uuid, 'kind>(&self, uuid: &'uuid str, kind: &'kind str) -> Result<(), Error<AssetsUuidDerivedKindGetError>>;
+    /// Direct Core byte delivery for the current derived file. No redirect response is part of the v1 contract.
+    async fn assets_uuid_derived_kind_get<'uuid, 'kind, 'range, 'accept_language>(&self, uuid: &'uuid str, kind: &'kind str, range: Option<&'range str>, accept_language: Option<&'accept_language str>) -> Result<std::path::PathBuf, Error<AssetsUuidDerivedKindGetError>>;
 
     /// POST /assets/{uuid}/derived/upload/complete
     ///
     /// 
-    async fn assets_uuid_derived_upload_complete_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_complete_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>>;
+    async fn assets_uuid_derived_upload_complete_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_complete_post_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>>;
 
     /// POST /assets/{uuid}/derived/upload/init
     ///
-    /// Initializes upload for one derived file. Normative media profile constraints: - `proxy_video`: `video/mp4` (H.264/AVC, browser-compatible), source framerate preserved. - `proxy_audio`: `audio/mp4` (AAC-LC) or `audio/mpeg`. - `proxy_photo` / `thumb`: `image/jpeg` or `image/webp`. - `waveform`: `application/json` (preferred) or `application/octet-stream`. 
-    async fn assets_uuid_derived_upload_init_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_init_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>>;
+    /// Initializes upload for one derived file. Supported kinds: `preview_video`, `preview_audio`, `preview_photo`, `thumb`, `waveform`. Media format details are defined in the Markdown specifications. 
+    async fn assets_uuid_derived_upload_init_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_init_post_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>>;
 
     /// POST /assets/{uuid}/derived/upload/part
     ///
     /// 
-    async fn assets_uuid_derived_upload_part_post<'uuid, 'if_match, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_part_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_part_post_request: models::AssetsUuidDerivedUploadPartPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadPartPostError>>;
+    async fn assets_uuid_derived_upload_part_post<'uuid, 'if_match, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'upload_id, 'part_number, 'chunk, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, upload_id: &'upload_id str, part_number: i32, chunk: std::path::PathBuf, accept_language: Option<&'accept_language str>) -> Result<models::AssetsUuidDerivedUploadPartPost200Response, Error<AssetsUuidDerivedUploadPartPostError>>;
 }
 
 pub struct DerivedApiClient {
@@ -60,7 +60,7 @@ impl DerivedApiClient {
 
 #[async_trait]
 impl DerivedApi for DerivedApiClient {
-    async fn assets_uuid_derived_get<'uuid>(&self, uuid: &'uuid str) -> Result<std::collections::HashMap<String, serde_json::Value>, Error<AssetsUuidDerivedGetError>> {
+    async fn assets_uuid_derived_get<'uuid, 'accept_language>(&self, uuid: &'uuid str, accept_language: Option<&'accept_language str>) -> Result<models::AssetDerived, Error<AssetsUuidDerivedGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -70,6 +70,9 @@ impl DerivedApi for DerivedApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -93,8 +96,8 @@ impl DerivedApi for DerivedApiClient {
         if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
             match local_var_content_type {
                 ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
-                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `std::collections::HashMap&lt;String, serde_json::Value&gt;`"))),
-                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `std::collections::HashMap&lt;String, serde_json::Value&gt;`")))),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AssetDerived`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AssetDerived`")))),
             }
         } else {
             let local_var_entity: Option<AssetsUuidDerivedGetError> = serde_json::from_str(&local_var_content).ok();
@@ -103,7 +106,8 @@ impl DerivedApi for DerivedApiClient {
         }
     }
 
-    async fn assets_uuid_derived_kind_get<'uuid, 'kind>(&self, uuid: &'uuid str, kind: &'kind str) -> Result<(), Error<AssetsUuidDerivedKindGetError>> {
+    /// Direct Core byte delivery for the current derived file. No redirect response is part of the v1 contract.
+    async fn assets_uuid_derived_kind_get<'uuid, 'kind, 'range, 'accept_language>(&self, uuid: &'uuid str, kind: &'kind str, range: Option<&'range str>, accept_language: Option<&'accept_language str>) -> Result<std::path::PathBuf, Error<AssetsUuidDerivedKindGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -113,6 +117,12 @@ impl DerivedApi for DerivedApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = range {
+            local_var_req_builder = local_var_req_builder.header("Range", local_var_param_value.to_string());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -125,10 +135,20 @@ impl DerivedApi for DerivedApiClient {
         let local_var_resp = local_var_client.execute(local_var_req).await?;
 
         let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
         let local_var_content = local_var_resp.text().await?;
 
         if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-            Ok(())
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `std::path::PathBuf`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `std::path::PathBuf`")))),
+            }
         } else {
             let local_var_entity: Option<AssetsUuidDerivedKindGetError> = serde_json::from_str(&local_var_content).ok();
             let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
@@ -136,7 +156,7 @@ impl DerivedApi for DerivedApiClient {
         }
     }
 
-    async fn assets_uuid_derived_upload_complete_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_complete_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>> {
+    async fn assets_uuid_derived_upload_complete_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_complete_post_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_complete_post_request: models::AssetsUuidDerivedUploadCompletePostRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidDerivedUploadCompletePostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -154,6 +174,9 @@ impl DerivedApi for DerivedApiClient {
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -174,8 +197,8 @@ impl DerivedApi for DerivedApiClient {
         }
     }
 
-    /// Initializes upload for one derived file. Normative media profile constraints: - `proxy_video`: `video/mp4` (H.264/AVC, browser-compatible), source framerate preserved. - `proxy_audio`: `audio/mp4` (AAC-LC) or `audio/mpeg`. - `proxy_photo` / `thumb`: `image/jpeg` or `image/webp`. - `waveform`: `application/json` (preferred) or `application/octet-stream`. 
-    async fn assets_uuid_derived_upload_init_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_init_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>> {
+    /// Initializes upload for one derived file. Supported kinds: `preview_video`, `preview_audio`, `preview_photo`, `thumb`, `waveform`. Media format details are defined in the Markdown specifications. 
+    async fn assets_uuid_derived_upload_init_post<'uuid, 'if_match, 'idempotency_key, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_init_post_request, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, idempotency_key: &'idempotency_key str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_init_post_request: models::AssetsUuidDerivedUploadInitPostRequest, accept_language: Option<&'accept_language str>) -> Result<(), Error<AssetsUuidDerivedUploadInitPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -193,6 +216,9 @@ impl DerivedApi for DerivedApiClient {
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
@@ -213,7 +239,7 @@ impl DerivedApi for DerivedApiClient {
         }
     }
 
-    async fn assets_uuid_derived_upload_part_post<'uuid, 'if_match, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'assets_uuid_derived_upload_part_post_request>(&self, uuid: &'uuid str, if_match: &'if_match str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, assets_uuid_derived_upload_part_post_request: models::AssetsUuidDerivedUploadPartPostRequest) -> Result<(), Error<AssetsUuidDerivedUploadPartPostError>> {
+    async fn assets_uuid_derived_upload_part_post<'uuid, 'if_match, 'x_retaia_agent_id, 'x_retaia_open_pgp_fingerprint, 'x_retaia_signature, 'x_retaia_signature_timestamp, 'x_retaia_signature_nonce, 'upload_id, 'part_number, 'chunk, 'accept_language>(&self, uuid: &'uuid str, if_match: &'if_match str, x_retaia_agent_id: &str, x_retaia_open_pgp_fingerprint: &'x_retaia_open_pgp_fingerprint str, x_retaia_signature: &'x_retaia_signature str, x_retaia_signature_timestamp: String, x_retaia_signature_nonce: &'x_retaia_signature_nonce str, upload_id: &'upload_id str, part_number: i32, chunk: std::path::PathBuf, accept_language: Option<&'accept_language str>) -> Result<models::AssetsUuidDerivedUploadPartPost200Response, Error<AssetsUuidDerivedUploadPartPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -230,19 +256,36 @@ impl DerivedApi for DerivedApiClient {
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature", x_retaia_signature.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Timestamp", x_retaia_signature_timestamp.to_string());
         local_var_req_builder = local_var_req_builder.header("X-Retaia-Signature-Nonce", x_retaia_signature_nonce.to_string());
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
+        }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
         };
-        local_var_req_builder = local_var_req_builder.json(&assets_uuid_derived_upload_part_post_request);
+        let mut local_var_form = reqwest::multipart::Form::new();
+        local_var_form = local_var_form.text("upload_id", upload_id.to_string());
+        local_var_form = local_var_form.text("part_number", part_number.to_string());
+        local_var_form = local_var_form.file("chunk", chunk.as_os_str()).await?;
+        local_var_req_builder = local_var_req_builder.multipart(local_var_form);
 
         let local_var_req = local_var_req_builder.build()?;
         let local_var_resp = local_var_client.execute(local_var_req).await?;
 
         let local_var_status = local_var_resp.status();
+        let local_var_content_type = local_var_resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream");
+        let local_var_content_type = super::ContentType::from(local_var_content_type);
         let local_var_content = local_var_resp.text().await?;
 
         if !local_var_status.is_client_error() && !local_var_status.is_server_error() {
-            Ok(())
+            match local_var_content_type {
+                ContentType::Json => serde_json::from_str(&local_var_content).map_err(Error::from),
+                ContentType::Text => return Err(Error::from(serde_json::Error::custom("Received `text/plain` content type response that cannot be converted to `models::AssetsUuidDerivedUploadPartPost200Response`"))),
+                ContentType::Unsupported(local_var_unknown_type) => return Err(Error::from(serde_json::Error::custom(format!("Received `{local_var_unknown_type}` content type response that cannot be converted to `models::AssetsUuidDerivedUploadPartPost200Response`")))),
+            }
         } else {
             let local_var_entity: Option<AssetsUuidDerivedUploadPartPostError> = serde_json::from_str(&local_var_content).ok();
             let local_var_error = ResponseContent { status: local_var_status, content: local_var_content, entity: local_var_entity };
@@ -266,6 +309,7 @@ pub enum AssetsUuidDerivedGetError {
 pub enum AssetsUuidDerivedKindGetError {
     Status401(models::ErrorResponse),
     Status404(),
+    Status416(),
     UnknownValue(serde_json::Value),
 }
 
@@ -292,4 +336,3 @@ pub enum AssetsUuidDerivedUploadPartPostError {
     Status401(models::ErrorResponse),
     UnknownValue(serde_json::Value),
 }
-

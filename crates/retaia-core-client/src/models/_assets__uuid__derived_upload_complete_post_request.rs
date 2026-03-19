@@ -16,7 +16,7 @@ pub struct AssetsUuidDerivedUploadCompletePostRequest {
     #[serde(rename = "upload_id")]
     pub upload_id: String,
     #[serde(rename = "parts", skip_serializing_if = "Option::is_none")]
-    pub parts: Option<Vec<serde_json::Value>>,
+    pub parts: Option<Vec<models::AssetsUuidDerivedUploadCompletePostRequestPartsInner>>,
 }
 
 impl AssetsUuidDerivedUploadCompletePostRequest {

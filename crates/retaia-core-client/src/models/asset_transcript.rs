@@ -11,6 +11,7 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
+/// AssetTranscript : Transcript enrichment payload. Outside v1 conformance scope; reserved for pre-release feature-flagged exposure before validated v1.1+ rollout.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AssetTranscript {
     #[serde(rename = "status", skip_serializing_if = "Option::is_none")]
@@ -20,18 +21,15 @@ pub struct AssetTranscript {
     /// Timestamp of the last accepted business mutation on this asset. Informational only; not a write precondition.
     #[serde(rename = "updated_at", skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
-    /// Strong opaque asset revision tag to be reused in `If-Match` for the next mutation.
-    #[serde(rename = "revision_etag", skip_serializing_if = "Option::is_none")]
-    pub revision_etag: Option<String>,
 }
 
 impl AssetTranscript {
+    /// Transcript enrichment payload. Outside v1 conformance scope; reserved for pre-release feature-flagged exposure before validated v1.1+ rollout.
     pub fn new() -> AssetTranscript {
         AssetTranscript {
             status: None,
             text_preview: None,
             updated_at: None,
-            revision_etag: None,
         }
     }
 }

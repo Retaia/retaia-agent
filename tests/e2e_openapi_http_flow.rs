@@ -14,6 +14,7 @@ use retaia_agent::{
     build_core_api_client,
 };
 use retaia_core_client::apis::assets_api::{AssetsApi, AssetsApiClient};
+use tempfile::NamedTempFile;
 
 struct MockExchange {
     method: &'static str,
@@ -217,6 +218,7 @@ fn e2e_openapi_assets_get_parses_asset_summary_name_and_updated_at() {
             None,
             Some(1),
             None,
+            None,
         ))
         .expect("assets_get should succeed");
 
@@ -236,7 +238,7 @@ fn e2e_openapi_derived_gateway_claim_rejects_missing_lock_token_from_http_payloa
         path: "/api/v1/jobs/job-1/claim",
         status: 200,
         content_type: "application/json",
-        body: r#"{"job_id":"job-1","job_type":"generate_proxy","status":"claimed","asset_uuid":"asset-1","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.proxies.photo@1"]}"#,
+        body: r#"{"job_id":"job-1","job_type":"generate_preview","status":"claimed","asset_uuid":"asset-1","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.proxies.photo@1"]}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));
@@ -276,7 +278,7 @@ fn e2e_openapi_derived_gateway_claim_maps_optional_sidecars_from_http_payload() 
         path: "/api/v1/jobs/job-sidecars/claim",
         status: 200,
         content_type: "application/json",
-        body: r#"{"job_id":"job-sidecars","job_type":"generate_proxy","status":"claimed","asset_uuid":"asset-sidecars","lock_token":"lock-sidecars","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov","sidecars_relative":["INBOX/a.xmp","INBOX/a.srt"]},"required_capabilities":["media.proxies.video@1"]}"#,
+        body: r#"{"job_id":"job-sidecars","job_type":"generate_preview","status":"claimed","asset_uuid":"asset-sidecars","lock_token":"lock-sidecars","fencing_token":1,"source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov","sidecars_relative":["INBOX/a.xmp","INBOX/a.srt"]},"required_capabilities":["media.proxies.video@1"]}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));
@@ -302,7 +304,7 @@ fn e2e_openapi_derived_gateway_claim_accepts_extract_facts_job_type_from_http_pa
         path: "/api/v1/jobs/job-nd/claim",
         status: 200,
         content_type: "application/json",
-        body: r#"{"job_id":"job-nd","job_type":"extract_facts","status":"claimed","asset_uuid":"asset-nd","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.facts@1"],"lock_token":"lock-nd"}"#,
+        body: r#"{"job_id":"job-nd","job_type":"extract_facts","status":"claimed","asset_uuid":"asset-nd","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.facts@1"],"lock_token":"lock-nd","fencing_token":1}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));
@@ -450,7 +452,7 @@ fn e2e_openapi_derived_gateway_heartbeat_maps_500_from_http_response() {
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiDerivedProcessingGateway::new(client);
     let error = gateway
-        .heartbeat("job-2", "lock-2")
+        .heartbeat("job-2", "lock-2", 1)
         .expect_err("must fail on 500");
     assert_eq!(error, DerivedProcessingError::UnexpectedStatus(500));
 
@@ -470,7 +472,7 @@ fn e2e_openapi_derived_gateway_heartbeat_maps_invalid_success_payload_to_transpo
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiDerivedProcessingGateway::new(client);
     let error = gateway
-        .heartbeat("job-hb", "lock-hb")
+        .heartbeat("job-hb", "lock-hb", 1)
         .expect_err("invalid payload must fail");
     match error {
         DerivedProcessingError::Transport(message) => assert!(!message.is_empty()),
@@ -504,7 +506,7 @@ fn e2e_openapi_derived_gateway_submit_maps_401_from_http_response() {
         metrics: None,
     };
     let error = gateway
-        .submit_derived("job-3", "lock-3", "idem-3", &payload)
+        .submit_derived("job-3", "lock-3", 1, "idem-3", &payload)
         .expect_err("must fail on 401");
     assert_eq!(error, DerivedProcessingError::Unauthorized);
 
@@ -523,10 +525,12 @@ fn e2e_openapi_derived_gateway_upload_part_maps_429_from_http_response() {
 
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let chunk = NamedTempFile::new().expect("temp chunk");
     let request = DerivedUploadPart {
         asset_uuid: "asset-2".to_string(),
         upload_id: "upload-2".to_string(),
         part_number: 1,
+        chunk_path: chunk.path().to_path_buf(),
     };
     let error = gateway
         .upload_part(&request)

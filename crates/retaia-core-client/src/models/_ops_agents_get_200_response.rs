@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 pub struct OpsAgentsGet200Response {
     #[serde(rename = "items")]
     pub items: Vec<models::OpsAgentsGet200ResponseItemsInner>,
+    /// Items are returned by canonical default order `last_seen_at DESC`.
     #[serde(rename = "total")]
     pub total: i32,
 }

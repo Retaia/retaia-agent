@@ -13,14 +13,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct JobsJobIdHeartbeatPost200Response {
-    #[serde(rename = "locked_until", skip_serializing_if = "Option::is_none")]
-    pub locked_until: Option<String>,
+    #[serde(rename = "locked_until")]
+    pub locked_until: String,
+    #[serde(rename = "fencing_token")]
+    pub fencing_token: i32,
 }
 
 impl JobsJobIdHeartbeatPost200Response {
-    pub fn new() -> JobsJobIdHeartbeatPost200Response {
+    pub fn new(locked_until: String, fencing_token: i32) -> JobsJobIdHeartbeatPost200Response {
         JobsJobIdHeartbeatPost200Response {
-            locked_until: None,
+            locked_until,
+            fencing_token,
         }
     }
 }

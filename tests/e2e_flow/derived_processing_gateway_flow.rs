@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use retaia_agent::{
     ClaimedDerivedJob, DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload,
+    HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart,
 };
 
 #[derive(Default)]
@@ -27,6 +27,7 @@ impl DerivedProcessingGateway for MemoryDerivedGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -38,6 +39,7 @@ impl DerivedProcessingGateway for MemoryDerivedGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
@@ -45,6 +47,7 @@ impl DerivedProcessingGateway for MemoryDerivedGateway {
             .push(format!("heartbeat:{job_id}"));
         Ok(HeartbeatReceipt {
             locked_until: Some("2026-02-17T12:00:00Z".to_string()),
+            fencing_token: 1,
         })
     }
 
@@ -52,6 +55,7 @@ impl DerivedProcessingGateway for MemoryDerivedGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -71,12 +75,18 @@ impl DerivedProcessingGateway for MemoryDerivedGateway {
         Ok(())
     }
 
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls.lock().expect("calls").push(format!(
             "upload_part:{}:{}",
             request.asset_uuid, request.part_number
         ));
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -97,7 +107,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
 
     let claimed = gateway.claim_job("job-1").expect("claim");
     gateway
-        .heartbeat(&claimed.job_id, &claimed.lock_token)
+        .heartbeat(&claimed.job_id, &claimed.lock_token, claimed.fencing_token)
         .expect("heartbeat");
 
     gateway
@@ -115,6 +125,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
             asset_uuid: claimed.asset_uuid.clone(),
             upload_id: "up-1".to_string(),
             part_number: 1,
+            chunk_path: std::path::PathBuf::from("/tmp/up-1.bin"),
         })
         .expect("upload part");
     gateway
@@ -130,6 +141,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
         .submit_derived(
             &claimed.job_id,
             &claimed.lock_token,
+            claimed.fencing_token,
             "idem-submit",
             &SubmitDerivedPayload {
                 job_type: DerivedJobType::GenerateProxy,

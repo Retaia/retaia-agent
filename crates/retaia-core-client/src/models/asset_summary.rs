@@ -26,7 +26,7 @@ pub struct AssetSummary {
     /// Timestamp of the last accepted business mutation on this asset. Informational only; not a write precondition.
     #[serde(rename = "updated_at")]
     pub updated_at: String,
-    /// Strong opaque asset revision tag to be reused in `If-Match` for the next mutation. Changes on any accepted human-visible business mutation and stays stable for purely technical noise with no review/operator impact.
+    /// Strong quoted HTTP entity-tag to be reused byte-for-byte in `If-Match` for the next mutation.
     #[serde(rename = "revision_etag")]
     pub revision_etag: String,
     #[serde(rename = "captured_at", skip_serializing_if = "Option::is_none")]
@@ -35,8 +35,8 @@ pub struct AssetSummary {
     pub duration: Option<f64>,
     #[serde(rename = "tags", skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
-    #[serde(rename = "has_proxy", skip_serializing_if = "Option::is_none")]
-    pub has_proxy: Option<bool>,
+    #[serde(rename = "has_preview", skip_serializing_if = "Option::is_none")]
+    pub has_preview: Option<bool>,
     #[serde(rename = "thumb_url", skip_serializing_if = "Option::is_none")]
     pub thumb_url: Option<String>,
 }
@@ -54,7 +54,7 @@ impl AssetSummary {
             captured_at: None,
             duration: None,
             tags: None,
-            has_proxy: None,
+            has_preview: None,
             thumb_url: None,
         }
     }

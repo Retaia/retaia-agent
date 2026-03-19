@@ -8,7 +8,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
     AgentRuntimeConfig, ClientRuntimeTarget, CompletedJobEntry, ConfigRepository, CoreApiGateway,
     DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats, DaemonRuntimeStats,
-    DerivedProcessingError, DerivedProcessingGateway, FileConfigRepository, LogLevel,
+    DerivedProcessingGateway, FileConfigRepository, LogLevel,
     RuntimeDerivedPlanner, RuntimeHistoryStore, RuntimePollCycleStatus, RuntimeSession,
     SystemConfigRepository, compact_validation_reason, detect_language,
     notification_sink_profile_for_target, now_unix_ms, process_next_pending_job,
@@ -18,6 +18,8 @@ use tracing::{info, warn};
 
 #[cfg(not(feature = "core-api-client"))]
 use retaia_agent::CoreApiGatewayError;
+#[cfg(not(feature = "core-api-client"))]
+use retaia_agent::{DerivedProcessingError, UploadedDerivedPart};
 
 #[derive(Debug, Parser)]
 #[command(name = "agent-runtime", about = "Retaia runtime daemon process")]
@@ -435,6 +437,7 @@ impl DerivedProcessingGateway for FeatureDisabledDerivedGateway {
         &self,
         _job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<retaia_agent::HeartbeatReceipt, DerivedProcessingError> {
         Err(DerivedProcessingError::Transport(
             "core-api-client feature is disabled for this build".to_string(),
@@ -445,6 +448,7 @@ impl DerivedProcessingGateway for FeatureDisabledDerivedGateway {
         &self,
         _job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &retaia_agent::SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -465,7 +469,7 @@ impl DerivedProcessingGateway for FeatureDisabledDerivedGateway {
     fn upload_part(
         &self,
         _request: &retaia_agent::DerivedUploadPart,
-    ) -> Result<(), DerivedProcessingError> {
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         Err(DerivedProcessingError::Transport(
             "core-api-client feature is disabled for this build".to_string(),
         ))

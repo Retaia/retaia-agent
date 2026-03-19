@@ -9,6 +9,7 @@ fn tdd_runtime_derived_planner_infers_audio_proxy_manifest_from_extension() {
         job_id: "job-audio-1".to_string(),
         asset_uuid: "asset-audio-1".to_string(),
         lock_token: "lock-audio-1".to_string(),
+        fencing_token: 1,
         job_type: DerivedJobType::GenerateProxy,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mp3".to_string(),
@@ -30,6 +31,7 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
         job_id: "job-video-1".to_string(),
         asset_uuid: "asset-video-1".to_string(),
         lock_token: "lock-video-1".to_string(),
+        fencing_token: 1,
         job_type: DerivedJobType::GenerateProxy,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mov".to_string(),
@@ -47,6 +49,7 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
     assert_eq!(plan.uploads[0].init.content_type, "video/mp4");
     assert_eq!(plan.uploads[0].parts.len(), 1);
     assert_eq!(plan.uploads[0].parts[0].part_number, 1);
+    assert_eq!(plan.uploads[0].parts[0].chunk_path, staged);
     assert_eq!(plan.submit.manifest[0].size_bytes, Some(12));
 }
 
@@ -57,6 +60,7 @@ fn tdd_runtime_derived_planner_extract_facts_stays_uploadless_with_staged_source
         job_id: "job-facts-1".to_string(),
         asset_uuid: "asset-facts-1".to_string(),
         lock_token: "lock-facts-1".to_string(),
+        fencing_token: 1,
         job_type: DerivedJobType::ExtractFacts,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mov".to_string(),
@@ -81,6 +85,7 @@ fn tdd_runtime_derived_planner_includes_sidecar_metrics_when_sidecars_are_staged
         job_id: "job-facts-2".to_string(),
         asset_uuid: "asset-facts-2".to_string(),
         lock_token: "lock-facts-2".to_string(),
+        fencing_token: 1,
         job_type: DerivedJobType::ExtractFacts,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mov".to_string(),

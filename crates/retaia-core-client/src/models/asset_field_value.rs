@@ -12,21 +12,12 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AuthMcpChallengeResponse {
-    #[serde(rename = "challenge_id")]
-    pub challenge_id: String,
-    #[serde(rename = "challenge")]
-    pub challenge: String,
-    #[serde(rename = "expires_in")]
-    pub expires_in: i32,
+pub struct AssetFieldValue {
 }
 
-impl AuthMcpChallengeResponse {
-    pub fn new(challenge_id: String, challenge: String, expires_in: i32) -> AuthMcpChallengeResponse {
-        AuthMcpChallengeResponse {
-            challenge_id,
-            challenge,
-            expires_in,
+impl AssetFieldValue {
+    pub fn new() -> AssetFieldValue {
+        AssetFieldValue {
         }
     }
 }

@@ -12,21 +12,15 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WebAuthnRegisterVerifyRequest {
-    #[serde(rename = "credential")]
-    pub credential: std::collections::HashMap<String, serde_json::Value>,
-    #[serde(rename = "device_id", skip_serializing_if = "Option::is_none")]
-    pub device_id: Option<uuid::Uuid>,
-    #[serde(rename = "device_label", skip_serializing_if = "Option::is_none")]
-    pub device_label: Option<String>,
+pub struct AuthMeSessionsGet200Response {
+    #[serde(rename = "items")]
+    pub items: Vec<models::AuthSession>,
 }
 
-impl WebAuthnRegisterVerifyRequest {
-    pub fn new(credential: std::collections::HashMap<String, serde_json::Value>) -> WebAuthnRegisterVerifyRequest {
-        WebAuthnRegisterVerifyRequest {
-            credential,
-            device_id: None,
-            device_label: None,
+impl AuthMeSessionsGet200Response {
+    pub fn new(items: Vec<models::AuthSession>) -> AuthMeSessionsGet200Response {
+        AuthMeSessionsGet200Response {
+            items,
         }
     }
 }

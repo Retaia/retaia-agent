@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use serde_json::Value;
 use thiserror::Error;
@@ -47,6 +48,7 @@ pub struct ClaimedDerivedJob {
     pub job_id: String,
     pub asset_uuid: String,
     pub lock_token: String,
+    pub fencing_token: i32,
     pub job_type: DerivedJobType,
     pub source_storage_id: String,
     pub source_original_relative: String,
@@ -56,6 +58,13 @@ pub struct ClaimedDerivedJob {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeartbeatReceipt {
     pub locked_until: Option<String>,
+    pub fencing_token: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UploadedDerivedPart {
+    pub part_number: u32,
+    pub part_etag: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,14 +98,15 @@ pub struct DerivedUploadPart {
     pub asset_uuid: String,
     pub upload_id: String,
     pub part_number: u32,
+    pub chunk_path: PathBuf,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DerivedUploadComplete {
     pub asset_uuid: String,
     pub upload_id: String,
     pub idempotency_key: String,
-    pub parts: Option<Vec<Value>>,
+    pub parts: Option<Vec<UploadedDerivedPart>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -117,6 +127,8 @@ pub enum DerivedProcessingError {
     NotDerivedJobType(String),
     #[error("claimed job missing lock token")]
     MissingLockToken,
+    #[error("claimed job missing fencing token")]
+    MissingFencingToken,
     #[error("numeric conversion overflow: {0}")]
     NumericOverflow(String),
 }
@@ -127,16 +139,21 @@ pub trait DerivedProcessingGateway {
         &self,
         job_id: &str,
         lock_token: &str,
+        fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError>;
     fn submit_derived(
         &self,
         job_id: &str,
         lock_token: &str,
+        fencing_token: i32,
         idempotency_key: &str,
         payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError>;
     fn upload_init(&self, request: &DerivedUploadInit) -> Result<(), DerivedProcessingError>;
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError>;
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError>;
     fn upload_complete(
         &self,
         request: &DerivedUploadComplete,

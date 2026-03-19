@@ -12,21 +12,18 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WebAuthnAuthenticateOptionsRequest {
-    #[serde(rename = "email", skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
-    #[serde(rename = "client_id", skip_serializing_if = "Option::is_none")]
-    pub client_id: Option<String>,
-    #[serde(rename = "client_kind", skip_serializing_if = "Option::is_none")]
-    pub client_kind: Option<models::ClientKind>,
+pub struct AssetsUuidDerivedUploadCompletePostRequestPartsInner {
+    #[serde(rename = "part_number")]
+    pub part_number: i32,
+    #[serde(rename = "part_etag")]
+    pub part_etag: String,
 }
 
-impl WebAuthnAuthenticateOptionsRequest {
-    pub fn new() -> WebAuthnAuthenticateOptionsRequest {
-        WebAuthnAuthenticateOptionsRequest {
-            email: None,
-            client_id: None,
-            client_kind: None,
+impl AssetsUuidDerivedUploadCompletePostRequestPartsInner {
+    pub fn new(part_number: i32, part_etag: String) -> AssetsUuidDerivedUploadCompletePostRequestPartsInner {
+        AssetsUuidDerivedUploadCompletePostRequestPartsInner {
+            part_number,
+            part_etag,
         }
     }
 }

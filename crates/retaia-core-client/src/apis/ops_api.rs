@@ -23,42 +23,42 @@ pub trait OpsApi: Send + Sync {
     /// GET /ops/agents
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_agents_get<'status, 'limit, 'offset>(&self, status: Option<&'status str>, limit: Option<i32>, offset: Option<i32>) -> Result<models::OpsAgentsGet200Response, Error<OpsAgentsGetError>>;
+    async fn ops_agents_get<'status, 'limit, 'offset, 'accept_language>(&self, status: Option<&'status str>, limit: Option<i32>, offset: Option<i32>, accept_language: Option<&'accept_language str>) -> Result<models::OpsAgentsGet200Response, Error<OpsAgentsGetError>>;
 
     /// GET /ops/ingest/diagnostics
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_ingest_diagnostics_get<>(&self, ) -> Result<models::OpsIngestDiagnosticsGet200Response, Error<OpsIngestDiagnosticsGetError>>;
+    async fn ops_ingest_diagnostics_get<'accept_language>(&self, accept_language: Option<&'accept_language str>) -> Result<models::OpsIngestDiagnosticsGet200Response, Error<OpsIngestDiagnosticsGetError>>;
 
     /// POST /ops/ingest/requeue
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_ingest_requeue_post<'ops_ingest_requeue_post_request>(&self, ops_ingest_requeue_post_request: models::OpsIngestRequeuePostRequest) -> Result<models::OpsIngestRequeuePost202Response, Error<OpsIngestRequeuePostError>>;
+    async fn ops_ingest_requeue_post<'ops_ingest_requeue_post_request, 'accept_language>(&self, ops_ingest_requeue_post_request: Option<models::OpsIngestRequeuePostRequest>, accept_language: Option<&'accept_language str>) -> Result<models::OpsIngestRequeuePost202Response, Error<OpsIngestRequeuePostError>>;
 
     /// GET /ops/ingest/unmatched
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_ingest_unmatched_get<'reason, 'since, 'limit>(&self, reason: Option<&'reason str>, since: Option<String>, limit: Option<i32>) -> Result<models::OpsIngestUnmatchedGet200Response, Error<OpsIngestUnmatchedGetError>>;
+    async fn ops_ingest_unmatched_get<'reason, 'since, 'limit, 'accept_language>(&self, reason: Option<&'reason str>, since: Option<String>, limit: Option<i32>, accept_language: Option<&'accept_language str>) -> Result<models::OpsIngestUnmatchedGet200Response, Error<OpsIngestUnmatchedGetError>>;
 
     /// GET /ops/jobs/queue
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_jobs_queue_get<>(&self, ) -> Result<models::OpsJobsQueueGet200Response, Error<OpsJobsQueueGetError>>;
+    async fn ops_jobs_queue_get<'accept_language>(&self, accept_language: Option<&'accept_language str>) -> Result<models::OpsJobsQueueGet200Response, Error<OpsJobsQueueGetError>>;
 
     /// GET /ops/locks
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_locks_get<'asset_uuid, 'lock_type, 'limit, 'offset>(&self, asset_uuid: Option<&'asset_uuid str>, lock_type: Option<&'lock_type str>, limit: Option<i32>, offset: Option<i32>) -> Result<models::OpsLocksGet200Response, Error<OpsLocksGetError>>;
+    async fn ops_locks_get<'asset_uuid, 'lock_type, 'limit, 'offset, 'accept_language>(&self, asset_uuid: Option<&'asset_uuid str>, lock_type: Option<&'lock_type str>, limit: Option<i32>, offset: Option<i32>, accept_language: Option<&'accept_language str>) -> Result<models::OpsLocksGet200Response, Error<OpsLocksGetError>>;
 
     /// POST /ops/locks/recover
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_locks_recover_post<'ops_locks_recover_post_request>(&self, ops_locks_recover_post_request: Option<models::OpsLocksRecoverPostRequest>) -> Result<models::OpsLocksRecoverPost200Response, Error<OpsLocksRecoverPostError>>;
+    async fn ops_locks_recover_post<'accept_language, 'ops_locks_recover_post_request>(&self, accept_language: Option<&'accept_language str>, ops_locks_recover_post_request: Option<models::OpsLocksRecoverPostRequest>) -> Result<models::OpsLocksRecoverPost200Response, Error<OpsLocksRecoverPostError>>;
 
     /// GET /ops/readiness
     ///
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_readiness_get<>(&self, ) -> Result<models::OpsReadinessGet200Response, Error<OpsReadinessGetError>>;
+    async fn ops_readiness_get<'accept_language>(&self, accept_language: Option<&'accept_language str>) -> Result<models::OpsReadinessGet200Response, Error<OpsReadinessGetError>>;
 }
 
 pub struct OpsApiClient {
@@ -76,7 +76,7 @@ impl OpsApiClient {
 #[async_trait]
 impl OpsApi for OpsApiClient {
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_agents_get<'status, 'limit, 'offset>(&self, status: Option<&'status str>, limit: Option<i32>, offset: Option<i32>) -> Result<models::OpsAgentsGet200Response, Error<OpsAgentsGetError>> {
+    async fn ops_agents_get<'status, 'limit, 'offset, 'accept_language>(&self, status: Option<&'status str>, limit: Option<i32>, offset: Option<i32>, accept_language: Option<&'accept_language str>) -> Result<models::OpsAgentsGet200Response, Error<OpsAgentsGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -95,6 +95,9 @@ impl OpsApi for OpsApiClient {
         }
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -126,7 +129,7 @@ impl OpsApi for OpsApiClient {
     }
 
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_ingest_diagnostics_get<>(&self, ) -> Result<models::OpsIngestDiagnosticsGet200Response, Error<OpsIngestDiagnosticsGetError>> {
+    async fn ops_ingest_diagnostics_get<'accept_language>(&self, accept_language: Option<&'accept_language str>) -> Result<models::OpsIngestDiagnosticsGet200Response, Error<OpsIngestDiagnosticsGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -136,6 +139,9 @@ impl OpsApi for OpsApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -167,7 +173,7 @@ impl OpsApi for OpsApiClient {
     }
 
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_ingest_requeue_post<'ops_ingest_requeue_post_request>(&self, ops_ingest_requeue_post_request: models::OpsIngestRequeuePostRequest) -> Result<models::OpsIngestRequeuePost202Response, Error<OpsIngestRequeuePostError>> {
+    async fn ops_ingest_requeue_post<'ops_ingest_requeue_post_request, 'accept_language>(&self, ops_ingest_requeue_post_request: Option<models::OpsIngestRequeuePostRequest>, accept_language: Option<&'accept_language str>) -> Result<models::OpsIngestRequeuePost202Response, Error<OpsIngestRequeuePostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -177,6 +183,9 @@ impl OpsApi for OpsApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -209,7 +218,7 @@ impl OpsApi for OpsApiClient {
     }
 
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_ingest_unmatched_get<'reason, 'since, 'limit>(&self, reason: Option<&'reason str>, since: Option<String>, limit: Option<i32>) -> Result<models::OpsIngestUnmatchedGet200Response, Error<OpsIngestUnmatchedGetError>> {
+    async fn ops_ingest_unmatched_get<'reason, 'since, 'limit, 'accept_language>(&self, reason: Option<&'reason str>, since: Option<String>, limit: Option<i32>, accept_language: Option<&'accept_language str>) -> Result<models::OpsIngestUnmatchedGet200Response, Error<OpsIngestUnmatchedGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -228,6 +237,9 @@ impl OpsApi for OpsApiClient {
         }
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -259,7 +271,7 @@ impl OpsApi for OpsApiClient {
     }
 
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_jobs_queue_get<>(&self, ) -> Result<models::OpsJobsQueueGet200Response, Error<OpsJobsQueueGetError>> {
+    async fn ops_jobs_queue_get<'accept_language>(&self, accept_language: Option<&'accept_language str>) -> Result<models::OpsJobsQueueGet200Response, Error<OpsJobsQueueGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -269,6 +281,9 @@ impl OpsApi for OpsApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -300,7 +315,7 @@ impl OpsApi for OpsApiClient {
     }
 
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_locks_get<'asset_uuid, 'lock_type, 'limit, 'offset>(&self, asset_uuid: Option<&'asset_uuid str>, lock_type: Option<&'lock_type str>, limit: Option<i32>, offset: Option<i32>) -> Result<models::OpsLocksGet200Response, Error<OpsLocksGetError>> {
+    async fn ops_locks_get<'asset_uuid, 'lock_type, 'limit, 'offset, 'accept_language>(&self, asset_uuid: Option<&'asset_uuid str>, lock_type: Option<&'lock_type str>, limit: Option<i32>, offset: Option<i32>, accept_language: Option<&'accept_language str>) -> Result<models::OpsLocksGet200Response, Error<OpsLocksGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -322,6 +337,9 @@ impl OpsApi for OpsApiClient {
         }
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -353,7 +371,7 @@ impl OpsApi for OpsApiClient {
     }
 
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_locks_recover_post<'ops_locks_recover_post_request>(&self, ops_locks_recover_post_request: Option<models::OpsLocksRecoverPostRequest>) -> Result<models::OpsLocksRecoverPost200Response, Error<OpsLocksRecoverPostError>> {
+    async fn ops_locks_recover_post<'accept_language, 'ops_locks_recover_post_request>(&self, accept_language: Option<&'accept_language str>, ops_locks_recover_post_request: Option<models::OpsLocksRecoverPostRequest>) -> Result<models::OpsLocksRecoverPost200Response, Error<OpsLocksRecoverPostError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -363,6 +381,9 @@ impl OpsApi for OpsApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());
@@ -395,7 +416,7 @@ impl OpsApi for OpsApiClient {
     }
 
     /// Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
-    async fn ops_readiness_get<>(&self, ) -> Result<models::OpsReadinessGet200Response, Error<OpsReadinessGetError>> {
+    async fn ops_readiness_get<'accept_language>(&self, accept_language: Option<&'accept_language str>) -> Result<models::OpsReadinessGet200Response, Error<OpsReadinessGetError>> {
         let local_var_configuration = &self.configuration;
 
         let local_var_client = &local_var_configuration.client;
@@ -405,6 +426,9 @@ impl OpsApi for OpsApiClient {
 
         if let Some(ref local_var_user_agent) = local_var_configuration.user_agent {
             local_var_req_builder = local_var_req_builder.header(reqwest::header::USER_AGENT, local_var_user_agent.clone());
+        }
+        if let Some(local_var_param_value) = accept_language {
+            local_var_req_builder = local_var_req_builder.header("Accept-Language", local_var_param_value.to_string());
         }
         if let Some(ref local_var_token) = local_var_configuration.bearer_access_token {
             local_var_req_builder = local_var_req_builder.bearer_auth(local_var_token.to_owned());

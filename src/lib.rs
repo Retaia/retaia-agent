@@ -27,7 +27,7 @@ pub use application::derived_job_executor::{
 pub use application::derived_processing_gateway::{
     ClaimedDerivedJob, DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload, validate_derived_upload_init,
+    HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart, validate_derived_upload_init,
 };
 pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,

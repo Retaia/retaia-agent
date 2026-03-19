@@ -19,6 +19,8 @@ pub struct UserFeaturesResponse {
     /// Effective availability after all gates (`feature_flags`, `app_feature_enabled`, `user_feature_enabled`, dependencies). Evaluation order is strict: feature_flags -> app_feature_enabled -> user_feature_enabled -> dependency/escalation rules. 
     #[serde(rename = "effective_feature_enabled")]
     pub effective_feature_enabled: std::collections::HashMap<String, bool>,
+    #[serde(rename = "effective_feature_explanations")]
+    pub effective_feature_explanations: std::collections::HashMap<String, models::FeatureExplanation>,
     #[serde(rename = "feature_governance")]
     pub feature_governance: Vec<models::FeatureGovernanceRule>,
     /// Canonical list of non-disableable v1 global core feature keys.
@@ -27,10 +29,11 @@ pub struct UserFeaturesResponse {
 }
 
 impl UserFeaturesResponse {
-    pub fn new(user_feature_enabled: std::collections::HashMap<String, bool>, effective_feature_enabled: std::collections::HashMap<String, bool>, feature_governance: Vec<models::FeatureGovernanceRule>, core_v1_global_features: Vec<models::CoreV1GlobalFeatureKey>) -> UserFeaturesResponse {
+    pub fn new(user_feature_enabled: std::collections::HashMap<String, bool>, effective_feature_enabled: std::collections::HashMap<String, bool>, effective_feature_explanations: std::collections::HashMap<String, models::FeatureExplanation>, feature_governance: Vec<models::FeatureGovernanceRule>, core_v1_global_features: Vec<models::CoreV1GlobalFeatureKey>) -> UserFeaturesResponse {
         UserFeaturesResponse {
             user_feature_enabled,
             effective_feature_enabled,
+            effective_feature_explanations,
             feature_governance,
             core_v1_global_features,
         }

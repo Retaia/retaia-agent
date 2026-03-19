@@ -12,24 +12,15 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AuthMcpTokenRequest {
-    #[serde(rename = "client_id")]
-    pub client_id: String,
-    #[serde(rename = "openpgp_fingerprint")]
-    pub openpgp_fingerprint: String,
-    #[serde(rename = "challenge_id")]
-    pub challenge_id: String,
-    #[serde(rename = "signature")]
-    pub signature: String,
+pub struct AuthMeSessionsRevokeOthersPost200Response {
+    #[serde(rename = "revoked")]
+    pub revoked: i32,
 }
 
-impl AuthMcpTokenRequest {
-    pub fn new(client_id: String, openpgp_fingerprint: String, challenge_id: String, signature: String) -> AuthMcpTokenRequest {
-        AuthMcpTokenRequest {
-            client_id,
-            openpgp_fingerprint,
-            challenge_id,
-            signature,
+impl AuthMeSessionsRevokeOthersPost200Response {
+    pub fn new(revoked: i32) -> AuthMeSessionsRevokeOthersPost200Response {
+        AuthMeSessionsRevokeOthersPost200Response {
+            revoked,
         }
     }
 }

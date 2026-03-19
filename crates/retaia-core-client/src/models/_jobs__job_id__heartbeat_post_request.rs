@@ -15,12 +15,15 @@ use serde::{Deserialize, Serialize};
 pub struct JobsJobIdHeartbeatPostRequest {
     #[serde(rename = "lock_token")]
     pub lock_token: String,
+    #[serde(rename = "fencing_token")]
+    pub fencing_token: i32,
 }
 
 impl JobsJobIdHeartbeatPostRequest {
-    pub fn new(lock_token: String) -> JobsJobIdHeartbeatPostRequest {
+    pub fn new(lock_token: String, fencing_token: i32) -> JobsJobIdHeartbeatPostRequest {
         JobsJobIdHeartbeatPostRequest {
             lock_token,
+            fencing_token,
         }
     }
 }

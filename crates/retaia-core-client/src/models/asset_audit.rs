@@ -13,8 +13,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AssetAudit {
+    /// Chronological path history in ascending order, using canonical relative paths only.
     #[serde(rename = "path_history", skip_serializing_if = "Option::is_none")]
     pub path_history: Option<Vec<String>>,
+    /// Append-only revision timeline in ascending `revision` order. The entry marked `is_current=true` matches the current `summary.revision_etag`.
     #[serde(rename = "revision_history", skip_serializing_if = "Option::is_none")]
     pub revision_history: Option<Vec<models::AssetAuditRevisionHistoryInner>>,
 }

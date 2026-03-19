@@ -20,6 +20,8 @@ pub enum AssetState {
     Ready,
     #[serde(rename = "PROCESSING_REVIEW")]
     ProcessingReview,
+    #[serde(rename = "REVIEW_PENDING_PROFILE")]
+    ReviewPendingProfile,
     #[serde(rename = "PROCESSED")]
     Processed,
     #[serde(rename = "DECISION_PENDING")]
@@ -43,6 +45,7 @@ impl std::fmt::Display for AssetState {
             Self::Discovered => write!(f, "DISCOVERED"),
             Self::Ready => write!(f, "READY"),
             Self::ProcessingReview => write!(f, "PROCESSING_REVIEW"),
+            Self::ReviewPendingProfile => write!(f, "REVIEW_PENDING_PROFILE"),
             Self::Processed => write!(f, "PROCESSED"),
             Self::DecisionPending => write!(f, "DECISION_PENDING"),
             Self::DecidedKeep => write!(f, "DECIDED_KEEP"),

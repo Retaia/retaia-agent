@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **lock_token** | **String** |  | 
+**fencing_token** | **i32** |  | 
 **error_code** | **String** |  | 
 **message** | Option<**String**> |  | [optional]
 **retryable** | **bool** |  | 

@@ -17,12 +17,12 @@ pub struct AssetProcessing {
     pub facts_done: Option<bool>,
     #[serde(rename = "thumbs_done", skip_serializing_if = "Option::is_none")]
     pub thumbs_done: Option<bool>,
-    #[serde(rename = "proxy_done", skip_serializing_if = "Option::is_none")]
-    pub proxy_done: Option<bool>,
+    #[serde(rename = "preview_done", skip_serializing_if = "Option::is_none")]
+    pub preview_done: Option<bool>,
     #[serde(rename = "waveform_done", skip_serializing_if = "Option::is_none")]
     pub waveform_done: Option<bool>,
     #[serde(rename = "processing_profile", skip_serializing_if = "Option::is_none")]
-    pub processing_profile: Option<String>,
+    pub processing_profile: Option<ProcessingProfile>,
     #[serde(rename = "review_processing_version", skip_serializing_if = "Option::is_none")]
     pub review_processing_version: Option<String>,
 }
@@ -32,11 +32,31 @@ impl AssetProcessing {
         AssetProcessing {
             facts_done: None,
             thumbs_done: None,
-            proxy_done: None,
+            preview_done: None,
             waveform_done: None,
             processing_profile: None,
             review_processing_version: None,
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum ProcessingProfile {
+    #[serde(rename = "video_standard")]
+    VideoStandard,
+    #[serde(rename = "audio_undefined")]
+    AudioUndefined,
+    #[serde(rename = "audio_music")]
+    AudioMusic,
+    #[serde(rename = "audio_voice")]
+    AudioVoice,
+    #[serde(rename = "photo_standard")]
+    PhotoStandard,
+}
+
+impl Default for ProcessingProfile {
+    fn default() -> ProcessingProfile {
+        Self::VideoStandard
     }
 }
 

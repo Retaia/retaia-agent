@@ -17,8 +17,11 @@ pub struct AssetsUuidPatchRequest {
     pub tags: Option<Vec<String>>,
     #[serde(rename = "notes", skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    /// Shared complementary metadata map. Values stay JSON-simple; domains requiring dedicated semantics, storage or security rules must not be hidden implicitly here. 
     #[serde(rename = "fields", skip_serializing_if = "Option::is_none")]
-    pub fields: Option<std::collections::HashMap<String, serde_json::Value>>,
+    pub fields: Option<std::collections::HashMap<String, models::AssetFieldValue>>,
+    #[serde(rename = "processing_profile", skip_serializing_if = "Option::is_none")]
+    pub processing_profile: Option<ProcessingProfile>,
     #[serde(rename = "state", skip_serializing_if = "Option::is_none")]
     pub state: Option<State>,
 }
@@ -29,8 +32,29 @@ impl AssetsUuidPatchRequest {
             tags: None,
             notes: None,
             fields: None,
+            processing_profile: None,
             state: None,
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum ProcessingProfile {
+    #[serde(rename = "video_standard")]
+    VideoStandard,
+    #[serde(rename = "audio_undefined")]
+    AudioUndefined,
+    #[serde(rename = "audio_music")]
+    AudioMusic,
+    #[serde(rename = "audio_voice")]
+    AudioVoice,
+    #[serde(rename = "photo_standard")]
+    PhotoStandard,
+}
+
+impl Default for ProcessingProfile {
+    fn default() -> ProcessingProfile {
+        Self::VideoStandard
     }
 }
 /// 

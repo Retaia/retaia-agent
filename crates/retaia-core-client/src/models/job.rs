@@ -29,8 +29,12 @@ pub struct Job {
     pub required_capabilities: Vec<String>,
     #[serde(rename = "claimed_by", skip_serializing_if = "Option::is_none")]
     pub claimed_by: Option<uuid::Uuid>,
+    /// Opaque current lease token.
     #[serde(rename = "lock_token", skip_serializing_if = "Option::is_none")]
     pub lock_token: Option<String>,
+    /// Monotone write-protection token bound to the current lease. Must be replayed unchanged on heartbeat/submit/fail.
+    #[serde(rename = "fencing_token", skip_serializing_if = "Option::is_none")]
+    pub fencing_token: Option<i32>,
     #[serde(rename = "locked_until", skip_serializing_if = "Option::is_none")]
     pub locked_until: Option<String>,
 }
@@ -47,6 +51,7 @@ impl Job {
             required_capabilities,
             claimed_by: None,
             lock_token: None,
+            fencing_token: None,
             locked_until: None,
         }
     }
@@ -56,8 +61,8 @@ impl Job {
 pub enum JobType {
     #[serde(rename = "extract_facts")]
     ExtractFacts,
-    #[serde(rename = "generate_proxy")]
-    GenerateProxy,
+    #[serde(rename = "generate_preview")]
+    GeneratePreview,
     #[serde(rename = "generate_thumbnails")]
     GenerateThumbnails,
     #[serde(rename = "generate_audio_waveform")]

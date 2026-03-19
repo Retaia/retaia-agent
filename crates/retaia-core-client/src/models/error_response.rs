@@ -86,8 +86,6 @@ pub enum Code {
     UnsupportedFeatureFlagsContractVersion,
     #[serde(rename = "SLOW_DOWN")]
     SlowDown,
-    #[serde(rename = "RATE_LIMITED")]
-    RateLimited,
     #[serde(rename = "TEMPORARY_UNAVAILABLE")]
     TemporaryUnavailable,
     #[serde(rename = "PRECONDITION_REQUIRED")]

@@ -12,22 +12,31 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WebAuthnDeviceResponse {
-    #[serde(rename = "device_id")]
-    pub device_id: uuid::Uuid,
-    #[serde(rename = "device_label", skip_serializing_if = "Option::is_none")]
-    pub device_label: Option<String>,
-    #[serde(rename = "webauthn_fingerprint", skip_serializing_if = "Option::is_none")]
-    pub webauthn_fingerprint: Option<String>,
+pub struct AssetsPurgePostRequest {
+    #[serde(rename = "asset_uuids")]
+    pub asset_uuids: Vec<uuid::Uuid>,
+    #[serde(rename = "confirm")]
+    pub confirm: Confirm,
 }
 
-impl WebAuthnDeviceResponse {
-    pub fn new(device_id: uuid::Uuid) -> WebAuthnDeviceResponse {
-        WebAuthnDeviceResponse {
-            device_id,
-            device_label: None,
-            webauthn_fingerprint: None,
+impl AssetsPurgePostRequest {
+    pub fn new(asset_uuids: Vec<uuid::Uuid>, confirm: Confirm) -> AssetsPurgePostRequest {
+        AssetsPurgePostRequest {
+            asset_uuids,
+            confirm,
         }
+    }
+}
+/// 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum Confirm {
+    #[serde(rename = "true")]
+    True,
+}
+
+impl Default for Confirm {
+    fn default() -> Confirm {
+        Self::True
     }
 }
 

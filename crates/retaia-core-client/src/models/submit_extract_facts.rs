@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 pub struct SubmitExtractFacts {
     #[serde(rename = "lock_token")]
     pub lock_token: String,
+    #[serde(rename = "fencing_token")]
+    pub fencing_token: i32,
     #[serde(rename = "job_type")]
     pub job_type: JobType,
     #[serde(rename = "result")]
@@ -22,9 +24,10 @@ pub struct SubmitExtractFacts {
 }
 
 impl SubmitExtractFacts {
-    pub fn new(lock_token: String, job_type: JobType, result: models::SubmitExtractFactsResult) -> SubmitExtractFacts {
+    pub fn new(lock_token: String, fencing_token: i32, job_type: JobType, result: models::SubmitExtractFactsResult) -> SubmitExtractFacts {
         SubmitExtractFacts {
             lock_token,
+            fencing_token,
             job_type,
             result: Box::new(result),
         }

@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 pub struct SubmitDerived {
     #[serde(rename = "lock_token")]
     pub lock_token: String,
+    #[serde(rename = "fencing_token")]
+    pub fencing_token: i32,
     #[serde(rename = "job_type")]
     pub job_type: JobType,
     #[serde(rename = "result")]
@@ -22,9 +24,10 @@ pub struct SubmitDerived {
 }
 
 impl SubmitDerived {
-    pub fn new(lock_token: String, job_type: JobType, result: models::SubmitDerivedResult) -> SubmitDerived {
+    pub fn new(lock_token: String, fencing_token: i32, job_type: JobType, result: models::SubmitDerivedResult) -> SubmitDerived {
         SubmitDerived {
             lock_token,
+            fencing_token,
             job_type,
             result: Box::new(result),
         }
@@ -33,8 +36,8 @@ impl SubmitDerived {
 /// 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum JobType {
-    #[serde(rename = "generate_proxy")]
-    GenerateProxy,
+    #[serde(rename = "generate_preview")]
+    GeneratePreview,
     #[serde(rename = "generate_thumbnails")]
     GenerateThumbnails,
     #[serde(rename = "generate_audio_waveform")]
@@ -43,7 +46,7 @@ pub enum JobType {
 
 impl Default for JobType {
     fn default() -> JobType {
-        Self::GenerateProxy
+        Self::GeneratePreview
     }
 }
 

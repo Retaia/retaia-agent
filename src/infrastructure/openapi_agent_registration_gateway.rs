@@ -81,6 +81,7 @@ impl AgentRegistrationGateway for OpenApiAgentRegistrationGateway {
                 signature_timestamp,
                 &signature_nonce,
                 request,
+                None,
             ))
             .map_err(map_openapi_register_error)?;
 

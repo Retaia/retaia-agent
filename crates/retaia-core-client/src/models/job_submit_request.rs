@@ -26,8 +26,8 @@ impl Default for JobSubmitRequest {
 /// 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum JobType {
-    #[serde(rename = "generate_proxy")]
-    GenerateProxy,
+    #[serde(rename = "generate_preview")]
+    GeneratePreview,
     #[serde(rename = "generate_thumbnails")]
     GenerateThumbnails,
     #[serde(rename = "generate_audio_waveform")]
@@ -36,7 +36,7 @@ pub enum JobType {
 
 impl Default for JobType {
     fn default() -> JobType {
-        Self::GenerateProxy
+        Self::GeneratePreview
     }
 }
 

@@ -4,7 +4,8 @@ use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ClaimedDerivedJob, CoreApiGateway, CoreApiGatewayError,
     CoreJobState, CoreJobView, DerivedJobType, DerivedProcessingError, DerivedProcessingGateway,
     DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart, HeartbeatReceipt, LogLevel,
-    RuntimeDerivedPlanner, RuntimeSession, SubmitDerivedPayload, process_next_pending_job,
+    RuntimeDerivedPlanner, RuntimeSession, SubmitDerivedPayload, UploadedDerivedPart,
+    process_next_pending_job,
 };
 
 fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
@@ -49,6 +50,7 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/asset.jpg".to_string(),
@@ -60,18 +62,23 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls mutex")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -86,8 +93,14 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
         Ok(())
     }
 
-    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
-        Ok(())
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(

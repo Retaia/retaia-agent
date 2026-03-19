@@ -12,18 +12,18 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WebAuthnPublicKeyOptionsResponse {
-    #[serde(rename = "request_id", skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<String>,
-    #[serde(rename = "public_key")]
-    pub public_key: std::collections::HashMap<String, serde_json::Value>,
+pub struct AssetsPurgePost200ResponseResultsInner {
+    #[serde(rename = "asset_uuid")]
+    pub asset_uuid: uuid::Uuid,
+    #[serde(rename = "status")]
+    pub status: String,
 }
 
-impl WebAuthnPublicKeyOptionsResponse {
-    pub fn new(public_key: std::collections::HashMap<String, serde_json::Value>) -> WebAuthnPublicKeyOptionsResponse {
-        WebAuthnPublicKeyOptionsResponse {
-            request_id: None,
-            public_key,
+impl AssetsPurgePost200ResponseResultsInner {
+    pub fn new(asset_uuid: uuid::Uuid, status: String) -> AssetsPurgePost200ResponseResultsInner {
+        AssetsPurgePost200ResponseResultsInner {
+            asset_uuid,
+            status,
         }
     }
 }

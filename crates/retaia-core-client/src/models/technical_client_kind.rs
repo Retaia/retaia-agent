@@ -11,14 +11,12 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-/// TechnicalClientKind : Allowed client kinds for technical bearer tokens.
-/// Allowed client kinds for technical bearer tokens.
+/// TechnicalClientKind : Allowed client kinds for v1 technical bearer tokens.
+/// Allowed client kinds for v1 technical bearer tokens.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum TechnicalClientKind {
     #[serde(rename = "AGENT")]
     Agent,
-    #[serde(rename = "MCP")]
-    Mcp,
 
 }
 
@@ -26,7 +24,6 @@ impl std::fmt::Display for TechnicalClientKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Agent => write!(f, "AGENT"),
-            Self::Mcp => write!(f, "MCP"),
         }
     }
 }

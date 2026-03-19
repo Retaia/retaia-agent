@@ -12,21 +12,24 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AuthMcpRegisterRequest {
-    #[serde(rename = "client_label", skip_serializing_if = "Option::is_none")]
-    pub client_label: Option<String>,
-    #[serde(rename = "openpgp_public_key")]
-    pub openpgp_public_key: String,
-    #[serde(rename = "openpgp_fingerprint")]
-    pub openpgp_fingerprint: String,
+pub struct AssetsPurgePost200Response {
+    #[serde(rename = "requested")]
+    pub requested: i32,
+    #[serde(rename = "purged")]
+    pub purged: i32,
+    #[serde(rename = "failed")]
+    pub failed: i32,
+    #[serde(rename = "results")]
+    pub results: Vec<models::AssetsPurgePost200ResponseResultsInner>,
 }
 
-impl AuthMcpRegisterRequest {
-    pub fn new(openpgp_public_key: String, openpgp_fingerprint: String) -> AuthMcpRegisterRequest {
-        AuthMcpRegisterRequest {
-            client_label: None,
-            openpgp_public_key,
-            openpgp_fingerprint,
+impl AssetsPurgePost200Response {
+    pub fn new(requested: i32, purged: i32, failed: i32, results: Vec<models::AssetsPurgePost200ResponseResultsInner>) -> AssetsPurgePost200Response {
+        AssetsPurgePost200Response {
+            requested,
+            purged,
+            failed,
+            results,
         }
     }
 }

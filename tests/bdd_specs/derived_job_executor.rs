@@ -2,7 +2,7 @@ use retaia_agent::{
     ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner, DerivedJobExecutorError,
     DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload, execute_derived_job_once,
+    HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart, execute_derived_job_once,
 };
 
 struct AssetMismatchPlanner;
@@ -26,6 +26,7 @@ impl DerivedExecutionPlanner for AssetMismatchPlanner {
                     asset_uuid: claimed.asset_uuid.clone(),
                     upload_id: "up-1".to_string(),
                     part_number: 1,
+                    chunk_path: std::path::PathBuf::from("/tmp/up-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
@@ -58,6 +59,7 @@ impl DerivedProcessingGateway for NoopGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -69,14 +71,19 @@ impl DerivedProcessingGateway for NoopGateway {
         &self,
         _job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         _job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -87,8 +94,14 @@ impl DerivedProcessingGateway for NoopGateway {
         Ok(())
     }
 
-    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
-        Ok(())
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -120,6 +133,7 @@ impl DerivedProcessingGateway for WaveformOptionalManifestGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-wf-1".to_string(),
             lock_token: "lock-wf-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateAudioWaveform,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -131,14 +145,19 @@ impl DerivedProcessingGateway for WaveformOptionalManifestGateway {
         &self,
         _job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         _job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -149,8 +168,14 @@ impl DerivedProcessingGateway for WaveformOptionalManifestGateway {
         Ok(())
     }
 
-    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
-        Ok(())
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(

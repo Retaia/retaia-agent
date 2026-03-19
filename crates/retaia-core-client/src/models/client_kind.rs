@@ -11,14 +11,12 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-/// ClientKind : Form factor identifier for interactive login flows.
-/// Form factor identifier for interactive login flows.
+/// ClientKind : Form factor identifier for interactive login flows in v1.
+/// Form factor identifier for interactive login flows in v1.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum ClientKind {
     #[serde(rename = "UI_WEB")]
     UiWeb,
-    #[serde(rename = "AGENT")]
-    Agent,
 
 }
 
@@ -26,7 +24,6 @@ impl std::fmt::Display for ClientKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::UiWeb => write!(f, "UI_WEB"),
-            Self::Agent => write!(f, "AGENT"),
         }
     }
 }

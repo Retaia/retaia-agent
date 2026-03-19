@@ -13,9 +13,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AppFeaturesResponse {
-    /// Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` controls MCP AI-dependent capabilities (false => MCP AI-dependent functions disabled). 
+    /// Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` gates pre-release dépendantes de l'AI capabilities ahead of their validated v1.1+ rollout. 
     #[serde(rename = "app_feature_enabled")]
     pub app_feature_enabled: std::collections::HashMap<String, bool>,
+    #[serde(rename = "app_feature_explanations")]
+    pub app_feature_explanations: std::collections::HashMap<String, models::FeatureExplanation>,
     /// Canonical list of non-disableable v1 global core feature keys.
     #[serde(rename = "core_v1_global_features")]
     pub core_v1_global_features: Vec<models::CoreV1GlobalFeatureKey>,
@@ -24,9 +26,10 @@ pub struct AppFeaturesResponse {
 }
 
 impl AppFeaturesResponse {
-    pub fn new(app_feature_enabled: std::collections::HashMap<String, bool>, core_v1_global_features: Vec<models::CoreV1GlobalFeatureKey>, feature_governance: Vec<models::FeatureGovernanceRule>) -> AppFeaturesResponse {
+    pub fn new(app_feature_enabled: std::collections::HashMap<String, bool>, app_feature_explanations: std::collections::HashMap<String, models::FeatureExplanation>, core_v1_global_features: Vec<models::CoreV1GlobalFeatureKey>, feature_governance: Vec<models::FeatureGovernanceRule>) -> AppFeaturesResponse {
         AppFeaturesResponse {
             app_feature_enabled,
+            app_feature_explanations,
             core_v1_global_features,
             feature_governance,
         }

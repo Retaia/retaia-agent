@@ -5,7 +5,7 @@ use retaia_agent::{
     DerivedJobExecutorError, DerivedJobType, DerivedKind, DerivedManifestItem,
     DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit,
     DerivedUploadPart, HeartbeatReceipt, LogLevel, RuntimeDerivedPlanner, SubmitDerivedPayload,
-    execute_derived_job_once, execute_derived_job_once_with_source_staging,
+    UploadedDerivedPart, execute_derived_job_once, execute_derived_job_once_with_source_staging,
 };
 
 fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
@@ -36,6 +36,7 @@ impl DerivedProcessingGateway for MemoryGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateProxy,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -47,18 +48,23 @@ impl DerivedProcessingGateway for MemoryGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -77,12 +83,18 @@ impl DerivedProcessingGateway for MemoryGateway {
         Ok(())
     }
 
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("upload_part:{}", request.part_number));
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -118,6 +130,7 @@ impl DerivedExecutionPlanner for ProxyPlanner {
                     asset_uuid: claimed.asset_uuid.clone(),
                     upload_id: "up-1".to_string(),
                     part_number: 1,
+                    chunk_path: std::path::PathBuf::from("/tmp/up-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
@@ -176,6 +189,7 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-facts".to_string(),
             lock_token: "lock-facts".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::ExtractFacts,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -190,18 +204,23 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -221,12 +240,18 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
         Ok(())
     }
 
-    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push("upload_part".to_string());
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -375,6 +400,7 @@ impl DerivedProcessingGateway for WaveformGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-wave-1".to_string(),
             lock_token: "lock-wave-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateAudioWaveform,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -386,18 +412,23 @@ impl DerivedProcessingGateway for WaveformGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -416,12 +447,18 @@ impl DerivedProcessingGateway for WaveformGateway {
         Ok(())
     }
 
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("upload_part:{}", request.part_number));
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -457,6 +494,7 @@ impl DerivedExecutionPlanner for ValidWaveformPlanner {
                     asset_uuid: claimed.asset_uuid.clone(),
                     upload_id: "up-wave-1".to_string(),
                     part_number: 1,
+                    chunk_path: std::path::PathBuf::from("/tmp/up-wave-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
