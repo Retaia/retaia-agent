@@ -99,6 +99,8 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     const KEEP_LAST_COMPLETED_JOBS: usize = 150_000;
 
     let lang = detect_language();
+    #[cfg(feature = "core-api-client")]
+    register_daemon_agent(session.settings())?;
     let gateway = build_gateway(session.settings());
     let derived_gateway = build_derived_gateway(session.settings());
     let planner = RuntimeDerivedPlanner;
@@ -320,6 +322,47 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     }
 }
 
+#[cfg(feature = "core-api-client")]
+fn register_daemon_agent(settings: &AgentRuntimeConfig) -> Result<(), String> {
+    use retaia_agent::{
+        AgentIdentity, AgentRegistrationIntent, OpenApiAgentRegistrationGateway,
+        build_core_api_client, mint_technical_bearer, register_agent, with_bearer_token,
+    };
+
+    let identity = AgentIdentity::load_or_create(None).map_err(|error| error.to_string())?;
+    let technical_auth = settings
+        .technical_auth
+        .as_ref()
+        .ok_or_else(|| "technical auth is required for daemon registration".to_string())?;
+    let client = build_core_api_client(settings);
+    let token = mint_technical_bearer(&client, technical_auth).map_err(|error| error.to_string())?;
+    let client = with_bearer_token(client, token);
+    let gateway = OpenApiAgentRegistrationGateway::new_with_identity(client, identity.clone());
+
+    let arch = match std::env::consts::ARCH {
+        "x86_64" => "x86_64",
+        "aarch64" => "arm64",
+        "arm" => "armv7",
+        _ => "other",
+    };
+
+    register_agent(
+        &gateway,
+        AgentRegistrationIntent {
+            agent_id: identity.agent_id,
+            agent_name: "retaia-agent".to_string(),
+            agent_version: env!("CARGO_PKG_VERSION").to_string(),
+            os_name: std::env::consts::OS.to_string(),
+            os_version: std::env::consts::OS.to_string(),
+            arch: arch.to_string(),
+            client_feature_flags_contract_version: None,
+            max_parallel_jobs: Some(settings.max_parallel_jobs),
+        },
+    )
+    .map(|_| ())
+    .map_err(|error| error.to_string())
+}
+
 fn install_shutdown_signal() -> Result<Arc<AtomicBool>, String> {
     let flag = Arc::new(AtomicBool::new(false));
     let handler_flag = Arc::clone(&flag);
@@ -375,10 +418,14 @@ fn init_logging(level: LogLevel) {
 
 #[cfg(feature = "core-api-client")]
 fn build_gateway(settings: &AgentRuntimeConfig) -> Box<dyn CoreApiGateway> {
-    use retaia_agent::{OpenApiJobsGateway, build_core_api_client, with_bearer_token};
+    use retaia_agent::{OpenApiJobsGateway, build_core_api_client, mint_technical_bearer, with_bearer_token};
 
     let mut client = build_core_api_client(settings);
-    if let Ok(token) = std::env::var("RETAIA_AGENT_BEARER_TOKEN") {
+    if let Some(technical_auth) = settings.technical_auth.as_ref() {
+        if let Ok(token) = mint_technical_bearer(&client, technical_auth) {
+            client = with_bearer_token(client, token);
+        }
+    } else if let Ok(token) = std::env::var("RETAIA_AGENT_BEARER_TOKEN") {
         client = with_bearer_token(client, token);
     }
     Box::new(OpenApiJobsGateway::new(client))
@@ -386,13 +433,21 @@ fn build_gateway(settings: &AgentRuntimeConfig) -> Box<dyn CoreApiGateway> {
 
 #[cfg(feature = "core-api-client")]
 fn build_derived_gateway(settings: &AgentRuntimeConfig) -> Box<dyn DerivedProcessingGateway> {
-    use retaia_agent::{OpenApiDerivedProcessingGateway, build_core_api_client, with_bearer_token};
+    use retaia_agent::{
+        AgentIdentity, OpenApiDerivedProcessingGateway, build_core_api_client,
+        mint_technical_bearer, with_bearer_token,
+    };
 
     let mut client = build_core_api_client(settings);
-    if let Ok(token) = std::env::var("RETAIA_AGENT_BEARER_TOKEN") {
+    if let Some(technical_auth) = settings.technical_auth.as_ref() {
+        if let Ok(token) = mint_technical_bearer(&client, technical_auth) {
+            client = with_bearer_token(client, token);
+        }
+    } else if let Ok(token) = std::env::var("RETAIA_AGENT_BEARER_TOKEN") {
         client = with_bearer_token(client, token);
     }
-    Box::new(OpenApiDerivedProcessingGateway::new(client))
+    let identity = AgentIdentity::load_or_create(None).expect("agent identity must load");
+    Box::new(OpenApiDerivedProcessingGateway::new_with_identity(client, identity))
 }
 
 #[cfg(not(feature = "core-api-client"))]

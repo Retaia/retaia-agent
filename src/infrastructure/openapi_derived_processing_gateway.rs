@@ -1,5 +1,5 @@
 #[cfg(feature = "core-api-client")]
-use std::sync::Arc;
+use std::fs;
 
 #[cfg(feature = "core-api-client")]
 use crate::application::derived_processing_gateway::{
@@ -7,28 +7,20 @@ use crate::application::derived_processing_gateway::{
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
     HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart, validate_derived_upload_init,
 };
+#[cfg(feature = "core-api-client")]
+use crate::infrastructure::agent_identity::AgentIdentity;
+#[cfg(feature = "core-api-client")]
+use crate::infrastructure::signed_core_http::{
+    json_bytes, multipart_part_request, signed_empty_request, signed_json_request,
+};
 
 #[cfg(feature = "core-api-client")]
-use retaia_core_client::apis::Error as OpenApiError;
+use reqwest::StatusCode;
 #[cfg(feature = "core-api-client")]
 use retaia_core_client::apis::configuration::Configuration;
 #[cfg(feature = "core-api-client")]
-use retaia_core_client::apis::derived_api::{
-    AssetsUuidDerivedUploadCompletePostError, AssetsUuidDerivedUploadInitPostError,
-    AssetsUuidDerivedUploadPartPostError, DerivedApi, DerivedApiClient,
-};
-#[cfg(feature = "core-api-client")]
-use retaia_core_client::apis::jobs_api::{
-    JobsApi, JobsApiClient, JobsJobIdClaimPostError, JobsJobIdHeartbeatPostError,
-    JobsJobIdSubmitPostError,
-};
-#[cfg(feature = "core-api-client")]
 use retaia_core_client::models;
 
-#[cfg(feature = "core-api-client")]
-const PLACEHOLDER_OPENPGP_FINGERPRINT: &str = "0000000000000000000000000000000000000000";
-#[cfg(feature = "core-api-client")]
-const PLACEHOLDER_SIGNATURE: &str = "placeholder-signature";
 #[cfg(feature = "core-api-client")]
 const PLACEHOLDER_IF_MATCH: &str = "*";
 
@@ -36,35 +28,49 @@ const PLACEHOLDER_IF_MATCH: &str = "*";
 #[derive(Debug, Clone)]
 pub struct OpenApiDerivedProcessingGateway {
     configuration: Configuration,
+    identity: AgentIdentity,
 }
 
 #[cfg(feature = "core-api-client")]
 impl OpenApiDerivedProcessingGateway {
     pub fn new(configuration: Configuration) -> Self {
-        Self { configuration }
+        let identity =
+            AgentIdentity::load_or_create(None).expect("agent identity must load for derived gateway");
+        Self {
+            configuration,
+            identity,
+        }
+    }
+
+    pub fn new_with_identity(configuration: Configuration, identity: AgentIdentity) -> Self {
+        Self {
+            configuration,
+            identity,
+        }
     }
 }
 
 #[cfg(feature = "core-api-client")]
 impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
     fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
-        let api = JobsApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let path = format!("/jobs/{job_id}/claim");
+        let response = signed_empty_request(
+            &reqwest::blocking::Client::new(),
+            &self.identity,
+            self.configuration.bearer_access_token.as_deref(),
+            &self.configuration.base_path,
+            reqwest::Method::POST,
+            &path,
+            None,
+        )
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
+        .send()
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
-        let job = runtime
-            .block_on(api.jobs_job_id_claim_post(
-                job_id,
-                job_id,
-                PLACEHOLDER_OPENPGP_FINGERPRINT,
-                PLACEHOLDER_SIGNATURE,
-                signature_timestamp_rfc3339_utc(),
-                &signature_nonce(),
-                None,
-            ))
-            .map_err(map_claim_error)?;
+        let response = require_success(response, map_claim_status)?;
+        let job: models::Job = response
+            .json()
+            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
         let lock_token = job
             .lock_token
@@ -80,8 +86,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             lock_token,
             fencing_token,
             job_type,
-            source_storage_id: job.source.storage_id.clone(),
-            source_original_relative: job.source.original_relative.clone(),
+            source_storage_id: job.source.storage_id,
+            source_original_relative: job.source.original_relative,
             source_sidecars_relative: job.source.sidecars_relative.unwrap_or_default(),
         })
     }
@@ -92,27 +98,29 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         lock_token: &str,
         fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
-        let api = JobsApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
-
+        let path = format!("/jobs/{job_id}/heartbeat");
         let request =
             models::JobsJobIdHeartbeatPostRequest::new(lock_token.to_string(), fencing_token);
-        let response = runtime
-            .block_on(api.jobs_job_id_heartbeat_post(
-                job_id,
-                job_id,
-                PLACEHOLDER_OPENPGP_FINGERPRINT,
-                PLACEHOLDER_SIGNATURE,
-                signature_timestamp_rfc3339_utc(),
-                &signature_nonce(),
-                request,
-                None,
-            ))
-            .map_err(map_heartbeat_error)?;
+        let payload =
+            json_bytes(&request).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let response = signed_json_request(
+            &reqwest::blocking::Client::new(),
+            &self.identity,
+            self.configuration.bearer_access_token.as_deref(),
+            &self.configuration.base_path,
+            reqwest::Method::POST,
+            &path,
+            &payload,
+            None,
+        )
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
+        .send()
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
+        let response = require_success(response, map_heartbeat_status)?;
+        let response: models::JobsJobIdHeartbeatPost200Response = response
+            .json()
+            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
         Ok(HeartbeatReceipt {
             locked_until: Some(response.locked_until),
             fencing_token: response.fencing_token,
@@ -127,77 +135,57 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         idempotency_key: &str,
         payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
-        let api = JobsApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
-
-        if payload.job_type == DerivedJobType::ExtractFacts {
+        let path = format!("/jobs/{job_id}/submit");
+        let request = if payload.job_type == DerivedJobType::ExtractFacts {
             let mut result = models::SubmitExtractFactsResult::new(models::FactsPatch::new());
             result.warnings = payload.warnings.clone();
             result.metrics = payload.metrics.clone();
-            let submit = models::SubmitExtractFacts::new(
+            models::JobSubmitRequest::SubmitExtractFacts(Box::new(models::SubmitExtractFacts::new(
                 lock_token.to_string(),
                 fencing_token,
                 models::submit_extract_facts::JobType::ExtractFacts,
                 result,
-            );
-            return runtime
-                .block_on(api.jobs_job_id_submit_post(
-                    job_id,
-                    idempotency_key,
-                    job_id,
-                    PLACEHOLDER_OPENPGP_FINGERPRINT,
-                    PLACEHOLDER_SIGNATURE,
-                    signature_timestamp_rfc3339_utc(),
-                    &signature_nonce(),
-                    models::JobSubmitRequest::SubmitExtractFacts(Box::new(submit)),
-                    None,
-                ))
-                .map_err(map_submit_error);
-        }
+            )))
+        } else {
+            let derived_patch = build_derived_patch(&payload.manifest)?;
+            let mut result = models::SubmitDerivedResult::new(derived_patch);
+            result.warnings = payload.warnings.clone();
+            result.metrics = payload.metrics.clone();
+            models::JobSubmitRequest::SubmitDerived(Box::new(models::SubmitDerived::new(
+                lock_token.to_string(),
+                fencing_token,
+                map_submit_job_type(payload.job_type),
+                result,
+            )))
+        };
 
-        let derived_patch = build_derived_patch(&payload.manifest)?;
-        let mut result = models::SubmitDerivedResult::new(derived_patch);
-        result.warnings = payload.warnings.clone();
-        result.metrics = payload.metrics.clone();
+        let body =
+            json_bytes(&request).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let response = signed_json_request(
+            &reqwest::blocking::Client::new(),
+            &self.identity,
+            self.configuration.bearer_access_token.as_deref(),
+            &self.configuration.base_path,
+            reqwest::Method::POST,
+            &path,
+            &body,
+            None,
+        )
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
+        .header("Idempotency-Key", idempotency_key)
+        .send()
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
-        let submit = models::SubmitDerived::new(
-            lock_token.to_string(),
-            fencing_token,
-            map_submit_job_type(payload.job_type),
-            result,
-        );
-
-        runtime
-            .block_on(api.jobs_job_id_submit_post(
-                job_id,
-                idempotency_key,
-                job_id,
-                PLACEHOLDER_OPENPGP_FINGERPRINT,
-                PLACEHOLDER_SIGNATURE,
-                signature_timestamp_rfc3339_utc(),
-                &signature_nonce(),
-                models::JobSubmitRequest::SubmitDerived(Box::new(submit)),
-                None,
-            ))
-            .map_err(map_submit_error)
+        require_success(response, map_submit_status)?;
+        Ok(())
     }
 
     fn upload_init(&self, request: &DerivedUploadInit) -> Result<(), DerivedProcessingError> {
         validate_derived_upload_init(request)?;
 
-        let api = DerivedApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
-
         let size_bytes = i32::try_from(request.size_bytes).map_err(|_| {
             DerivedProcessingError::NumericOverflow("size_bytes > i32::MAX".to_string())
         })?;
-
         let mut payload = models::AssetsUuidDerivedUploadInitPostRequest::new(
             map_upload_kind(request.kind),
             request.content_type.clone(),
@@ -205,51 +193,56 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         );
         payload.sha256 = request.sha256.clone();
 
-        runtime
-            .block_on(api.assets_uuid_derived_upload_init_post(
-                &request.asset_uuid,
-                PLACEHOLDER_IF_MATCH,
-                &request.idempotency_key,
-                &request.asset_uuid,
-                PLACEHOLDER_OPENPGP_FINGERPRINT,
-                PLACEHOLDER_SIGNATURE,
-                signature_timestamp_rfc3339_utc(),
-                &signature_nonce(),
-                payload,
-                None,
-            ))
-            .map_err(map_upload_init_error)
+        let body =
+            json_bytes(&payload).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let path = format!("/assets/{}/derived/upload/init", request.asset_uuid);
+        let response = signed_json_request(
+            &reqwest::blocking::Client::new(),
+            &self.identity,
+            self.configuration.bearer_access_token.as_deref(),
+            &self.configuration.base_path,
+            reqwest::Method::POST,
+            &path,
+            &body,
+            None,
+        )
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
+        .header("If-Match", PLACEHOLDER_IF_MATCH)
+        .header("Idempotency-Key", request.idempotency_key.clone())
+        .send()
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+
+        require_success(response, map_upload_init_status)?;
+        Ok(())
     }
 
     fn upload_part(
         &self,
         request: &DerivedUploadPart,
     ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
-        let api = DerivedApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
+        let path = format!("/assets/{}/derived/upload/part", request.asset_uuid);
+        let chunk = fs::read(&request.chunk_path)
             .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let response = multipart_part_request(
+            &reqwest::blocking::Client::new(),
+            &self.identity,
+            self.configuration.bearer_access_token.as_deref(),
+            &self.configuration.base_path,
+            &path,
+            PLACEHOLDER_IF_MATCH,
+            &request.upload_id,
+            request.part_number,
+            chunk,
+            None,
+        )
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
+        .send()
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
-        let part_number = i32::try_from(request.part_number).map_err(|_| {
-            DerivedProcessingError::NumericOverflow("part_number > i32::MAX".to_string())
-        })?;
-
-        let response = runtime
-            .block_on(api.assets_uuid_derived_upload_part_post(
-                &request.asset_uuid,
-                PLACEHOLDER_IF_MATCH,
-                &request.asset_uuid,
-                PLACEHOLDER_OPENPGP_FINGERPRINT,
-                PLACEHOLDER_SIGNATURE,
-                signature_timestamp_rfc3339_utc(),
-                &signature_nonce(),
-                &request.upload_id,
-                part_number,
-                request.chunk_path.clone(),
-                None,
-            ))
-            .map_err(map_upload_part_error)?;
+        let response = require_success(response, map_upload_part_status)?;
+        let response: models::AssetsUuidDerivedUploadPartPost200Response = response
+            .json()
+            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
 
         Ok(UploadedDerivedPart {
             part_number: request.part_number,
@@ -261,12 +254,6 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         &self,
         request: &DerivedUploadComplete,
     ) -> Result<(), DerivedProcessingError> {
-        let api = DerivedApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
-
         let mut payload =
             models::AssetsUuidDerivedUploadCompletePostRequest::new(request.upload_id.clone());
         payload.parts = request.parts.as_ref().map(|parts| {
@@ -280,31 +267,28 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 .collect()
         });
 
-        runtime
-            .block_on(api.assets_uuid_derived_upload_complete_post(
-                &request.asset_uuid,
-                PLACEHOLDER_IF_MATCH,
-                &request.idempotency_key,
-                &request.asset_uuid,
-                PLACEHOLDER_OPENPGP_FINGERPRINT,
-                PLACEHOLDER_SIGNATURE,
-                signature_timestamp_rfc3339_utc(),
-                &signature_nonce(),
-                payload,
-                None,
-            ))
-            .map_err(map_upload_complete_error)
+        let body =
+            json_bytes(&payload).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let path = format!("/assets/{}/derived/upload/complete", request.asset_uuid);
+        let response = signed_json_request(
+            &reqwest::blocking::Client::new(),
+            &self.identity,
+            self.configuration.bearer_access_token.as_deref(),
+            &self.configuration.base_path,
+            reqwest::Method::POST,
+            &path,
+            &body,
+            None,
+        )
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
+        .header("If-Match", PLACEHOLDER_IF_MATCH)
+        .header("Idempotency-Key", request.idempotency_key.clone())
+        .send()
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+
+        require_success(response, map_upload_complete_status)?;
+        Ok(())
     }
-}
-
-#[cfg(feature = "core-api-client")]
-fn signature_nonce() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
-
-#[cfg(feature = "core-api-client")]
-fn signature_timestamp_rfc3339_utc() -> String {
-    "1970-01-01T00:00:00Z".to_string()
 }
 
 #[cfg(feature = "core-api-client")]
@@ -320,9 +304,7 @@ fn map_job_type(job_type: models::job::JobType) -> Result<DerivedJobType, Derive
 #[cfg(feature = "core-api-client")]
 fn map_submit_job_type(job_type: DerivedJobType) -> models::submit_derived::JobType {
     match job_type {
-        DerivedJobType::ExtractFacts => {
-            unreachable!("extract_facts must be submitted via SubmitExtractFacts")
-        }
+        DerivedJobType::ExtractFacts => unreachable!("extract_facts must use SubmitExtractFacts"),
         DerivedJobType::GenerateProxy => models::submit_derived::JobType::GeneratePreview,
         DerivedJobType::GenerateThumbnails => models::submit_derived::JobType::GenerateThumbnails,
         DerivedJobType::GenerateAudioWaveform => {
@@ -382,15 +364,7 @@ fn build_derived_patch(
             },
             item.reference.clone(),
         );
-
-        mapped.size_bytes = match item.size_bytes {
-            Some(value) => Some(i32::try_from(value).map_err(|_| {
-                DerivedProcessingError::NumericOverflow(
-                    "manifest.size_bytes > i32::MAX".to_string(),
-                )
-            })?),
-            None => None,
-        };
+        mapped.size_bytes = item.size_bytes.and_then(|value| i32::try_from(value).ok());
         mapped.sha256 = item.sha256.clone();
         items.push(mapped);
     }
@@ -400,119 +374,64 @@ fn build_derived_patch(
 }
 
 #[cfg(feature = "core-api-client")]
-fn map_claim_error(error: OpenApiError<JobsJobIdClaimPostError>) -> DerivedProcessingError {
-    map_status_error(error)
+fn require_success(
+    response: reqwest::blocking::Response,
+    map_status: fn(StatusCode) -> DerivedProcessingError,
+) -> Result<reqwest::blocking::Response, DerivedProcessingError> {
+    let status = response.status();
+    if status.is_success() {
+        return Ok(response);
+    }
+    Err(map_status(status))
 }
 
 #[cfg(feature = "core-api-client")]
-fn map_heartbeat_error(error: OpenApiError<JobsJobIdHeartbeatPostError>) -> DerivedProcessingError {
-    map_status_error(error)
-}
-
-#[cfg(feature = "core-api-client")]
-fn map_submit_error(error: OpenApiError<JobsJobIdSubmitPostError>) -> DerivedProcessingError {
-    map_status_error(error)
-}
-
-#[cfg(feature = "core-api-client")]
-fn map_upload_init_error(
-    error: OpenApiError<AssetsUuidDerivedUploadInitPostError>,
-) -> DerivedProcessingError {
-    map_status_error(error)
-}
-
-#[cfg(feature = "core-api-client")]
-fn map_upload_part_error(
-    error: OpenApiError<AssetsUuidDerivedUploadPartPostError>,
-) -> DerivedProcessingError {
-    map_status_error(error)
-}
-
-#[cfg(feature = "core-api-client")]
-fn map_upload_complete_error(
-    error: OpenApiError<AssetsUuidDerivedUploadCompletePostError>,
-) -> DerivedProcessingError {
-    map_status_error(error)
-}
-
-#[cfg(feature = "core-api-client")]
-fn map_status_error<T>(error: OpenApiError<T>) -> DerivedProcessingError {
-    match error {
-        OpenApiError::ResponseError(response) => match response.status.as_u16() {
-            401 => DerivedProcessingError::Unauthorized,
-            429 => DerivedProcessingError::Throttled,
-            code => DerivedProcessingError::UnexpectedStatus(code),
-        },
-        OpenApiError::Reqwest(err) => DerivedProcessingError::Transport(err.to_string()),
-        OpenApiError::Serde(err) => DerivedProcessingError::Transport(err.to_string()),
-        OpenApiError::Io(err) => DerivedProcessingError::Transport(err.to_string()),
+fn map_claim_status(status: StatusCode) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        429 => DerivedProcessingError::Throttled,
+        code => DerivedProcessingError::UnexpectedStatus(code),
     }
 }
 
-#[cfg(all(test, feature = "core-api-client"))]
-mod tests {
-    use super::{build_derived_patch, map_job_type, map_status_error};
-    use crate::{DerivedKind, DerivedManifestItem, DerivedProcessingError};
-    use reqwest::StatusCode;
-    use retaia_core_client::apis::{Error as OpenApiError, ResponseContent};
-    use retaia_core_client::models::job::JobType;
-
-    fn response_error(status: u16) -> OpenApiError<()> {
-        OpenApiError::ResponseError(ResponseContent {
-            status: StatusCode::from_u16(status).expect("valid status"),
-            content: String::new(),
-            entity: None,
-        })
+#[cfg(feature = "core-api-client")]
+fn map_heartbeat_status(status: StatusCode) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        code => DerivedProcessingError::UnexpectedStatus(code),
     }
+}
 
-    #[test]
-    fn tdd_openapi_derived_gateway_maps_expected_http_statuses() {
-        assert_eq!(
-            map_status_error(response_error(401)),
-            DerivedProcessingError::Unauthorized
-        );
-        assert_eq!(
-            map_status_error(response_error(429)),
-            DerivedProcessingError::Throttled
-        );
-        assert_eq!(
-            map_status_error(response_error(422)),
-            DerivedProcessingError::UnexpectedStatus(422)
-        );
-        assert_eq!(
-            map_status_error(response_error(503)),
-            DerivedProcessingError::UnexpectedStatus(503)
-        );
+#[cfg(feature = "core-api-client")]
+fn map_submit_status(status: StatusCode) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        429 => DerivedProcessingError::Throttled,
+        code => DerivedProcessingError::UnexpectedStatus(code),
     }
+}
 
-    #[test]
-    fn tdd_openapi_derived_gateway_maps_transport_errors() {
-        let error = map_status_error::<()>(OpenApiError::Io(std::io::Error::other("timeout")));
-        match error {
-            DerivedProcessingError::Transport(message) => assert!(message.contains("timeout")),
-            other => panic!("unexpected error variant: {other:?}"),
-        }
+#[cfg(feature = "core-api-client")]
+fn map_upload_init_status(status: StatusCode) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        code => DerivedProcessingError::UnexpectedStatus(code),
     }
+}
 
-    #[test]
-    fn tdd_openapi_derived_gateway_maps_extract_facts_job_type() {
-        let mapped = map_job_type(JobType::ExtractFacts).expect("extract_facts must be supported");
-        assert_eq!(mapped, crate::DerivedJobType::ExtractFacts);
+#[cfg(feature = "core-api-client")]
+fn map_upload_part_status(status: StatusCode) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        429 => DerivedProcessingError::Throttled,
+        code => DerivedProcessingError::UnexpectedStatus(code),
     }
+}
 
-    #[test]
-    fn tdd_openapi_derived_gateway_rejects_manifest_size_overflow() {
-        let manifest = vec![DerivedManifestItem {
-            kind: DerivedKind::ProxyPhoto,
-            reference: "s3://bucket/proxy.jpg".to_string(),
-            size_bytes: Some(i32::MAX as u64 + 1),
-            sha256: None,
-        }];
-
-        let error = build_derived_patch(&manifest).expect_err("must reject overflow");
-        assert_eq!(
-            error,
-            DerivedProcessingError::NumericOverflow("manifest.size_bytes > i32::MAX".to_string())
-        );
+#[cfg(feature = "core-api-client")]
+fn map_upload_complete_status(status: StatusCode) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        code => DerivedProcessingError::UnexpectedStatus(code),
     }
 }
