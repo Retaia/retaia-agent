@@ -1,9 +1,14 @@
+use std::fs;
+use std::io::BufWriter;
+use std::path::Path;
 use std::process::Command;
 
 use crate::application::proxy_generator::{
-    AudioProxyFormat, AudioProxyRequest, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
-    ThumbnailFormat, VideoProxyRequest, VideoThumbnailRequest,
+    AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, PhotoProxyRequest,
+    ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
+    VideoThumbnailRequest,
 };
+use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandOutput {
@@ -101,6 +106,42 @@ impl<R: CommandRunner> ProxyGenerator for FfmpegProxyGenerator<R> {
             &build_video_thumbnail_args(request),
         )
     }
+
+    fn generate_audio_waveform(
+        &self,
+        request: &AudioWaveformRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        validate_waveform_request(request)?;
+        let output = Path::new(&request.output_path);
+        if let Some(parent) = output.parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent)
+                    .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+            }
+        }
+
+        let temp_dir = output
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
+        let temp_wav = tempfile::Builder::new()
+            .prefix("retaia-waveform-")
+            .suffix(".wav")
+            .tempfile_in(temp_dir)
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+        let wav_path = temp_wav.path().to_path_buf();
+        drop(temp_wav);
+
+        let generation_result = run_ffmpeg(
+            &self.runner,
+            &self.ffmpeg_binary,
+            &build_audio_waveform_decode_args(request, &wav_path),
+        )
+        .and_then(|()| write_waveform_json_from_wav(&wav_path, output, request.bucket_count));
+
+        let _ = fs::remove_file(&wav_path);
+        generation_result
+    }
 }
 
 fn run_ffmpeg<R: CommandRunner>(
@@ -180,6 +221,25 @@ fn validate_thumbnail_request(request: &VideoThumbnailRequest) -> Result<(), Pro
     if request.max_width == 0 {
         return Err(ProxyGenerationError::InvalidRequest(
             "thumbnail max width must be > 0".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_waveform_request(request: &AudioWaveformRequest) -> Result<(), ProxyGenerationError> {
+    if request.input_path.trim().is_empty() {
+        return Err(ProxyGenerationError::InvalidRequest(
+            "waveform input path is required".to_string(),
+        ));
+    }
+    if request.output_path.trim().is_empty() {
+        return Err(ProxyGenerationError::InvalidRequest(
+            "waveform output path is required".to_string(),
+        ));
+    }
+    if request.bucket_count < 100 {
+        return Err(ProxyGenerationError::InvalidRequest(
+            "waveform bucket_count must be >= 100".to_string(),
         ));
     }
     Ok(())
@@ -299,4 +359,84 @@ pub fn build_video_thumbnail_args(request: &VideoThumbnailRequest) -> Vec<String
     args.extend(quality_args);
     args.push(request.output_path.clone());
     args
+}
+
+pub fn build_audio_waveform_decode_args(
+    request: &AudioWaveformRequest,
+    wav_path: &Path,
+) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-i".to_string(),
+        request.input_path.clone(),
+        "-vn".to_string(),
+        "-ac".to_string(),
+        "1".to_string(),
+        "-ar".to_string(),
+        "16000".to_string(),
+        "-c:a".to_string(),
+        "pcm_s16le".to_string(),
+        wav_path.to_string_lossy().to_string(),
+    ]
+}
+
+#[derive(Serialize)]
+struct WaveformJson {
+    duration_ms: u64,
+    bucket_count: usize,
+    samples: Vec<f32>,
+}
+
+fn write_waveform_json_from_wav(
+    wav_path: &Path,
+    output_path: &Path,
+    bucket_count: usize,
+) -> Result<(), ProxyGenerationError> {
+    let mut reader = hound::WavReader::open(wav_path)
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+    let spec = reader.spec();
+    let sample_rate = u64::from(spec.sample_rate);
+    if sample_rate == 0 {
+        return Err(ProxyGenerationError::Process(
+            "waveform sample_rate must be > 0".to_string(),
+        ));
+    }
+
+    let samples: Vec<i16> = reader
+        .samples::<i16>()
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+    if samples.is_empty() {
+        return Err(ProxyGenerationError::Process(
+            "waveform source produced no samples".to_string(),
+        ));
+    }
+
+    let duration_ms = ((samples.len() as f64 / sample_rate as f64) * 1000.0).round() as u64;
+    let mut buckets = Vec::with_capacity(bucket_count);
+    for bucket in 0..bucket_count {
+        let start = bucket * samples.len() / bucket_count;
+        let end = ((bucket + 1) * samples.len() / bucket_count).max(start + 1);
+        let end = end.min(samples.len());
+        let peak = samples[start..end]
+            .iter()
+            .map(|sample| i32::from(*sample).unsigned_abs())
+            .max()
+            .unwrap_or(0) as f32
+            / i16::MAX as f32;
+        buckets.push(peak.clamp(0.0, 1.0));
+    }
+
+    let file = fs::File::create(output_path)
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+    let writer = BufWriter::new(file);
+    serde_json::to_writer(
+        writer,
+        &WaveformJson {
+            duration_ms,
+            bucket_count,
+            samples: buckets,
+        },
+    )
+    .map_err(|error| ProxyGenerationError::Process(error.to_string()))
 }

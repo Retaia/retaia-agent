@@ -207,12 +207,17 @@ impl DerivedExecutionPlanner for WaveformOptionalManifestPlanner {
 }
 
 #[test]
-fn bdd_given_generate_audio_waveform_job_when_no_waveform_derived_is_produced_then_submit_is_still_valid()
+fn bdd_given_generate_audio_waveform_job_when_no_waveform_derived_is_produced_then_submit_is_rejected()
  {
     let result = execute_derived_job_once(
         &WaveformOptionalManifestGateway,
         &WaveformOptionalManifestPlanner,
         "job-waveform-1",
     );
-    assert!(result.is_ok());
+    assert_eq!(
+        result.expect_err("waveform manifest must be required"),
+        DerivedJobExecutorError::MissingSubmitManifestForJobType(
+            DerivedJobType::GenerateAudioWaveform
+        )
+    );
 }

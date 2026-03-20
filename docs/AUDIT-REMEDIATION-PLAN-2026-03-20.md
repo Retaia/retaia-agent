@@ -36,7 +36,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 ## Priorité P2
 
 - Remplacer le processing "transport-only" par un processing réel:
-  - produire de vraies waveforms
   - produire de vrais `FactsPatch`
 
 - Corriger les contrats dérivés OpenAPI:

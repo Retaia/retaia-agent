@@ -6,8 +6,9 @@ use crate::application::derived_processing_gateway::{
     DerivedUploadInit, DerivedUploadPart, SubmitDerivedPayload,
 };
 use crate::application::proxy_generator::{
-    AudioProxyFormat, AudioProxyRequest, PhotoProxyFormat, PhotoProxyRequest, ProxyGenerationError,
-    ProxyGenerator, ThumbnailFormat, VideoProxyRequest, VideoThumbnailRequest,
+    AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, PhotoProxyFormat, PhotoProxyRequest,
+    ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
+    VideoThumbnailRequest,
 };
 use crate::domain::capabilities::photo_source_extension_supported;
 use crate::infrastructure::ffmpeg_proxy_generator::FfmpegProxyGenerator;
@@ -97,7 +98,10 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
                 self.generate_preview_artifact(source_path, upload_kind)?
             }
             DerivedJobType::GenerateThumbnails => self.generate_thumbnail_artifact(source_path)?,
-            _ => source_path.to_path_buf(),
+            DerivedJobType::GenerateAudioWaveform => {
+                self.generate_waveform_artifact(source_path)?
+            }
+            DerivedJobType::ExtractFacts => source_path.to_path_buf(),
         };
 
         let metadata = std::fs::metadata(&generated_path)
@@ -234,6 +238,20 @@ impl RuntimeDerivedPlanner {
             .map_err(map_preview_generation_error)?;
         Ok(output_path)
     }
+
+    fn generate_waveform_artifact(
+        &self,
+        source_path: &Path,
+    ) -> Result<PathBuf, DerivedJobExecutorError> {
+        let output_path = generated_preview_output_path(source_path, DerivedKind::Waveform);
+        self.av_generator
+            .generate_audio_waveform(&canonical_waveform_request(
+                source_path.to_string_lossy().to_string(),
+                output_path.to_string_lossy().to_string(),
+            ))
+            .map_err(map_preview_generation_error)?;
+        Ok(output_path)
+    }
 }
 
 fn generated_preview_output_path(source_path: &Path, kind: DerivedKind) -> PathBuf {
@@ -294,6 +312,14 @@ fn canonical_thumbnail_request(input_path: String, output_path: String) -> Video
     }
 }
 
+fn canonical_waveform_request(input_path: String, output_path: String) -> AudioWaveformRequest {
+    AudioWaveformRequest {
+        input_path,
+        output_path,
+        bucket_count: 1_000,
+    }
+}
+
 fn map_preview_generation_error(error: ProxyGenerationError) -> DerivedJobExecutorError {
     DerivedJobExecutorError::Planner(format!("preview generation failed: {error}"))
 }
@@ -333,6 +359,9 @@ fn base_metrics_for_job(claimed: &ClaimedDerivedJob) -> Option<HashMap<String, V
             Value::from("video_representative_v1"),
         );
         metrics.insert("thumbnail_count".to_string(), Value::from(1_u64));
+    } else if claimed.job_type == DerivedJobType::GenerateAudioWaveform {
+        metrics.insert("waveform_bucket_count".to_string(), Value::from(1_000_u64));
+        metrics.insert("waveform_format".to_string(), Value::from("json"));
     }
 
     if metrics.is_empty() {

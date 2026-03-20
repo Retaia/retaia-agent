@@ -56,6 +56,13 @@ pub struct VideoThumbnailRequest {
     pub seek_ms: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AudioWaveformRequest {
+    pub input_path: String,
+    pub output_path: String,
+    pub bucket_count: usize,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ProxyGenerationError {
     #[error("invalid proxy request: {0}")]
@@ -82,6 +89,14 @@ pub trait ProxyGenerator {
     ) -> Result<(), ProxyGenerationError> {
         Err(ProxyGenerationError::InvalidRequest(
             "video thumbnail generation is not supported by this generator".to_string(),
+        ))
+    }
+    fn generate_audio_waveform(
+        &self,
+        _request: &AudioWaveformRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        Err(ProxyGenerationError::InvalidRequest(
+            "audio waveform generation is not supported by this generator".to_string(),
         ))
     }
 }

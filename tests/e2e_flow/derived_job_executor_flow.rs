@@ -221,12 +221,6 @@ struct WaveformOptionalGateway {
     calls: Mutex<Vec<String>>,
 }
 
-impl WaveformOptionalGateway {
-    fn calls(&self) -> Vec<String> {
-        self.calls.lock().expect("calls").clone()
-    }
-}
-
 impl DerivedProcessingGateway for WaveformOptionalGateway {
     fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
         self.calls
@@ -316,22 +310,15 @@ impl DerivedExecutionPlanner for WaveformOptionalPlanner {
 }
 
 #[test]
-fn e2e_derived_job_executor_flow_allows_audio_waveform_submit_without_output_artifact() {
+fn e2e_derived_job_executor_flow_rejects_audio_waveform_submit_without_output_artifact() {
     let gateway = WaveformOptionalGateway::default();
-    let report = execute_derived_job_once(&gateway, &WaveformOptionalPlanner, "job-wave-opt-1")
-        .expect("optional waveform flow should succeed");
+    let err = execute_derived_job_once(&gateway, &WaveformOptionalPlanner, "job-wave-opt-1")
+        .expect_err("waveform output must be required");
 
-    assert_eq!(report.job_id, "job-wave-opt-1");
-    assert_eq!(report.asset_uuid, "asset-wave-opt-1");
-    assert_eq!(report.upload_count, 0);
     assert_eq!(
-        gateway.calls(),
-        vec![
-            "claim:job-wave-opt-1".to_string(),
-            "heartbeat:job-wave-opt-1".to_string(),
-            "heartbeat:job-wave-opt-1".to_string(),
-            "heartbeat:job-wave-opt-1".to_string(),
-            "submit:job-wave-opt-1".to_string(),
-        ]
+        err,
+        DerivedJobExecutorError::MissingSubmitManifestForJobType(
+            DerivedJobType::GenerateAudioWaveform
+        )
     );
 }

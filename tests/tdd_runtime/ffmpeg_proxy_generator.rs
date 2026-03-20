@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 
 use retaia_agent::{
-    AudioProxyFormat, AudioProxyRequest, CommandOutput, CommandRunner, FfmpegProxyGenerator,
-    ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
+    AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, CommandOutput, CommandRunner,
+    FfmpegProxyGenerator, ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
     VideoThumbnailRequest,
 };
 
@@ -49,6 +49,48 @@ impl CommandRunner for FakeRunner {
             args: args.to_vec(),
         });
         Ok(self.output.clone())
+    }
+}
+
+struct WaveformRunner {
+    calls: Mutex<Vec<RecordedCall>>,
+}
+
+impl WaveformRunner {
+    fn new() -> Self {
+        Self {
+            calls: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl CommandRunner for WaveformRunner {
+    fn run(&self, program: &str, args: &[String]) -> Result<CommandOutput, ProxyGenerationError> {
+        self.calls.lock().expect("calls").push(RecordedCall {
+            program: program.to_string(),
+            args: args.to_vec(),
+        });
+        let wav_path = args.last().expect("wav output path");
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 16_000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(wav_path, spec)
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+        for sample in [0_i16, 8_000, -16_000, 4_000, 0] {
+            writer
+                .write_sample(sample)
+                .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+        }
+        writer
+            .finalize()
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+        Ok(CommandOutput {
+            status_code: Some(0),
+            stderr: String::new(),
+        })
     }
 }
 
@@ -152,6 +194,34 @@ fn tdd_ffmpeg_thumbnail_uses_webp_encoder_and_representative_seek() {
     assert!(joined.contains("-c:v libwebp"));
     assert!(joined.contains("-quality 75"));
     assert!(joined.contains("scale=w=480:h=-2:force_original_aspect_ratio=decrease"));
+}
+
+#[test]
+fn tdd_ffmpeg_waveform_generates_json_with_requested_bucket_count() {
+    let runner = WaveformRunner::new();
+    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let output = dir.path().join("waveform.json");
+
+    generator
+        .generate_audio_waveform(&AudioWaveformRequest {
+            input_path: "/tmp/in.wav".to_string(),
+            output_path: output.display().to_string(),
+            bucket_count: 100,
+        })
+        .expect("waveform generation should succeed");
+
+    let payload: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&output).expect("read waveform json"))
+            .expect("json payload");
+    assert_eq!(payload.get("bucket_count"), Some(&serde_json::json!(100)));
+    assert_eq!(
+        payload
+            .get("samples")
+            .and_then(|samples| samples.as_array())
+            .map(|samples| samples.len()),
+        Some(100)
+    );
 }
 
 fn generator_runner_call(generator: &FfmpegProxyGenerator<FakeRunner>) -> RecordedCall {

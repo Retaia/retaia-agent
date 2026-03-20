@@ -1,7 +1,7 @@
 use retaia_agent::{
-    AudioProxyRequest, ClaimedDerivedJob, DerivedExecutionPlanner, DerivedJobType, DerivedKind,
-    PhotoProxyRequest, ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner,
-    VideoProxyRequest, VideoThumbnailRequest,
+    AudioProxyRequest, AudioWaveformRequest, ClaimedDerivedJob, DerivedExecutionPlanner,
+    DerivedJobType, DerivedKind, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
+    RuntimeDerivedPlanner, VideoProxyRequest, VideoThumbnailRequest,
 };
 use std::sync::Arc;
 
@@ -39,6 +39,17 @@ impl ProxyGenerator for WritingPreviewGenerator {
     ) -> Result<(), ProxyGenerationError> {
         std::fs::write(&request.output_path, b"generated-thumbnail")
             .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_waveform(
+        &self,
+        request: &AudioWaveformRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(
+            &request.output_path,
+            br#"{"duration_ms":1000,"bucket_count":1000,"samples":[0.1,0.5]}"#,
+        )
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))
     }
 }
 
@@ -196,6 +207,49 @@ fn tdd_runtime_derived_planner_builds_thumbnail_upload_as_webp() {
         Some(&serde_json::json!("video_representative_v1"))
     );
     assert_eq!(metrics.get("thumbnail_count"), Some(&serde_json::json!(1)));
+}
+
+#[test]
+fn tdd_runtime_derived_planner_builds_waveform_upload_as_json() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-wave-1".to_string(),
+        asset_uuid: "asset-wave-1".to_string(),
+        lock_token: "lock-wave-1".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GenerateAudioWaveform,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/audio.wav".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("audio.wav");
+    std::fs::write(&staged, b"audio-source").expect("write");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::Waveform);
+    assert_eq!(plan.uploads[0].init.content_type, "application/json");
+    assert!(
+        plan.uploads[0].parts[0]
+            .chunk_path
+            .ends_with("audio.waveform.json")
+    );
+    let metrics = plan.submit.metrics.expect("waveform metrics");
+    assert_eq!(
+        metrics.get("waveform_bucket_count"),
+        Some(&serde_json::json!(1000))
+    );
+    assert_eq!(
+        metrics.get("waveform_format"),
+        Some(&serde_json::json!("json"))
+    );
 }
 
 #[test]
