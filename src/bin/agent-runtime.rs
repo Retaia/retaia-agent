@@ -491,6 +491,15 @@ impl DerivedProcessingGateway for FeatureDisabledDerivedGateway {
         ))
     }
 
+    fn fetch_asset_revision_etag(
+        &self,
+        _asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        Err(DerivedProcessingError::Transport(
+            "core-api-client feature is disabled for this build".to_string(),
+        ))
+    }
+
     fn heartbeat(
         &self,
         _job_id: &str,

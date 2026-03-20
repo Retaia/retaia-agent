@@ -59,6 +59,17 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
         })
     }
 
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls mutex")
+            .push(format!("fetch_revision_etag:{asset_uuid}"));
+        Ok("\"asset-rev-1\"".to_string())
+    }
+
     fn heartbeat(
         &self,
         job_id: &str,
@@ -160,10 +171,15 @@ fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
     assert!(
         calls
             .iter()
-            .skip(1)
-            .take(calls.len().saturating_sub(2))
-            .all(|call| call == "heartbeat:job-1"),
-        "expected only heartbeats between claim and submit, got: {calls:?}"
+            .any(|call| call == "fetch_revision_etag:asset-1"),
+        "expected an asset revision fetch before uploads, got: {calls:?}"
+    );
+    assert!(
+        calls
+            .iter()
+            .filter(|call| call.as_str() != "claim:job-1" && call.as_str() != "submit:job-1")
+            .all(|call| call == "heartbeat:job-1" || call == "fetch_revision_etag:asset-1"),
+        "expected only heartbeats and revision fetch between claim and submit, got: {calls:?}"
     );
     assert!(
         calls.iter().any(|call| call == "heartbeat:job-1"),

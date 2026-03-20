@@ -118,6 +118,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
         plan.uploads = vec![DerivedUploadPlan {
             init: DerivedUploadInit {
                 asset_uuid: claimed.asset_uuid.clone(),
+                revision_etag: String::new(),
                 kind: upload_kind,
                 content_type: content_type_for_kind(upload_kind).to_string(),
                 size_bytes,
@@ -126,12 +127,14 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
             },
             parts: vec![DerivedUploadPart {
                 asset_uuid: claimed.asset_uuid.clone(),
+                revision_etag: String::new(),
                 upload_id: upload_id.clone(),
                 part_number: 1,
                 chunk_path: generated_path.clone(),
             }],
             complete: DerivedUploadComplete {
                 asset_uuid: claimed.asset_uuid.clone(),
+                revision_etag: String::new(),
                 upload_id,
                 idempotency_key: format!("complete-{}-{}", claimed.job_id, upload_kind.as_str()),
                 parts: None,

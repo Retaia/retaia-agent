@@ -5,6 +5,7 @@ fn bdd_given_derived_upload_init_request_when_kind_preview_audio_then_only_mp4_o
  {
     let accepted_mp4 = DerivedUploadInit {
         asset_uuid: "asset-a".to_string(),
+        revision_etag: "\"asset-rev-a\"".to_string(),
         kind: DerivedKind::PreviewAudio,
         content_type: "audio/mp4".to_string(),
         size_bytes: 2048,
@@ -33,6 +34,7 @@ fn bdd_given_derived_upload_init_request_when_kind_waveform_then_json_or_octet_s
 {
     let json_waveform = DerivedUploadInit {
         asset_uuid: "asset-w".to_string(),
+        revision_etag: "\"asset-rev-w\"".to_string(),
         kind: DerivedKind::Waveform,
         content_type: "application/json".to_string(),
         size_bytes: 1024,

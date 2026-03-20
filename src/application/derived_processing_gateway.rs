@@ -98,6 +98,7 @@ pub struct SubmitDerivedPayload {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DerivedUploadInit {
     pub asset_uuid: String,
+    pub revision_etag: String,
     pub kind: DerivedKind,
     pub content_type: String,
     pub size_bytes: u64,
@@ -108,6 +109,7 @@ pub struct DerivedUploadInit {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DerivedUploadPart {
     pub asset_uuid: String,
+    pub revision_etag: String,
     pub upload_id: String,
     pub part_number: u32,
     pub chunk_path: PathBuf,
@@ -116,6 +118,7 @@ pub struct DerivedUploadPart {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DerivedUploadComplete {
     pub asset_uuid: String,
+    pub revision_etag: String,
     pub upload_id: String,
     pub idempotency_key: String,
     pub parts: Option<Vec<UploadedDerivedPart>>,
@@ -147,6 +150,8 @@ pub enum DerivedProcessingError {
 
 pub trait DerivedProcessingGateway {
     fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError>;
+    fn fetch_asset_revision_etag(&self, asset_uuid: &str)
+    -> Result<String, DerivedProcessingError>;
     fn heartbeat(
         &self,
         job_id: &str,

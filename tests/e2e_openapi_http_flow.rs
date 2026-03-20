@@ -101,6 +101,17 @@ fn reason_phrase(status: u16) -> &'static str {
     }
 }
 
+fn assert_request_contains_header(request: &str, header_line: &str) {
+    let expected = header_line.to_ascii_lowercase();
+    assert!(
+        request
+            .lines()
+            .map(|line| line.to_ascii_lowercase())
+            .any(|line| line == expected),
+        "missing header `{header_line}` in request:\n{request}"
+    );
+}
+
 #[test]
 fn e2e_openapi_jobs_gateway_maps_422_from_real_http_response() {
     let (server, base_url) = spawn_mock_server(vec![MockExchange {
@@ -349,6 +360,7 @@ fn e2e_openapi_derived_gateway_upload_init_maps_422_from_http_response() {
     let gateway = OpenApiDerivedProcessingGateway::new(client);
     let request = DerivedUploadInit {
         asset_uuid: "asset-1".to_string(),
+        revision_etag: "\"asset-rev-1\"".to_string(),
         kind: DerivedKind::PreviewPhoto,
         content_type: "image/jpeg".to_string(),
         size_bytes: 64,
@@ -359,6 +371,44 @@ fn e2e_openapi_derived_gateway_upload_init_maps_422_from_http_response() {
         .upload_init(&request)
         .expect_err("must fail on unexpected 422");
     assert_eq!(error, DerivedProcessingError::UnexpectedStatus(422));
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_fetch_asset_revision_etag_reads_http_etag_header() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut buffer = [0_u8; 4096];
+        let size = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..size]);
+        let first_line = request.lines().next().unwrap_or_default().to_string();
+        assert!(first_line.starts_with("GET /api/v1/assets/asset-9"));
+
+        let response = concat!(
+            "HTTP/1.1 200 OK\r\n",
+            "Content-Type: application/json\r\n",
+            "ETag: \"asset-rev-9\"\r\n",
+            "Content-Length: 2\r\n",
+            "Connection: close\r\n",
+            "\r\n",
+            "{}"
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let etag = gateway
+        .fetch_asset_revision_etag("asset-9")
+        .expect("etag fetch should succeed");
+    assert_eq!(etag, "\"asset-rev-9\"");
 
     server.join().expect("server thread");
 }
@@ -546,6 +596,7 @@ fn e2e_openapi_derived_gateway_upload_part_maps_429_from_http_response() {
     let chunk = NamedTempFile::new().expect("temp chunk");
     let request = DerivedUploadPart {
         asset_uuid: "asset-2".to_string(),
+        revision_etag: "\"asset-rev-2\"".to_string(),
         upload_id: "upload-2".to_string(),
         part_number: 1,
         chunk_path: chunk.path().to_path_buf(),
@@ -554,6 +605,49 @@ fn e2e_openapi_derived_gateway_upload_part_maps_429_from_http_response() {
         .upload_part(&request)
         .expect_err("must fail on throttling");
     assert_eq!(error, DerivedProcessingError::Throttled);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_upload_init_sends_request_revision_etag_in_if_match_header() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut buffer = [0_u8; 4096];
+        let size = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..size]);
+        let first_line = request.lines().next().unwrap_or_default().to_string();
+        assert!(first_line.starts_with("POST /api/v1/assets/asset-3/derived/upload/init"));
+        assert_request_contains_header(&request, "If-Match: \"asset-rev-3\"");
+
+        let response = concat!(
+            "HTTP/1.1 204 No Content\r\n",
+            "Content-Length: 0\r\n",
+            "Connection: close\r\n",
+            "\r\n"
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    gateway
+        .upload_init(&DerivedUploadInit {
+            asset_uuid: "asset-3".to_string(),
+            revision_etag: "\"asset-rev-3\"".to_string(),
+            kind: DerivedKind::PreviewPhoto,
+            content_type: "image/jpeg".to_string(),
+            size_bytes: 64,
+            sha256: None,
+            idempotency_key: "idem-3".to_string(),
+        })
+        .expect("upload init should succeed");
 
     server.join().expect("server thread");
 }
@@ -572,6 +666,7 @@ fn e2e_openapi_derived_gateway_upload_complete_maps_500_from_http_response() {
     let gateway = OpenApiDerivedProcessingGateway::new(client);
     let request = DerivedUploadComplete {
         asset_uuid: "asset-2".to_string(),
+        revision_etag: "\"asset-rev-2\"".to_string(),
         upload_id: "upload-2".to_string(),
         idempotency_key: "idem-2".to_string(),
         parts: None,
@@ -580,6 +675,94 @@ fn e2e_openapi_derived_gateway_upload_complete_maps_500_from_http_response() {
         .upload_complete(&request)
         .expect_err("must fail on 500");
     assert_eq!(error, DerivedProcessingError::UnexpectedStatus(500));
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_upload_part_sends_request_revision_etag_in_if_match_header() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut buffer = [0_u8; 8192];
+        let size = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..size]);
+        let first_line = request.lines().next().unwrap_or_default().to_string();
+        assert!(first_line.starts_with("POST /api/v1/assets/asset-4/derived/upload/part"));
+        assert_request_contains_header(&request, "If-Match: \"asset-rev-4\"");
+
+        let body = r#"{"part_etag":"part-etag-1"}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let chunk = NamedTempFile::new().expect("temp chunk");
+    std::fs::write(chunk.path(), b"chunk").expect("write chunk");
+    let uploaded = gateway
+        .upload_part(&DerivedUploadPart {
+            asset_uuid: "asset-4".to_string(),
+            revision_etag: "\"asset-rev-4\"".to_string(),
+            upload_id: "upload-4".to_string(),
+            part_number: 1,
+            chunk_path: chunk.path().to_path_buf(),
+        })
+        .expect("upload part should succeed");
+    assert_eq!(uploaded.part_etag, "part-etag-1");
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_upload_complete_sends_request_revision_etag_in_if_match_header() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut buffer = [0_u8; 4096];
+        let size = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..size]);
+        let first_line = request.lines().next().unwrap_or_default().to_string();
+        assert!(first_line.starts_with("POST /api/v1/assets/asset-5/derived/upload/complete"));
+        assert_request_contains_header(&request, "If-Match: \"asset-rev-5\"");
+
+        let response = concat!(
+            "HTTP/1.1 204 No Content\r\n",
+            "Content-Length: 0\r\n",
+            "Connection: close\r\n",
+            "\r\n"
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    gateway
+        .upload_complete(&DerivedUploadComplete {
+            asset_uuid: "asset-5".to_string(),
+            revision_etag: "\"asset-rev-5\"".to_string(),
+            upload_id: "upload-5".to_string(),
+            idempotency_key: "idem-5".to_string(),
+            parts: Some(vec![retaia_agent::UploadedDerivedPart {
+                part_number: 1,
+                part_etag: "part-etag-1".to_string(),
+            }]),
+        })
+        .expect("upload complete should succeed");
 
     server.join().expect("server thread");
 }

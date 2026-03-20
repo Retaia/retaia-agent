@@ -22,6 +22,7 @@ fn tdd_derived_kind_content_type_matrix_matches_v1_constraints() {
 fn tdd_validate_derived_upload_init_rejects_invalid_content_type_or_zero_size() {
     let invalid_mime = DerivedUploadInit {
         asset_uuid: "asset-1".to_string(),
+        revision_etag: "\"asset-rev-1\"".to_string(),
         kind: DerivedKind::PreviewVideo,
         content_type: "video/webm".to_string(),
         size_bytes: 1024,
@@ -37,6 +38,7 @@ fn tdd_validate_derived_upload_init_rejects_invalid_content_type_or_zero_size() 
 
     let invalid_size = DerivedUploadInit {
         asset_uuid: "asset-1".to_string(),
+        revision_etag: "\"asset-rev-1\"".to_string(),
         kind: DerivedKind::PreviewVideo,
         content_type: "video/mp4".to_string(),
         size_bytes: 0,
@@ -51,6 +53,7 @@ fn tdd_validate_derived_upload_init_rejects_invalid_content_type_or_zero_size() 
 fn tdd_validate_derived_upload_init_accepts_v1_valid_preview_video_payload() {
     let request = DerivedUploadInit {
         asset_uuid: "asset-1".to_string(),
+        revision_etag: "\"asset-rev-1\"".to_string(),
         kind: DerivedKind::PreviewVideo,
         content_type: "video/mp4".to_string(),
         size_bytes: 32_000,

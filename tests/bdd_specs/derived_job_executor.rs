@@ -16,6 +16,7 @@ impl DerivedExecutionPlanner for AssetMismatchPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: format!("{}-mismatch", claimed.asset_uuid),
+                    revision_etag: String::new(),
                     kind: DerivedKind::PreviewVideo,
                     content_type: "video/mp4".to_string(),
                     size_bytes: 1,
@@ -24,12 +25,14 @@ impl DerivedExecutionPlanner for AssetMismatchPlanner {
                 },
                 parts: vec![DerivedUploadPart {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-1".to_string(),
                     part_number: 1,
                     chunk_path: std::path::PathBuf::from("/tmp/up-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-1".to_string(),
                     idempotency_key: "idem-complete".to_string(),
                     parts: None,
@@ -66,6 +69,13 @@ impl DerivedProcessingGateway for NoopGateway {
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),
         })
+    }
+
+    fn fetch_asset_revision_etag(
+        &self,
+        _asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        Ok("\"asset-rev-1\"".to_string())
     }
 
     fn heartbeat(
@@ -140,6 +150,13 @@ impl DerivedProcessingGateway for WaveformOptionalManifestGateway {
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),
         })
+    }
+
+    fn fetch_asset_revision_etag(
+        &self,
+        _asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        Ok("\"asset-rev-wf-1\"".to_string())
     }
 
     fn heartbeat(

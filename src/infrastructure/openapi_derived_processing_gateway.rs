@@ -22,9 +22,6 @@ use retaia_core_client::apis::configuration::Configuration;
 use retaia_core_client::models;
 
 #[cfg(feature = "core-api-client")]
-const PLACEHOLDER_IF_MATCH: &str = "*";
-
-#[cfg(feature = "core-api-client")]
 #[derive(Debug, Clone)]
 pub struct OpenApiDerivedProcessingGateway {
     configuration: Configuration,
@@ -90,6 +87,39 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             source_original_relative: job.source.original_relative,
             source_sidecars_relative: job.source.sidecars_relative.unwrap_or_default(),
         })
+    }
+
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        let path = format!("/assets/{asset_uuid}");
+        let response = signed_empty_request(
+            &reqwest::blocking::Client::new(),
+            &self.identity,
+            self.configuration.bearer_access_token.as_deref(),
+            &self.configuration.base_path,
+            reqwest::Method::GET,
+            &path,
+            None,
+        )
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
+        .send()
+        .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+
+        let response = require_success(response, map_asset_get_status)?;
+        let etag = response
+            .headers()
+            .get(reqwest::header::ETAG)
+            .and_then(|value| value.to_str().ok())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                DerivedProcessingError::Transport(
+                    "core API asset detail response missing ETag header".to_string(),
+                )
+            })?;
+        Ok(etag.to_string())
     }
 
     fn heartbeat(
@@ -212,7 +242,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             None,
         )
         .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
-        .header("If-Match", PLACEHOLDER_IF_MATCH)
+        .header("If-Match", request.revision_etag.clone())
         .header("Idempotency-Key", request.idempotency_key.clone())
         .send()
         .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
@@ -234,7 +264,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             self.configuration.bearer_access_token.as_deref(),
             &self.configuration.base_path,
             &path,
-            PLACEHOLDER_IF_MATCH,
+            &request.revision_etag,
             &request.upload_id,
             request.part_number,
             chunk,
@@ -287,7 +317,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             None,
         )
         .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?
-        .header("If-Match", PLACEHOLDER_IF_MATCH)
+        .header("If-Match", request.revision_etag.clone())
         .header("Idempotency-Key", request.idempotency_key.clone())
         .send()
         .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
@@ -408,6 +438,15 @@ fn require_success(
 
 #[cfg(feature = "core-api-client")]
 fn map_claim_status(status: StatusCode) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        429 => DerivedProcessingError::Throttled,
+        code => DerivedProcessingError::UnexpectedStatus(code),
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_asset_get_status(status: StatusCode) -> DerivedProcessingError {
     match status.as_u16() {
         401 => DerivedProcessingError::Unauthorized,
         429 => DerivedProcessingError::Throttled,

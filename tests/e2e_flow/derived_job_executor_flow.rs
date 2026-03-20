@@ -36,6 +36,17 @@ impl DerivedProcessingGateway for RecordingGateway {
         })
     }
 
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("fetch_revision_etag:{asset_uuid}"));
+        Ok("\"asset-rev-22\"".to_string())
+    }
+
     fn heartbeat(
         &self,
         job_id: &str,
@@ -113,6 +124,7 @@ impl DerivedExecutionPlanner for ThumbnailPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     kind: DerivedKind::Thumb,
                     content_type: "image/jpeg".to_string(),
                     size_bytes: 4096,
@@ -121,12 +133,14 @@ impl DerivedExecutionPlanner for ThumbnailPlanner {
                 },
                 parts: vec![DerivedUploadPart {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-thumb-1".to_string(),
                     part_number: 1,
                     chunk_path: std::path::PathBuf::from("/tmp/up-thumb-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-thumb-1".to_string(),
                     idempotency_key: "idem-complete-thumb".to_string(),
                     parts: None,
@@ -165,6 +179,7 @@ fn e2e_derived_job_executor_flow_claims_uploads_and_submits_for_v1_derived_job()
             "claim:job-22".to_string(),
             "heartbeat:job-22".to_string(),
             "heartbeat:job-22".to_string(),
+            "fetch_revision_etag:asset-22".to_string(),
             "heartbeat:job-22".to_string(),
             "upload_init:asset-22:thumb".to_string(),
             "heartbeat:job-22".to_string(),
@@ -239,6 +254,17 @@ impl DerivedProcessingGateway for WaveformOptionalGateway {
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),
         })
+    }
+
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("fetch_revision_etag:{asset_uuid}"));
+        Ok("\"asset-rev-wave-opt-1\"".to_string())
     }
 
     fn heartbeat(
