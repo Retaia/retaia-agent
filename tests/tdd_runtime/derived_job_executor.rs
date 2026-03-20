@@ -4,9 +4,9 @@ use retaia_agent::{
     AgentRuntimeConfig, AudioProxyRequest, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan,
     DerivedExecutionPlanner, DerivedJobExecutorError, DerivedJobType, DerivedKind,
     DerivedManifestItem, DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete,
-    DerivedUploadInit, DerivedUploadPart, HeartbeatReceipt, LogLevel, PhotoProxyRequest,
-    ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner, SubmitDerivedPayload,
-    UploadedDerivedPart, VideoProxyRequest, execute_derived_job_once,
+    DerivedUploadInit, DerivedUploadPart, FactsPatchPayload, HeartbeatReceipt, LogLevel,
+    PhotoProxyRequest, ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner,
+    SubmitDerivedPayload, UploadedDerivedPart, VideoProxyRequest, execute_derived_job_once,
     execute_derived_job_once_with_source_staging,
 };
 use std::sync::Arc;
@@ -44,6 +44,21 @@ impl ProxyGenerator for WritingPreviewGenerator {
     ) -> Result<(), ProxyGenerationError> {
         std::fs::write(&request.output_path, b"generated-photo")
             .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn extract_media_facts(
+        &self,
+        _input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        Ok(FactsPatchPayload {
+            duration_ms: Some(1_000),
+            media_format: Some("mp4".to_string()),
+            video_codec: Some("h264".to_string()),
+            audio_codec: Some("aac".to_string()),
+            width: Some(1280),
+            height: Some(720),
+            fps: Some(25.0),
+        })
     }
 }
 
@@ -179,6 +194,7 @@ impl DerivedExecutionPlanner for ProxyPlanner {
                     size_bytes: Some(1024),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -310,6 +326,7 @@ impl DerivedExecutionPlanner for MissingIdempotencyPlanner {
             submit: SubmitDerivedPayload {
                 job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -335,6 +352,7 @@ impl DerivedExecutionPlanner for MismatchedJobTypePlanner {
                     size_bytes: Some(1),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -355,6 +373,7 @@ impl DerivedExecutionPlanner for EmptyProxyManifestPlanner {
             submit: SubmitDerivedPayload {
                 job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -396,6 +415,7 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
                     size_bytes: Some(1024),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -537,6 +557,7 @@ impl DerivedExecutionPlanner for ValidWaveformPlanner {
                     size_bytes: Some(128),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -557,6 +578,7 @@ impl DerivedExecutionPlanner for EmptyWaveformPlanner {
             submit: SubmitDerivedPayload {
                 job_type: claimed.job_type,
                 manifest: vec![],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -582,6 +604,7 @@ impl DerivedExecutionPlanner for IncompatibleWaveformPlanner {
                     size_bytes: Some(42),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -835,6 +858,11 @@ fn tdd_execute_derived_job_once_with_runtime_planner_supports_extract_facts_with
     assert!(calls.contains(&"submit:job-facts-1".to_string()));
     assert!(!calls.iter().any(|call| call.starts_with("upload_")));
     let payload = gateway.submitted_payload().expect("submitted payload");
+    let facts = payload.facts_patch.expect("facts patch");
+    assert_eq!(facts.duration_ms, Some(1_000));
+    assert_eq!(facts.media_format.as_deref(), Some("mp4"));
+    assert_eq!(facts.video_codec.as_deref(), Some("h264"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("aac"));
     let metrics = payload.metrics.expect("metrics");
     assert_eq!(
         metrics.get("staged_sidecars_count"),

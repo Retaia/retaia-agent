@@ -5,6 +5,7 @@ use std::path::Path;
 use image::imageops::FilterType;
 use image::{DynamicImage, ImageBuffer, ImageFormat, Rgb};
 
+use crate::application::derived_processing_gateway::FactsPatchPayload;
 use crate::application::proxy_generator::{
     AudioProxyRequest, PhotoProxyFormat, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
     VideoProxyRequest,
@@ -89,6 +90,38 @@ impl<D: RawPhotoDecoder> ProxyGenerator for RustPhotoProxyGenerator<D> {
             FilterType::Lanczos3,
         );
         write_photo_proxy(&resized, &request.output_path, request.format)
+    }
+
+    fn extract_media_facts(
+        &self,
+        input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        let source = load_source_image(&self.raw_decoder, input_path)?;
+        let format = image::ImageFormat::from_path(input_path)
+            .ok()
+            .map(|format| {
+                format
+                    .extensions_str()
+                    .first()
+                    .copied()
+                    .unwrap_or("image")
+                    .to_string()
+            })
+            .or_else(|| {
+                Path::new(input_path)
+                    .extension()
+                    .and_then(|value| value.to_str())
+                    .map(|value| value.to_ascii_lowercase())
+            });
+        Ok(FactsPatchPayload {
+            duration_ms: None,
+            media_format: format,
+            video_codec: None,
+            audio_codec: None,
+            width: i32::try_from(source.width()).ok(),
+            height: i32::try_from(source.height()).ok(),
+            fps: None,
+        })
     }
 }
 

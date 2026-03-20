@@ -519,6 +519,7 @@ fn e2e_openapi_derived_gateway_submit_maps_401_from_http_response() {
             size_bytes: Some(12),
             sha256: None,
         }],
+        facts_patch: None,
         warnings: None,
         metrics: None,
     };

@@ -1,7 +1,7 @@
 use retaia_agent::{
     AudioProxyRequest, AudioWaveformRequest, ClaimedDerivedJob, DerivedExecutionPlanner,
-    DerivedJobType, DerivedKind, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
-    RuntimeDerivedPlanner, VideoProxyRequest, VideoThumbnailRequest,
+    DerivedJobType, DerivedKind, FactsPatchPayload, PhotoProxyRequest, ProxyGenerationError,
+    ProxyGenerator, RuntimeDerivedPlanner, VideoProxyRequest, VideoThumbnailRequest,
 };
 use std::sync::Arc;
 
@@ -50,6 +50,21 @@ impl ProxyGenerator for WritingPreviewGenerator {
             br#"{"duration_ms":1000,"bucket_count":1000,"samples":[0.1,0.5]}"#,
         )
         .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn extract_media_facts(
+        &self,
+        _input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        Ok(FactsPatchPayload {
+            duration_ms: Some(2_000),
+            media_format: Some("mp4".to_string()),
+            video_codec: Some("h264".to_string()),
+            audio_codec: Some("aac".to_string()),
+            width: Some(1920),
+            height: Some(1080),
+            fps: Some(25.0),
+        })
     }
 }
 
@@ -253,8 +268,11 @@ fn tdd_runtime_derived_planner_builds_waveform_upload_as_json() {
 }
 
 #[test]
-fn tdd_runtime_derived_planner_extract_facts_stays_uploadless_with_staged_source() {
-    let planner = RuntimeDerivedPlanner::default();
+fn tdd_runtime_derived_planner_extract_facts_populates_facts_patch_without_uploads() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
     let claimed = ClaimedDerivedJob {
         job_id: "job-facts-1".to_string(),
         asset_uuid: "asset-facts-1".to_string(),
@@ -275,11 +293,22 @@ fn tdd_runtime_derived_planner_extract_facts_stays_uploadless_with_staged_source
     assert_eq!(plan.submit.job_type, DerivedJobType::ExtractFacts);
     assert!(plan.submit.manifest.is_empty());
     assert!(plan.uploads.is_empty());
+    let facts = plan.submit.facts_patch.expect("facts patch");
+    assert_eq!(facts.duration_ms, Some(2_000));
+    assert_eq!(facts.media_format.as_deref(), Some("mp4"));
+    assert_eq!(facts.video_codec.as_deref(), Some("h264"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("aac"));
+    assert_eq!(facts.width, Some(1920));
+    assert_eq!(facts.height, Some(1080));
+    assert_eq!(facts.fps, Some(25.0));
 }
 
 #[test]
 fn tdd_runtime_derived_planner_includes_sidecar_metrics_when_sidecars_are_staged() {
-    let planner = RuntimeDerivedPlanner::default();
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
     let claimed = ClaimedDerivedJob {
         job_id: "job-facts-2".to_string(),
         asset_uuid: "asset-facts-2".to_string(),

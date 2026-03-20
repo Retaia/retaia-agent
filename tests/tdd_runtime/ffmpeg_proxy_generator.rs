@@ -22,8 +22,16 @@ impl FakeRunner {
         Self {
             output: CommandOutput {
                 status_code: Some(0),
+                stdout: String::new(),
                 stderr: String::new(),
             },
+            calls: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn with_output(output: CommandOutput) -> Self {
+        Self {
+            output,
             calls: Mutex::new(Vec::new()),
         }
     }
@@ -89,6 +97,7 @@ impl CommandRunner for WaveformRunner {
             .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
         Ok(CommandOutput {
             status_code: Some(0),
+            stdout: String::new(),
             stderr: String::new(),
         })
     }
@@ -222,6 +231,35 @@ fn tdd_ffmpeg_waveform_generates_json_with_requested_bucket_count() {
             .map(|samples| samples.len()),
         Some(100)
     );
+}
+
+#[test]
+fn tdd_ffmpeg_extract_media_facts_maps_ffprobe_json_to_patch() {
+    let runner = FakeRunner::with_output(CommandOutput {
+        status_code: Some(0),
+        stdout: r#"{
+            "format":{"duration":"12.345","format_name":"mov,mp4,m4a,3gp,3g2,mj2"},
+            "streams":[
+                {"codec_type":"video","codec_name":"h264","width":1920,"height":1080,"avg_frame_rate":"30000/1001"},
+                {"codec_type":"audio","codec_name":"aac"}
+            ]
+        }"#
+        .to_string(),
+        stderr: String::new(),
+    });
+    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+
+    let facts = generator
+        .extract_media_facts("/tmp/in.mov")
+        .expect("facts extraction should succeed");
+
+    assert_eq!(facts.duration_ms, Some(12_345));
+    assert_eq!(facts.media_format.as_deref(), Some("mov"));
+    assert_eq!(facts.video_codec.as_deref(), Some("h264"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("aac"));
+    assert_eq!(facts.width, Some(1920));
+    assert_eq!(facts.height, Some(1080));
+    assert_eq!(facts.fps, Some(30000.0 / 1001.0));
 }
 
 fn generator_runner_call(generator: &FfmpegProxyGenerator<FakeRunner>) -> RecordedCall {

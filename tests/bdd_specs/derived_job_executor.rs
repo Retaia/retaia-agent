@@ -43,6 +43,7 @@ impl DerivedExecutionPlanner for AssetMismatchPlanner {
                     size_bytes: Some(1),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -198,6 +199,7 @@ impl DerivedExecutionPlanner for WaveformOptionalManifestPlanner {
             submit: SubmitDerivedPayload {
                 job_type: claimed.job_type,
                 manifest: vec![],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },

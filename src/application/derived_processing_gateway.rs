@@ -75,10 +75,22 @@ pub struct DerivedManifestItem {
     pub sha256: Option<String>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct FactsPatchPayload {
+    pub duration_ms: Option<i32>,
+    pub media_format: Option<String>,
+    pub video_codec: Option<String>,
+    pub audio_codec: Option<String>,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub fps: Option<f64>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SubmitDerivedPayload {
     pub job_type: DerivedJobType,
     pub manifest: Vec<DerivedManifestItem>,
+    pub facts_patch: Option<FactsPatchPayload>,
     pub warnings: Option<Vec<String>>,
     pub metrics: Option<HashMap<String, Value>>,
 }

@@ -151,6 +151,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
                     size_bytes: Some(2048),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },

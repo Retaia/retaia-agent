@@ -3,7 +3,7 @@ use crate::application::derived_job_executor::{
 };
 use crate::application::derived_processing_gateway::{
     ClaimedDerivedJob, DerivedJobType, DerivedKind, DerivedManifestItem, DerivedUploadComplete,
-    DerivedUploadInit, DerivedUploadPart, SubmitDerivedPayload,
+    DerivedUploadInit, DerivedUploadPart, FactsPatchPayload, SubmitDerivedPayload,
 };
 use crate::application::proxy_generator::{
     AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, PhotoProxyFormat, PhotoProxyRequest,
@@ -62,6 +62,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
             submit: SubmitDerivedPayload {
                 job_type: claimed.job_type,
                 manifest,
+                facts_patch: None,
                 warnings: None,
                 metrics: base_metrics_for_job(claimed),
             },
@@ -80,12 +81,13 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
             &mut plan.submit.metrics,
             sidecar_metrics(staged_source_path, staged_sidecar_paths)?,
         );
-        if claimed.job_type == DerivedJobType::ExtractFacts {
-            return Ok(plan);
-        }
         let Some(source_path) = staged_source_path else {
             return Ok(plan);
         };
+        if claimed.job_type == DerivedJobType::ExtractFacts {
+            plan.submit.facts_patch = Some(self.extract_facts(source_path, claimed)?);
+            return Ok(plan);
+        }
 
         let upload_kind = plan
             .submit
@@ -251,6 +253,22 @@ impl RuntimeDerivedPlanner {
             ))
             .map_err(map_preview_generation_error)?;
         Ok(output_path)
+    }
+
+    fn extract_facts(
+        &self,
+        source_path: &Path,
+        claimed: &ClaimedDerivedJob,
+    ) -> Result<FactsPatchPayload, DerivedJobExecutorError> {
+        let generator: &Arc<dyn ProxyGenerator> =
+            if infer_preview_kind(claimed) == DerivedKind::PreviewPhoto {
+                &self.photo_generator
+            } else {
+                &self.av_generator
+            };
+        generator
+            .extract_media_facts(&source_path.to_string_lossy())
+            .map_err(map_preview_generation_error)
     }
 }
 

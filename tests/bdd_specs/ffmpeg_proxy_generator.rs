@@ -44,6 +44,7 @@ impl CommandRunner for ScenarioRunner {
 fn bdd_given_audio_proxy_format_mpeg_when_generating_then_ffmpeg_uses_libmp3lame_encoder() {
     let runner = ScenarioRunner::with_output(CommandOutput {
         status_code: Some(0),
+        stdout: String::new(),
         stderr: String::new(),
     });
     let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
@@ -67,6 +68,7 @@ fn bdd_given_audio_proxy_format_mpeg_when_generating_then_ffmpeg_uses_libmp3lame
 fn bdd_given_ffmpeg_non_zero_exit_when_generating_proxy_then_command_failed_error_is_returned() {
     let runner = ScenarioRunner::with_output(CommandOutput {
         status_code: Some(1),
+        stdout: String::new(),
         stderr: "encoding failed".to_string(),
     });
     let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
@@ -89,6 +91,7 @@ fn bdd_given_video_proxy_request_when_generating_then_ffmpeg_is_called_with_h264
 {
     let runner = ScenarioRunner::with_output(CommandOutput {
         status_code: Some(0),
+        stdout: String::new(),
         stderr: String::new(),
     });
     let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
@@ -121,6 +124,7 @@ fn bdd_given_invalid_video_proxy_request_when_generating_then_validation_fails_b
 {
     let runner = ScenarioRunner::with_output(CommandOutput {
         status_code: Some(0),
+        stdout: String::new(),
         stderr: String::new(),
     });
     let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
@@ -144,6 +148,7 @@ fn bdd_given_invalid_video_proxy_request_when_generating_then_validation_fails_b
 fn bdd_given_invalid_audio_proxy_request_when_zero_sample_rate_then_validation_fails() {
     let runner = ScenarioRunner::with_output(CommandOutput {
         status_code: Some(0),
+        stdout: String::new(),
         stderr: String::new(),
     });
     let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
@@ -166,6 +171,7 @@ fn bdd_given_invalid_audio_proxy_request_when_zero_sample_rate_then_validation_f
 fn bdd_given_thumbnail_request_when_generating_then_ffmpeg_extracts_single_webp_frame() {
     let runner = ScenarioRunner::with_output(CommandOutput {
         status_code: Some(0),
+        stdout: String::new(),
         stderr: String::new(),
     });
     let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);

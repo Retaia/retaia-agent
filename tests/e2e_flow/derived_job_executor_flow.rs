@@ -140,6 +140,7 @@ impl DerivedExecutionPlanner for ThumbnailPlanner {
                     size_bytes: Some(4096),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -193,6 +194,7 @@ impl DerivedExecutionPlanner for IncompatibleThumbnailManifestPlanner {
                     size_bytes: Some(1024),
                     sha256: None,
                 }],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -301,6 +303,7 @@ impl DerivedExecutionPlanner for WaveformOptionalPlanner {
             submit: SubmitDerivedPayload {
                 job_type: claimed.job_type,
                 manifest: vec![],
+                facts_patch: None,
                 warnings: None,
                 metrics: None,
             },
