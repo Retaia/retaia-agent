@@ -34,6 +34,10 @@ fn tdd_file_config_repository_implements_port_roundtrip() {
     let loaded = repository.load().expect("load should pass");
     assert_eq!(loaded, config);
 
+    let raw = std::fs::read_to_string(&path).expect("raw config");
+    assert!(!raw.contains("secret_key"));
+    assert!(!raw.contains("secret"));
+
     let raw_loaded = load_config_from_path(&path).expect("direct loader should match");
     assert_eq!(raw_loaded, config);
 }

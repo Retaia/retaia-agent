@@ -22,6 +22,7 @@ fn map_store_error(error: ConfigStoreError) -> ConfigRepositoryError {
         ConfigStoreError::TomlEncode(error) => {
             ConfigRepositoryError::Persistence(error.to_string())
         }
+        ConfigStoreError::SecretStore(error) => ConfigRepositoryError::Persistence(error),
         ConfigStoreError::Validation(errors) => ConfigRepositoryError::Validation(errors),
     }
 }

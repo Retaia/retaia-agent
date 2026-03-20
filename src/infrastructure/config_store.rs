@@ -12,6 +12,9 @@ use crate::domain::configuration::{
     AgentRuntimeConfig, AuthMode, ConfigValidationError, LogLevel, TechnicalAuthConfig,
     normalize_storage_mounts, validate_config,
 };
+use crate::infrastructure::technical_secret_store::{
+    delete_technical_secret, load_technical_secret, persist_technical_secret,
+};
 
 pub const CONFIG_FILE_ENV: &str = "RETAIA_AGENT_CONFIG_PATH";
 pub const CONFIG_FILE_NAME: &str = "config.toml";
@@ -26,6 +29,8 @@ pub enum ConfigStoreError {
     TomlDecode(toml::de::Error),
     #[error("toml encode error: {0}")]
     TomlEncode(toml::ser::Error),
+    #[error("secret store error: {0}")]
+    SecretStore(String),
     #[error("config validation failed")]
     Validation(Vec<ConfigValidationError>),
 }
@@ -68,7 +73,8 @@ enum StoredLogLevel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StoredTechnicalAuthConfig {
     client_id: String,
-    secret_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    secret_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -129,7 +135,7 @@ impl From<StoredTechnicalAuthConfig> for TechnicalAuthConfig {
     fn from(value: StoredTechnicalAuthConfig) -> Self {
         Self {
             client_id: value.client_id,
-            secret_key: value.secret_key,
+            secret_key: value.secret_key.unwrap_or_default(),
         }
     }
 }
@@ -138,7 +144,7 @@ impl From<TechnicalAuthConfig> for StoredTechnicalAuthConfig {
     fn from(value: TechnicalAuthConfig) -> Self {
         Self {
             client_id: value.client_id,
-            secret_key: value.secret_key,
+            secret_key: None,
         }
     }
 }
@@ -194,7 +200,16 @@ pub fn save_config_to_path(
         fs::create_dir_all(parent)?;
     }
 
+    let previous = if path.exists() {
+        Some(toml::from_str::<StoredAgentRuntimeConfig>(
+            &fs::read_to_string(path)?,
+        )?)
+    } else {
+        None
+    };
+
     let raw: StoredAgentRuntimeConfig = config.clone().into();
+    sync_technical_secret(path, previous.as_ref(), config)?;
     let toml = toml::to_string_pretty(&raw)?;
     fs::write(path, toml)?;
     Ok(())
@@ -203,7 +218,10 @@ pub fn save_config_to_path(
 pub fn load_config_from_path(path: &Path) -> Result<AgentRuntimeConfig, ConfigStoreError> {
     let content = fs::read_to_string(path)?;
     let stored: StoredAgentRuntimeConfig = toml::from_str(&content)?;
-    let config: AgentRuntimeConfig = stored.into();
+    let (config, migrated_legacy_secret) = hydrate_runtime_config(path, stored)?;
+    if migrated_legacy_secret {
+        save_config_to_path(path, &config)?;
+    }
     validate_config(&config).map_err(ConfigStoreError::Validation)?;
     Ok(config)
 }
@@ -217,4 +235,67 @@ pub fn save_system_config(config: &AgentRuntimeConfig) -> Result<PathBuf, Config
 pub fn load_system_config() -> Result<AgentRuntimeConfig, ConfigStoreError> {
     let path = system_config_file_path()?;
     load_config_from_path(&path)
+}
+
+fn hydrate_runtime_config(
+    path: &Path,
+    stored: StoredAgentRuntimeConfig,
+) -> Result<(AgentRuntimeConfig, bool), ConfigStoreError> {
+    let mut migrated_legacy_secret = false;
+    let technical_auth = match stored.technical_auth {
+        Some(technical) => {
+            if let Some(secret_key) = technical.secret_key.as_deref() {
+                persist_technical_secret(path, &technical.client_id, secret_key)
+                    .map_err(ConfigStoreError::SecretStore)?;
+                migrated_legacy_secret = true;
+            }
+            let secret_key = load_technical_secret(path, &technical.client_id)
+                .map_err(ConfigStoreError::SecretStore)?;
+            Some(TechnicalAuthConfig {
+                client_id: technical.client_id,
+                secret_key,
+            })
+        }
+        None => None,
+    };
+
+    Ok((
+        AgentRuntimeConfig {
+            core_api_url: stored.core_api_url,
+            ollama_url: stored.ollama_url,
+            auth_mode: stored.auth_mode.into(),
+            technical_auth,
+            storage_mounts: normalize_storage_mounts(&stored.storage_mounts),
+            max_parallel_jobs: stored.max_parallel_jobs,
+            log_level: stored.log_level.into(),
+        },
+        migrated_legacy_secret,
+    ))
+}
+
+fn sync_technical_secret(
+    path: &Path,
+    previous: Option<&StoredAgentRuntimeConfig>,
+    config: &AgentRuntimeConfig,
+) -> Result<(), ConfigStoreError> {
+    let previous_client_id = previous
+        .and_then(|value| value.technical_auth.as_ref())
+        .map(|technical| technical.client_id.as_str());
+    let next_client_id = config
+        .technical_auth
+        .as_ref()
+        .map(|technical| technical.client_id.as_str());
+
+    if let Some(client_id) = previous_client_id {
+        if next_client_id != Some(client_id) {
+            delete_technical_secret(path, client_id).map_err(ConfigStoreError::SecretStore)?;
+        }
+    }
+
+    if let Some(technical) = &config.technical_auth {
+        persist_technical_secret(path, &technical.client_id, &technical.secret_key)
+            .map_err(ConfigStoreError::SecretStore)?;
+    }
+
+    Ok(())
 }

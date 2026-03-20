@@ -14,12 +14,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 ## Priorité P1
 
-- Corriger le stockage des secrets:
-  - sortir `technical_auth.secret_key` du fichier TOML
-  - brancher un secret store OS-native
-  - prévoir migration depuis le format actuel
-  - ajouter tests d'absence de secret en clair dans la config persistée
-
 - Implémenter le bootstrap agent conforme:
   - device flow `start/poll/cancel`
   - ouverture browser vers `UI_WEB`
@@ -56,12 +50,11 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 ## Ordre d'exécution recommandé
 
 1. Policy/effective features
-2. Secret storage
-3. Device flow/browser/rotation
-4. Polling/backoff
-5. Processing réel previews/thumbs/waveform/facts
-6. Concurrence OpenAPI dérivés
-7. Docs et CI i18n
+2. Device flow/browser/rotation
+3. Polling/backoff
+4. Processing réel previews/thumbs/waveform/facts
+5. Concurrence OpenAPI dérivés
+6. Docs et CI i18n
 
 ## Découpage en lots de travail
 
@@ -76,7 +69,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - rotation secret
 
 - Lot 3: sécurité locale et polling
-  - secret store OS-native
   - migration config
   - backoff 429
   - Retry-After

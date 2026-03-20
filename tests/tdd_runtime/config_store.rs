@@ -30,6 +30,9 @@ fn tdd_config_store_roundtrip_preserves_runtime_config() {
     let config = valid_config();
 
     save_config_to_path(&path, &config).expect("save should pass");
+    let raw = std::fs::read_to_string(&path).expect("raw config");
+    assert!(!raw.contains("secret_key"));
+    assert!(raw.contains("client_id = \"agent-svc\""));
     let loaded = load_config_from_path(&path).expect("load should pass");
     assert_eq!(loaded, config);
 }
@@ -77,4 +80,35 @@ log_level = "info"
 
     let loaded = load_config_from_path(&path).expect("legacy config should load");
     assert!(loaded.storage_mounts.is_empty());
+}
+
+#[test]
+fn tdd_config_store_migrates_legacy_inline_technical_secret_out_of_toml() {
+    let dir = tempdir().expect("temp dir");
+    let path = dir.path().join("legacy-technical.toml");
+    std::fs::write(
+        &path,
+        r#"
+core_api_url = "https://core.retaia.local/api/v1"
+ollama_url = "http://127.0.0.1:11434"
+auth_mode = "technical"
+max_parallel_jobs = 2
+log_level = "info"
+
+[technical_auth]
+client_id = "agent-svc"
+secret_key = "legacy-secret"
+"#,
+    )
+    .expect("write legacy config");
+
+    let loaded = load_config_from_path(&path).expect("legacy technical config should load");
+    let technical = loaded.technical_auth.expect("technical auth");
+    assert_eq!(technical.client_id, "agent-svc");
+    assert_eq!(technical.secret_key, "legacy-secret");
+
+    let raw = std::fs::read_to_string(&path).expect("raw config");
+    assert!(raw.contains("client_id = \"agent-svc\""));
+    assert!(!raw.contains("legacy-secret"));
+    assert!(!raw.contains("secret_key"));
 }

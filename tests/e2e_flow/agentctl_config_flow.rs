@@ -9,8 +9,14 @@ use tempfile::tempdir;
 
 fn run_agentctl(args: &[&str]) -> std::process::Output {
     let exe = env!("CARGO_BIN_EXE_agentctl");
+    let store_file = std::env::temp_dir().join(format!(
+        "retaia-agent-technical-secret-store-{}.json",
+        std::process::id()
+    ));
     Command::new(exe)
         .args(args)
+        .env("RETAIA_AGENT_SECRET_STORE_BACKEND", "memory")
+        .env("RETAIA_AGENT_SECRET_STORE_FILE", store_file)
         .output()
         .expect("agentctl must execute")
 }
@@ -77,6 +83,8 @@ fn e2e_agentctl_init_show_validate_set_flow() {
     assert!(raw.contains("max_parallel_jobs = 6"));
     assert!(raw.contains("log_level = \"warn\""));
     assert!(raw.contains("nas-main = \"/srv/nas/main\""));
+    assert!(!raw.contains("super-secret"));
+    assert!(!raw.contains("secret_key"));
 }
 
 #[test]
