@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="$ROOT_DIR/crates/retaia-core-client"
 DOCS_OUT_DIR="$ROOT_DIR/docs/api"
+SPEC_PATH="specs/api/openapi/v1.yaml"
+OUT_DIR_REL="crates/retaia-core-client"
 
 rm -rf "$OUT_DIR"
 rm -rf "$DOCS_OUT_DIR"/*.md
@@ -24,14 +26,17 @@ if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     -o /local/crates/retaia-core-client \
     --additional-properties=library=reqwest-trait,supportAsync=true,packageName=retaia_core_client,packageVersion=0.1.0
 else
-  npx -y @openapitools/openapi-generator-cli validate \
-    -i "$ROOT_DIR/specs/api/openapi/v1.yaml"
+  (
+    cd "$ROOT_DIR"
+    npx -y @openapitools/openapi-generator-cli validate \
+      -i "$SPEC_PATH"
 
-  npx -y @openapitools/openapi-generator-cli generate \
-    -i "$ROOT_DIR/specs/api/openapi/v1.yaml" \
-    -g rust \
-    -o "$OUT_DIR" \
-    --additional-properties=library=reqwest-trait,supportAsync=true,packageName=retaia_core_client,packageVersion=0.1.0
+    npx -y @openapitools/openapi-generator-cli generate \
+      -i "$SPEC_PATH" \
+      -g rust \
+      -o "$OUT_DIR_REL" \
+      --additional-properties=library=reqwest-trait,supportAsync=true,packageName=retaia_core_client,packageVersion=0.1.0
+  )
 fi
 
 rm -rf "$OUT_DIR/target" "$OUT_DIR/.travis.yml" "$OUT_DIR/git_push.sh"
