@@ -1,9 +1,23 @@
+use std::sync::{Mutex, OnceLock};
+
 use tempfile::tempdir;
 
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigRepository, FileConfigRepository, LogLevel,
     TechnicalAuthConfig, load_config_from_path,
 };
+
+fn env_guard() -> &'static Mutex<()> {
+    static ENV_GUARD: OnceLock<Mutex<()>> = OnceLock::new();
+    ENV_GUARD.get_or_init(|| Mutex::new(()))
+}
+
+fn use_memory_secret_store() {
+    unsafe {
+        std::env::set_var("RETAIA_AGENT_SECRET_STORE_BACKEND", "memory");
+        std::env::remove_var("RETAIA_AGENT_SECRET_STORE_FILE");
+    }
+}
 
 fn valid_config() -> AgentRuntimeConfig {
     let mut storage_mounts = std::collections::BTreeMap::new();
@@ -25,6 +39,8 @@ fn valid_config() -> AgentRuntimeConfig {
 
 #[test]
 fn tdd_file_config_repository_implements_port_roundtrip() {
+    let _guard = env_guard().lock().expect("env guard");
+    use_memory_secret_store();
     let dir = tempdir().expect("temp dir");
     let path = dir.path().join("config.toml");
     let repository = FileConfigRepository::new(path.clone());

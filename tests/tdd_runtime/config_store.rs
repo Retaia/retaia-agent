@@ -1,9 +1,23 @@
+use std::sync::{Mutex, OnceLock};
+
 use tempfile::tempdir;
 
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ConfigStoreError, LogLevel, TechnicalAuthConfig,
     load_config_from_path, save_config_to_path, system_config_file_path,
 };
+
+fn env_guard() -> &'static Mutex<()> {
+    static ENV_GUARD: OnceLock<Mutex<()>> = OnceLock::new();
+    ENV_GUARD.get_or_init(|| Mutex::new(()))
+}
+
+fn use_memory_secret_store() {
+    unsafe {
+        std::env::set_var("RETAIA_AGENT_SECRET_STORE_BACKEND", "memory");
+        std::env::remove_var("RETAIA_AGENT_SECRET_STORE_FILE");
+    }
+}
 
 fn valid_config() -> AgentRuntimeConfig {
     let mut storage_mounts = std::collections::BTreeMap::new();
@@ -25,6 +39,8 @@ fn valid_config() -> AgentRuntimeConfig {
 
 #[test]
 fn tdd_config_store_roundtrip_preserves_runtime_config() {
+    let _guard = env_guard().lock().expect("env guard");
+    use_memory_secret_store();
     let dir = tempdir().expect("temp dir");
     let path = dir.path().join("agent-config.toml");
     let config = valid_config();
@@ -39,6 +55,8 @@ fn tdd_config_store_roundtrip_preserves_runtime_config() {
 
 #[test]
 fn tdd_config_store_rejects_invalid_config_before_persist() {
+    let _guard = env_guard().lock().expect("env guard");
+    use_memory_secret_store();
     let dir = tempdir().expect("temp dir");
     let path = dir.path().join("invalid.toml");
     let mut invalid = valid_config();
@@ -64,6 +82,8 @@ fn tdd_config_store_system_path_resolution_returns_config_file() {
 
 #[test]
 fn tdd_config_store_loads_legacy_toml_without_storage_mounts() {
+    let _guard = env_guard().lock().expect("env guard");
+    use_memory_secret_store();
     let dir = tempdir().expect("temp dir");
     let path = dir.path().join("legacy.toml");
     std::fs::write(
@@ -84,6 +104,8 @@ log_level = "info"
 
 #[test]
 fn tdd_config_store_migrates_legacy_inline_technical_secret_out_of_toml() {
+    let _guard = env_guard().lock().expect("env guard");
+    use_memory_secret_store();
     let dir = tempdir().expect("temp dir");
     let path = dir.path().join("legacy-technical.toml");
     std::fs::write(
