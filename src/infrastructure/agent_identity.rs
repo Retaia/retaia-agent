@@ -219,9 +219,9 @@ fn secret_store_account(agent_id: &str) -> String {
 #[cfg(not(test))]
 fn persist_private_key(agent_id: &str, private_key: &str) -> Result<(), AgentIdentityError> {
     if use_memory_secret_store() {
-        let mut store = test_secret_store()
-            .lock()
-            .map_err(|_| AgentIdentityError::SecretStore("memory secret store poisoned".to_string()))?;
+        let mut store = test_secret_store().lock().map_err(|_| {
+            AgentIdentityError::SecretStore("memory secret store poisoned".to_string())
+        })?;
         store.insert(secret_store_account(agent_id), private_key.to_string());
         return Ok(());
     }
@@ -243,9 +243,9 @@ fn persist_private_key(agent_id: &str, private_key: &str) -> Result<(), AgentIde
 #[cfg(not(test))]
 fn load_private_key(agent_id: &str) -> Result<String, AgentIdentityError> {
     if use_memory_secret_store() {
-        let store = test_secret_store()
-            .lock()
-            .map_err(|_| AgentIdentityError::SecretStore("memory secret store poisoned".to_string()))?;
+        let store = test_secret_store().lock().map_err(|_| {
+            AgentIdentityError::SecretStore("memory secret store poisoned".to_string())
+        })?;
         return store
             .get(&secret_store_account(agent_id))
             .cloned()
@@ -343,8 +343,16 @@ mod tests {
             AgentIdentity::generate_ephemeral(Some("550e8400-e29b-41d4-a716-446655440099"))
                 .expect("identity");
         assert_eq!(identity.agent_id, "550e8400-e29b-41d4-a716-446655440099");
-        assert!(identity.openpgp_public_key.contains("BEGIN PGP PUBLIC KEY BLOCK"));
-        assert!(identity.openpgp_private_key.contains("BEGIN PGP PRIVATE KEY BLOCK"));
+        assert!(
+            identity
+                .openpgp_public_key
+                .contains("BEGIN PGP PUBLIC KEY BLOCK")
+        );
+        assert!(
+            identity
+                .openpgp_private_key
+                .contains("BEGIN PGP PRIVATE KEY BLOCK")
+        );
         assert!(!identity.openpgp_fingerprint.is_empty());
     }
 
@@ -372,7 +380,10 @@ mod tests {
     #[test]
     fn tdd_agent_identity_persists_metadata_without_private_key() {
         let _guard = super::test_env_guard().lock().expect("env guard");
-        super::test_secret_store().lock().expect("test store").clear();
+        super::test_secret_store()
+            .lock()
+            .expect("test store")
+            .clear();
         let tempdir = tempdir().expect("tempdir");
         let identity_path = tempdir.path().join("identity.json");
         unsafe {
@@ -395,7 +406,10 @@ mod tests {
     #[test]
     fn tdd_agent_identity_migrates_legacy_private_key_out_of_json() {
         let _guard = super::test_env_guard().lock().expect("env guard");
-        super::test_secret_store().lock().expect("test store").clear();
+        super::test_secret_store()
+            .lock()
+            .expect("test store")
+            .clear();
         let tempdir = tempdir().expect("tempdir");
         let identity_path = tempdir.path().join("identity.json");
         unsafe {

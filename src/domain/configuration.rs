@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, BTreeSet};
 use std::hash::{Hash, Hasher};
@@ -5,7 +6,6 @@ use std::net::IpAddr;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::SystemTime;
-use serde::Deserialize;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -367,7 +367,12 @@ pub fn resolve_source_path(
     storage_id: &str,
     relative_path: &str,
 ) -> Result<PathBuf, SourcePathResolveError> {
-    resolve_source_path_with_marker_provider(config, storage_id, relative_path, &FsStorageMarkerProvider)
+    resolve_source_path_with_marker_provider(
+        config,
+        storage_id,
+        relative_path,
+        &FsStorageMarkerProvider,
+    )
 }
 
 pub fn resolve_source_path_with_marker_provider<P: StorageMarkerProvider>(
@@ -396,15 +401,14 @@ fn load_and_validate_storage_marker<P: StorageMarkerProvider>(
     let marker_read = marker_provider.read_marker(&marker_path)?;
     let content_fingerprint = marker_contents_fingerprint(&marker_read.contents);
     let cache_key = format!("{}::{expected_storage_id}", mount_root.display());
-    if let Some(cached) = cached_storage_marker(&cache_key, marker_read.modified_at, content_fingerprint) {
+    if let Some(cached) =
+        cached_storage_marker(&cache_key, marker_read.modified_at, content_fingerprint)
+    {
         return Ok(cached);
     }
 
     let marker: StorageMarker = serde_json::from_str(&marker_read.contents).map_err(|error| {
-        SourcePathResolveError::StorageMarkerInvalid(format!(
-            "{} ({error})",
-            marker_path.display()
-        ))
+        SourcePathResolveError::StorageMarkerInvalid(format!("{} ({error})", marker_path.display()))
     })?;
 
     if marker.version == 0 {

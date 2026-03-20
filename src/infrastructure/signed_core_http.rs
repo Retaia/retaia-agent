@@ -210,10 +210,8 @@ fn write_multipart_file(
 ) {
     buf.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
     buf.extend_from_slice(
-        format!(
-            "Content-Disposition: form-data; name=\"{name}\"; filename=\"{filename}\"\r\n"
-        )
-        .as_bytes(),
+        format!("Content-Disposition: form-data; name=\"{name}\"; filename=\"{filename}\"\r\n")
+            .as_bytes(),
     );
     buf.extend_from_slice(b"Content-Type: application/octet-stream\r\n\r\n");
     buf.extend_from_slice(value);
@@ -238,6 +236,8 @@ mod tests {
         );
         assert_eq!(payload.lines().count(), 6);
         assert!(payload.contains("/api/v1/jobs/job-1/claim"));
-        assert!(payload.ends_with("4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93"));
+        assert!(
+            payload.ends_with("4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93")
+        );
     }
 }

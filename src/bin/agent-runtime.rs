@@ -8,11 +8,11 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use retaia_agent::{
     AgentRuntimeConfig, ClientRuntimeTarget, CompletedJobEntry, ConfigRepository, CoreApiGateway,
     DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats, DaemonRuntimeStats,
-    DerivedProcessingGateway, FileConfigRepository, LogLevel,
-    RuntimeDerivedPlanner, RuntimeHistoryStore, RuntimePollCycleStatus, RuntimeSession,
-    SystemConfigRepository, compact_validation_reason, detect_language,
-    notification_sink_profile_for_target, now_unix_ms, process_next_pending_job,
-    run_runtime_poll_cycle, run_state_label, save_runtime_stats, select_notification_sink, t,
+    DerivedProcessingGateway, FileConfigRepository, LogLevel, RuntimeDerivedPlanner,
+    RuntimeHistoryStore, RuntimePollCycleStatus, RuntimeSession, SystemConfigRepository,
+    compact_validation_reason, detect_language, notification_sink_profile_for_target, now_unix_ms,
+    process_next_pending_job, run_runtime_poll_cycle, run_state_label, save_runtime_stats,
+    select_notification_sink, t,
 };
 use tracing::{info, warn};
 
@@ -335,7 +335,8 @@ fn register_daemon_agent(settings: &AgentRuntimeConfig) -> Result<(), String> {
         .as_ref()
         .ok_or_else(|| "technical auth is required for daemon registration".to_string())?;
     let client = build_core_api_client(settings);
-    let token = mint_technical_bearer(&client, technical_auth).map_err(|error| error.to_string())?;
+    let token =
+        mint_technical_bearer(&client, technical_auth).map_err(|error| error.to_string())?;
     let client = with_bearer_token(client, token);
     let gateway = OpenApiAgentRegistrationGateway::new_with_identity(client, identity.clone());
 
@@ -418,7 +419,9 @@ fn init_logging(level: LogLevel) {
 
 #[cfg(feature = "core-api-client")]
 fn build_gateway(settings: &AgentRuntimeConfig) -> Box<dyn CoreApiGateway> {
-    use retaia_agent::{OpenApiJobsGateway, build_core_api_client, mint_technical_bearer, with_bearer_token};
+    use retaia_agent::{
+        OpenApiJobsGateway, build_core_api_client, mint_technical_bearer, with_bearer_token,
+    };
 
     let mut client = build_core_api_client(settings);
     if let Some(technical_auth) = settings.technical_auth.as_ref() {
@@ -447,7 +450,9 @@ fn build_derived_gateway(settings: &AgentRuntimeConfig) -> Box<dyn DerivedProces
         client = with_bearer_token(client, token);
     }
     let identity = AgentIdentity::load_or_create(None).expect("agent identity must load");
-    Box::new(OpenApiDerivedProcessingGateway::new_with_identity(client, identity))
+    Box::new(OpenApiDerivedProcessingGateway::new_with_identity(
+        client, identity,
+    ))
 }
 
 #[cfg(not(feature = "core-api-client"))]

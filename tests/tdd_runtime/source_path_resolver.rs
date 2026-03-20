@@ -31,9 +31,12 @@ impl FakeStorageMarkerProvider {
 
 impl StorageMarkerProvider for FakeStorageMarkerProvider {
     fn read_marker(&self, marker_path: &Path) -> Result<StorageMarkerRead, SourcePathResolveError> {
-        self.markers.get(&marker_path.display().to_string()).cloned().ok_or_else(|| {
-            SourcePathResolveError::StorageMarkerMissing(marker_path.display().to_string())
-        })
+        self.markers
+            .get(&marker_path.display().to_string())
+            .cloned()
+            .ok_or_else(|| {
+                SourcePathResolveError::StorageMarkerMissing(marker_path.display().to_string())
+            })
     }
 }
 
@@ -62,7 +65,8 @@ fn config_with_mount(mount: &str) -> AgentRuntimeConfig {
 fn tdd_resolve_source_path_joins_storage_mount_and_relative_path() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
+    let provider =
+        FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
 
     let resolved = resolve_source_path_with_marker_provider(
         &config,
@@ -82,15 +86,12 @@ fn tdd_resolve_source_path_joins_storage_mount_and_relative_path() {
 fn tdd_resolve_source_path_rejects_unknown_storage_id() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
+    let provider =
+        FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
 
-    let error = resolve_source_path_with_marker_provider(
-        &config,
-        "missing",
-        "INBOX/asset.mp4",
-        &provider,
-    )
-    .expect_err("must fail");
+    let error =
+        resolve_source_path_with_marker_provider(&config, "missing", "INBOX/asset.mp4", &provider)
+            .expect_err("must fail");
 
     assert_eq!(
         error,
@@ -102,7 +103,8 @@ fn tdd_resolve_source_path_rejects_unknown_storage_id() {
 fn tdd_resolve_source_path_rejects_parent_dir_relative_path() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
+    let provider =
+        FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
 
     let error =
         resolve_source_path_with_marker_provider(&config, "nas-main", "../etc/passwd", &provider)
@@ -118,10 +120,12 @@ fn tdd_resolve_source_path_rejects_parent_dir_relative_path() {
 fn tdd_resolve_source_path_rejects_absolute_relative_path() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
+    let provider =
+        FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
 
-    let error = resolve_source_path_with_marker_provider(&config, "nas-main", "/etc/passwd", &provider)
-        .expect_err("must fail");
+    let error =
+        resolve_source_path_with_marker_provider(&config, "nas-main", "/etc/passwd", &provider)
+            .expect_err("must fail");
 
     assert_eq!(
         error,
@@ -133,10 +137,12 @@ fn tdd_resolve_source_path_rejects_absolute_relative_path() {
 fn tdd_resolve_source_path_rejects_null_byte() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
+    let provider =
+        FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
 
-    let error = resolve_source_path_with_marker_provider(&config, "nas-main", "INBOX/a\0b", &provider)
-        .expect_err("must fail");
+    let error =
+        resolve_source_path_with_marker_provider(&config, "nas-main", "INBOX/a\0b", &provider)
+            .expect_err("must fail");
 
     assert_eq!(
         error,
@@ -191,7 +197,8 @@ fn tdd_resolve_source_path_rejects_marker_storage_id_mismatch() {
 fn tdd_resolve_source_path_rejects_non_inbox_for_marker_v1() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
+    let provider =
+        FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 1));
 
     let error =
         resolve_source_path_with_marker_provider(&config, "nas-main", "ARCHIVE/a.mp4", &provider)
@@ -207,10 +214,14 @@ fn tdd_resolve_source_path_rejects_non_inbox_for_marker_v1() {
 fn tdd_resolve_source_path_allows_non_inbox_for_marker_v2() {
     let mount = "/mnt/nas/main";
     let config = config_with_mount(mount);
-    let provider = FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 2));
+    let provider =
+        FakeStorageMarkerProvider::default().with_marker(mount, marker_json("nas-main", 2));
 
     let resolved =
         resolve_source_path_with_marker_provider(&config, "nas-main", "ARCHIVE/a.mp4", &provider)
             .expect("must pass");
-    assert_eq!(resolved, std::path::PathBuf::from(mount).join("ARCHIVE/a.mp4"));
+    assert_eq!(
+        resolved,
+        std::path::PathBuf::from(mount).join("ARCHIVE/a.mp4")
+    );
 }

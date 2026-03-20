@@ -78,8 +78,8 @@ impl AgentRegistrationGateway for OpenApiAgentRegistrationGateway {
         request.client_feature_flags_contract_version =
             command.client_feature_flags_contract_version.clone();
         request.max_parallel_jobs = command.max_parallel_jobs.map(i32::from);
-        let payload =
-            json_bytes(&request).map_err(|error| AgentRegistrationError::Transport(error.to_string()))?;
+        let payload = json_bytes(&request)
+            .map_err(|error| AgentRegistrationError::Transport(error.to_string()))?;
 
         let response = signed_json_request(
             &reqwest::blocking::Client::new(),

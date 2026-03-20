@@ -92,8 +92,8 @@ pub use domain::runtime_ui::{
     AgentRunState, AgentUiRuntime, ConnectivityState, JobFailure, JobStage, JobStatus, MenuAction,
     MenuVisibility, RuntimeSnapshot, SystemNotification, base_menu_actions, menu_visibility,
 };
-pub use infrastructure::config_repository::{FileConfigRepository, SystemConfigRepository};
 pub use infrastructure::agent_identity::{AgentIdentity, AgentIdentityError};
+pub use infrastructure::config_repository::{FileConfigRepository, SystemConfigRepository};
 pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
     save_config_to_path, save_system_config, system_config_file_path,
@@ -123,9 +123,6 @@ pub use infrastructure::openapi_client::{build_core_api_client, with_bearer_toke
 pub use infrastructure::openapi_derived_processing_gateway::OpenApiDerivedProcessingGateway;
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::openapi_jobs_gateway::OpenApiJobsGateway;
-pub use infrastructure::signed_core_http::{SignedCoreHttpError, signature_payload};
-#[cfg(feature = "core-api-client")]
-pub use infrastructure::technical_auth::{TechnicalAuthError, mint_technical_bearer};
 pub use infrastructure::runtime_history_store::{
     CompletedJobEntry, DAEMON_HISTORY_DB_FILE_NAME, DaemonCycleEntry, RuntimeHistoryStore,
     RuntimeHistoryStoreError, runtime_history_db_path,
@@ -137,5 +134,8 @@ pub use infrastructure::runtime_stats_store::{
 pub use infrastructure::rust_photo_proxy_generator::{
     RawPhotoDecoder, RawloaderPhotoDecoder, RustPhotoProxyGenerator,
 };
+pub use infrastructure::signed_core_http::{SignedCoreHttpError, signature_payload};
 #[cfg(feature = "tauri-notifications")]
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;
+#[cfg(feature = "core-api-client")]
+pub use infrastructure::technical_auth::{TechnicalAuthError, mint_technical_bearer};

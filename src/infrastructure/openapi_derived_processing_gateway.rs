@@ -34,8 +34,8 @@ pub struct OpenApiDerivedProcessingGateway {
 #[cfg(feature = "core-api-client")]
 impl OpenApiDerivedProcessingGateway {
     pub fn new(configuration: Configuration) -> Self {
-        let identity =
-            AgentIdentity::load_or_create(None).expect("agent identity must load for derived gateway");
+        let identity = AgentIdentity::load_or_create(None)
+            .expect("agent identity must load for derived gateway");
         Self {
             configuration,
             identity,
@@ -101,8 +101,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         let path = format!("/jobs/{job_id}/heartbeat");
         let request =
             models::JobsJobIdHeartbeatPostRequest::new(lock_token.to_string(), fencing_token);
-        let payload =
-            json_bytes(&request).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let payload = json_bytes(&request)
+            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
         let response = signed_json_request(
             &reqwest::blocking::Client::new(),
             &self.identity,
@@ -159,8 +159,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
             )))
         };
 
-        let body =
-            json_bytes(&request).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let body = json_bytes(&request)
+            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
         let response = signed_json_request(
             &reqwest::blocking::Client::new(),
             &self.identity,
@@ -193,8 +193,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         );
         payload.sha256 = request.sha256.clone();
 
-        let body =
-            json_bytes(&payload).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let body = json_bytes(&payload)
+            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
         let path = format!("/assets/{}/derived/upload/init", request.asset_uuid);
         let response = signed_json_request(
             &reqwest::blocking::Client::new(),
@@ -257,7 +257,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
         let mut payload =
             models::AssetsUuidDerivedUploadCompletePostRequest::new(request.upload_id.clone());
         payload.parts = request.parts.as_ref().map(|parts| {
-            parts.iter()
+            parts
+                .iter()
                 .map(|part| {
                     models::AssetsUuidDerivedUploadCompletePostRequestPartsInner::new(
                         i32::try_from(part.part_number).unwrap_or(i32::MAX),
@@ -267,8 +268,8 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 .collect()
         });
 
-        let body =
-            json_bytes(&payload).map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
+        let body = json_bytes(&payload)
+            .map_err(|error| DerivedProcessingError::Transport(error.to_string()))?;
         let path = format!("/assets/{}/derived/upload/complete", request.asset_uuid);
         let response = signed_json_request(
             &reqwest::blocking::Client::new(),

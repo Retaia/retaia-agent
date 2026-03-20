@@ -13,11 +13,11 @@ pub mod openapi_client;
 pub mod openapi_derived_processing_gateway;
 #[cfg(feature = "core-api-client")]
 pub mod openapi_jobs_gateway;
-pub mod signed_core_http;
-#[cfg(feature = "core-api-client")]
-pub mod technical_auth;
 pub mod runtime_history_store;
 pub mod runtime_stats_store;
 pub mod rust_photo_proxy_generator;
+pub mod signed_core_http;
 #[cfg(feature = "tauri-notifications")]
 pub mod tauri_notification_sink;
+#[cfg(feature = "core-api-client")]
+pub mod technical_auth;
