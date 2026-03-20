@@ -60,5 +60,8 @@ fn e2e_ffmpeg_proxy_generator_flow_builds_video_and_audio_commands_with_configur
     assert_eq!(calls[0].0, "/usr/local/bin/ffmpeg");
     assert_eq!(calls[1].0, "/usr/local/bin/ffmpeg");
     assert!(calls[0].1.join(" ").contains("-c:v libx264"));
+    assert!(calls[0].1.join(" ").contains("-profile:v high"));
+    assert!(calls[0].1.join(" ").contains("-crf 23"));
     assert!(calls[1].1.join(" ").contains("-c:a libmp3lame"));
+    assert!(calls[1].1.join(" ").contains("-ac 2"));
 }

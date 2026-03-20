@@ -2,7 +2,8 @@ use std::sync::Mutex;
 
 use retaia_agent::{
     AudioProxyFormat, AudioProxyRequest, CommandOutput, CommandRunner, FfmpegProxyGenerator,
-    ProxyGenerationError, ProxyGenerator, VideoProxyRequest,
+    ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
+    VideoThumbnailRequest,
 };
 
 struct ScenarioRunner {
@@ -105,7 +106,12 @@ fn bdd_given_video_proxy_request_when_generating_then_ffmpeg_is_called_with_h264
 
     let args = generator.runner().first_args().join(" ");
     assert!(args.contains("-c:v libx264"));
+    assert!(args.contains("-profile:v high"));
+    assert!(args.contains("-preset medium"));
+    assert!(args.contains("-crf 23"));
     assert!(args.contains("-vsync cfr"));
+    assert!(args.contains("-ac 2"));
+    assert!(args.contains("-ar 48000"));
     assert!(args.contains("-movflags +faststart"));
     assert!(args.contains("force_original_aspect_ratio=decrease"));
 }
@@ -154,4 +160,29 @@ fn bdd_given_invalid_audio_proxy_request_when_zero_sample_rate_then_validation_f
 
     assert!(matches!(err, ProxyGenerationError::InvalidRequest(_)));
     assert_eq!(generator.runner().call_count(), 0);
+}
+
+#[test]
+fn bdd_given_thumbnail_request_when_generating_then_ffmpeg_extracts_single_webp_frame() {
+    let runner = ScenarioRunner::with_output(CommandOutput {
+        status_code: Some(0),
+        stderr: String::new(),
+    });
+    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+
+    generator
+        .generate_video_thumbnail(&VideoThumbnailRequest {
+            input_path: "/tmp/in.mov".to_string(),
+            output_path: "/tmp/thumb.webp".to_string(),
+            format: ThumbnailFormat::Webp,
+            max_width: 480,
+            seek_ms: 1_000,
+        })
+        .expect("thumbnail should succeed");
+
+    let args = generator.runner().first_args().join(" ");
+    assert!(args.contains("-ss 1.000"));
+    assert!(args.contains("-frames:v 1"));
+    assert!(args.contains("-c:v libwebp"));
+    assert!(args.contains("-quality 75"));
 }

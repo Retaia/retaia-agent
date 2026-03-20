@@ -1,7 +1,7 @@
 use retaia_agent::{
-    AudioProxyRequest, ClaimedDerivedJob, DerivedExecutionPlanner, DerivedJobType, DerivedKind,
-    PhotoProxyRequest, ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner,
-    VideoProxyRequest,
+    AudioProxyRequest, AudioWaveformRequest, ClaimedDerivedJob, DerivedExecutionPlanner,
+    DerivedJobType, DerivedKind, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
+    RuntimeDerivedPlanner, VideoProxyRequest, VideoThumbnailRequest,
 };
 use std::sync::Arc;
 
@@ -32,6 +32,25 @@ impl ProxyGenerator for WritingPreviewGenerator {
         std::fs::write(&request.output_path, b"generated-photo")
             .map_err(|error| ProxyGenerationError::Process(error.to_string()))
     }
+
+    fn generate_video_thumbnail(
+        &self,
+        request: &VideoThumbnailRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-thumbnail")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_waveform(
+        &self,
+        request: &AudioWaveformRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(
+            &request.output_path,
+            br#"{"duration_ms":1000,"bucket_count":1000,"samples":[0.1,0.5]}"#,
+        )
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
 }
 
 #[test]
@@ -54,6 +73,15 @@ fn tdd_runtime_derived_planner_infers_audio_proxy_manifest_from_extension() {
     assert_eq!(plan.submit.manifest[0].kind, DerivedKind::PreviewAudio);
     assert!(plan.uploads.is_empty());
     assert_eq!(plan.submit_idempotency_key, "agent-submit-job-audio-1");
+    let metrics = plan.submit.metrics.expect("preview metrics");
+    assert_eq!(
+        metrics.get("preview_kind"),
+        Some(&serde_json::json!("preview_audio"))
+    );
+    assert_eq!(
+        metrics.get("preview_profile"),
+        Some(&serde_json::json!("audio_review_default_v1"))
+    );
 }
 
 #[test]
@@ -91,6 +119,137 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
             .ends_with("clip.preview_video.mp4")
     );
     assert_eq!(plan.submit.manifest[0].size_bytes, Some(15));
+    let metrics = plan.submit.metrics.expect("preview metrics");
+    assert_eq!(
+        metrics.get("preview_kind"),
+        Some(&serde_json::json!("preview_video"))
+    );
+    assert_eq!(
+        metrics.get("preview_profile"),
+        Some(&serde_json::json!("video_review_default_v1"))
+    );
+}
+
+#[test]
+fn tdd_runtime_derived_planner_builds_photo_preview_upload_as_webp() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-photo-1".to_string(),
+        asset_uuid: "asset-photo-1".to_string(),
+        lock_token: "lock-photo-1".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GeneratePreview,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/frame.jpg".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("frame.jpg");
+    std::fs::write(&staged, b"generated-photo").expect("write");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::PreviewPhoto);
+    assert_eq!(plan.uploads[0].init.content_type, "image/webp");
+    assert!(
+        plan.uploads[0].parts[0]
+            .chunk_path
+            .ends_with("frame.preview_photo.webp")
+    );
+    let metrics = plan.submit.metrics.expect("preview metrics");
+    assert_eq!(
+        metrics.get("preview_profile"),
+        Some(&serde_json::json!("photo_review_default_v1"))
+    );
+}
+
+#[test]
+fn tdd_runtime_derived_planner_builds_thumbnail_upload_as_webp() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-thumb-1".to_string(),
+        asset_uuid: "asset-thumb-1".to_string(),
+        lock_token: "lock-thumb-1".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GenerateThumbnails,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/clip.mov".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("clip.mov");
+    std::fs::write(&staged, b"generated-video").expect("write");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::Thumb);
+    assert_eq!(plan.uploads[0].init.content_type, "image/webp");
+    assert!(
+        plan.uploads[0].parts[0]
+            .chunk_path
+            .ends_with("clip.thumb.webp")
+    );
+    let metrics = plan.submit.metrics.expect("thumbnail metrics");
+    assert_eq!(
+        metrics.get("thumbnail_profile"),
+        Some(&serde_json::json!("video_representative_v1"))
+    );
+    assert_eq!(metrics.get("thumbnail_count"), Some(&serde_json::json!(1)));
+}
+
+#[test]
+fn tdd_runtime_derived_planner_builds_waveform_upload_as_json() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-wave-1".to_string(),
+        asset_uuid: "asset-wave-1".to_string(),
+        lock_token: "lock-wave-1".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GenerateAudioWaveform,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/audio.wav".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("audio.wav");
+    std::fs::write(&staged, b"audio-source").expect("write");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::Waveform);
+    assert_eq!(plan.uploads[0].init.content_type, "application/json");
+    assert!(
+        plan.uploads[0].parts[0]
+            .chunk_path
+            .ends_with("audio.waveform.json")
+    );
+    let metrics = plan.submit.metrics.expect("waveform metrics");
+    assert_eq!(
+        metrics.get("waveform_bucket_count"),
+        Some(&serde_json::json!(1000))
+    );
+    assert_eq!(
+        metrics.get("waveform_format"),
+        Some(&serde_json::json!("json"))
+    );
 }
 
 #[test]

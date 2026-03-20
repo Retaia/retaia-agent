@@ -240,6 +240,11 @@ fn validate_submit_payload_for_claimed_job(
             }
         }
         DerivedJobType::GenerateAudioWaveform => {
+            if submit.manifest.is_empty() {
+                return Err(DerivedJobExecutorError::MissingSubmitManifestForJobType(
+                    DerivedJobType::GenerateAudioWaveform,
+                ));
+            }
             for item in &submit.manifest {
                 if item.kind != DerivedKind::Waveform {
                     return Err(DerivedJobExecutorError::IncompatibleDerivedKindForJobType {

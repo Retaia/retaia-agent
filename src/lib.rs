@@ -34,8 +34,9 @@ pub use application::notification_bridge::{
     dispatch_notifications, notification_message,
 };
 pub use application::proxy_generator::{
-    AudioProxyFormat, AudioProxyRequest, PhotoProxyFormat, PhotoProxyRequest, ProxyGenerationError,
-    ProxyGenerator, VideoProxyRequest, resolve_processing_input_path,
+    AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, PhotoProxyFormat, PhotoProxyRequest,
+    ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
+    VideoThumbnailRequest, resolve_processing_input_path,
 };
 pub use application::runtime_cli_shell::{
     ShellCommand, ShellCommandResult, execute_shell_command, format_menu, format_settings,

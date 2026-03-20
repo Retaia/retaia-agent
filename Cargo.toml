@@ -16,6 +16,7 @@ directories = "5.0"
 eframe = { version = "0.33", default-features = true, optional = true }
 genai = "0.4.0-alpha.7"
 hex = "0.4"
+hound = "3.5"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "tiff", "webp"] }
 keyring = "4.0.0-rc.3"
 keyring-core = "0.7.2"

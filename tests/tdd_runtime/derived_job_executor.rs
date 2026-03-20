@@ -416,12 +416,6 @@ impl Default for WaveformGateway {
     }
 }
 
-impl WaveformGateway {
-    fn calls(&self) -> Vec<String> {
-        self.calls.lock().expect("calls").clone()
-    }
-}
-
 impl DerivedProcessingGateway for WaveformGateway {
     fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
         self.calls
@@ -696,22 +690,16 @@ fn tdd_execute_derived_job_once_rejects_non_waveform_manifest_for_waveform_job_t
 }
 
 #[test]
-fn tdd_execute_derived_job_once_allows_waveform_job_without_waveform_output_and_skips_uploads() {
+fn tdd_execute_derived_job_once_rejects_waveform_job_without_waveform_output() {
     let gateway = WaveformGateway::default();
-    let report = execute_derived_job_once(&gateway, &EmptyWaveformPlanner, "job-wave-3")
-        .expect("empty waveform submit should remain valid");
+    let err = execute_derived_job_once(&gateway, &EmptyWaveformPlanner, "job-wave-3")
+        .expect_err("empty waveform submit must fail");
 
-    assert_eq!(report.job_id, "job-wave-3");
-    assert_eq!(report.upload_count, 0);
     assert_eq!(
-        gateway.calls(),
-        vec![
-            "claim:job-wave-3".to_string(),
-            "heartbeat:job-wave-3".to_string(),
-            "heartbeat:job-wave-3".to_string(),
-            "heartbeat:job-wave-3".to_string(),
-            "submit:job-wave-3".to_string(),
-        ]
+        err,
+        DerivedJobExecutorError::MissingSubmitManifestForJobType(
+            DerivedJobType::GenerateAudioWaveform
+        )
     );
 }
 
