@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClientKind {
     Agent,
-    Mcp,
     UiWeb,
     UiMobile,
 }
@@ -66,11 +65,10 @@ pub fn resolve_effective_features(
     effective
 }
 
-pub fn can_issue_client_token(client_kind: ClientKind, ai_enabled: bool) -> bool {
+pub fn can_issue_client_token(client_kind: ClientKind, _ai_enabled: bool) -> bool {
     match client_kind {
         ClientKind::UiWeb | ClientKind::UiMobile => false,
         ClientKind::Agent => true,
-        ClientKind::Mcp => ai_enabled,
     }
 }
 

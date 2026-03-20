@@ -46,7 +46,6 @@ struct DaemonArgs {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum TargetArg {
     Agent,
-    Mcp,
     UiWeb,
     UiMobile,
 }
@@ -55,7 +54,6 @@ impl From<TargetArg> for ClientRuntimeTarget {
     fn from(value: TargetArg) -> Self {
         match value {
             TargetArg::Agent => ClientRuntimeTarget::Agent,
-            TargetArg::Mcp => ClientRuntimeTarget::Mcp,
             TargetArg::UiWeb => ClientRuntimeTarget::UiWeb,
             TargetArg::UiMobile => ClientRuntimeTarget::UiMobile,
         }

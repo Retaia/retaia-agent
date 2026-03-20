@@ -7,7 +7,7 @@ Rust agent client for the Retaia platform.
 `retaia-agent` is the execution client responsible for processing workloads defined by Retaia Core contracts.
 
 - CLI-first design for Linux headless environments.
-- Optional GUI mode using the same runtime engine as CLI.
+- Desktop shell built on the same runtime engine as CLI.
 - Strict contract alignment with `specs/` (submodule to `retaia-docs`).
 
 ## Features
@@ -15,8 +15,8 @@ Rust agent client for the Retaia platform.
 - Contract-driven runtime behavior.
 - Capability-driven scheduling guard (`media.facts@1`, `media.thumbnails@1`, `audio.waveform@1`; `media.proxies.video@1` and `media.proxies.audio@1` require `ffmpeg`; `media.proxies.photo@1` is backed by Rust image/raw codecs).
 - Derived-processing v1 runtime support (`claim/heartbeat/submit` + `/derived/upload/*` gateway).
-- Runtime i18n v2 data-driven (`locales/en.json`, `locales/fr.json`) for CLI/desktop labels (override with `RETAIA_AGENT_LANG=fr|en`), with CI key-parity validation and debug-time missing-key guard.
-- CLI mandatory, GUI optional.
+- Runtime i18n v2 data-driven (`locales/en.json`, `locales/fr.json`) for CLI/desktop labels (override with `RETAIA_AGENT_LANG=fr|en`), with debug-time missing-key guard.
+- CLI runtime plus desktop shell in this repo.
 - Same runtime configuration contract in GUI and CLI-only environments (Linux/macOS/Windows, including SSH/headless).
 - Branch protection workflow with linear-history enforcement.
 - `cargo-husky` local guards (`pre-commit`, `pre-push`) to block direct work on `master`.
@@ -27,7 +27,7 @@ Rust agent client for the Retaia platform.
 - `locales/`: data-driven i18n locale files (`en.json`, `fr.json`)
 - `tests/`: automated test suite
 - `docs/`: implementation and operations docs
-- `retaia-docs/agent`: functional agent docs shared across projects
+- `specs/agent/`: agent specs used as source of truth in this repo
 - `AGENT.md`: normative rules for agent implementation
 - `specs/`: contract source of truth (git submodule)
 
@@ -47,6 +47,7 @@ Rust agent client for the Retaia platform.
 git submodule update --init --recursive
 cargo install cargo-commitlint
 cargo test
+cargo test --features core-api-client --tests --no-run
 ```
 
 Headless config (CLI):
@@ -187,7 +188,7 @@ The Rust HTTP client for Core v1 is generated from `specs/api/openapi/v1.yaml`:
 To compile agent integration helpers with this generated client:
 
 ```bash
-cargo test --features core-api-client
+cargo test --features core-api-client --tests --no-run
 ```
 
 ## CI checks
@@ -219,7 +220,7 @@ See:
 
 - `CONTRIBUTING.md`
 - `AGENT.md`
-- `https://github.com/Retaia/retaia-docs/tree/master/agent`
+- `specs/agent/`
 - `docs/README.md`
 - `docs/CONFIG-STORAGE.md`
 
@@ -231,7 +232,7 @@ See:
 ## Roadmap
 
 - Rust CLI baseline (v1)
-- Optional GUI shell on top of the same engine
+- Desktop shell on top of the same engine
 - Extended observability and operational hardening
 
 ## License

@@ -4,13 +4,12 @@
 
 - Agent Rust.
 - CLI obligatoire (Linux headless supporté).
-- GUI optionnelle.
+- Shell desktop dans ce repo, sur le même moteur runtime que la CLI.
 - Même moteur runtime pour CLI et GUI.
 
 ## Protocol Rules
 
 - Bearer-only.
-- Respect strict de `effective_feature_enabled`.
 - L'agent n'est pas décideur métier.
 - Aucun traitement MCP dans ce repo.
 - Pilotage runtime status-driven par polling HTTP contractuel (source de vérité).
@@ -18,8 +17,8 @@
 
 ## Auth
 
-- Mode interactif: `POST /auth/login`.
-- Mode technique: `client_id + secret_key` via `POST /auth/clients/token` (ou OAuth2 client credentials).
+- Implémenté aujourd'hui: mode technique `client_id + secret_key` via `POST /auth/clients/token`.
+- Les flows interactifs/browser/device-flow attendus par les specs ne sont pas encore implémentés dans ce repo.
 - Invariant: 1 token actif par `client_id`.
 
 ## Security

@@ -13,6 +13,8 @@ Client HTTP Rust généré depuis l'OpenAPI v1:
 ./scripts/generate_core_api_client.sh
 ```
 
+Le script applique les correctifs post-génération connus sur le client Rust généré puis vérifie immédiatement `cargo test --features core-api-client --tests --no-run`.
+
 ## Integration in `retaia-agent`
 
 Le crate généré est branché en dépendance optionnelle via feature:
@@ -34,5 +36,5 @@ Le crate généré est branché en dépendance optionnelle via feature:
 Activation:
 
 ```bash
-cargo test --features core-api-client
+cargo test --features core-api-client --tests --no-run
 ```

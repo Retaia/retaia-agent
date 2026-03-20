@@ -10,7 +10,6 @@ pub enum RuntimeOrchestrationMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClientRuntimeTarget {
     Agent,
-    Mcp,
     UiWeb,
     UiMobile,
 }

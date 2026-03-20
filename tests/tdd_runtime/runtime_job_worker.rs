@@ -168,3 +168,35 @@ fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
         "expected at least one heartbeat call, got: {calls:?}"
     );
 }
+
+#[test]
+fn tdd_runtime_job_worker_refuses_processing_for_non_agent_targets() {
+    let source_root = tempfile::tempdir().expect("source root");
+    write_storage_marker(source_root.path(), "nas-main");
+
+    let mut mounts = std::collections::BTreeMap::new();
+    mounts.insert(
+        "nas-main".to_string(),
+        source_root.path().display().to_string(),
+    );
+    let settings = AgentRuntimeConfig {
+        core_api_url: "http://localhost:3000/api/v1".to_string(),
+        ollama_url: "http://localhost:11434".to_string(),
+        auth_mode: AuthMode::Interactive,
+        technical_auth: None,
+        storage_mounts: mounts,
+        max_parallel_jobs: 1,
+        log_level: LogLevel::Info,
+    };
+    let mut session =
+        RuntimeSession::new(retaia_agent::ClientRuntimeTarget::UiWeb, settings).expect("session");
+    let _ = session.on_poll_success(retaia_agent::PollEndpoint::Jobs, 5_000, true);
+
+    let core = SinglePendingGateway;
+    let derived = RecordingDerivedGateway::default();
+    let planner = RuntimeDerivedPlanner;
+
+    let report = process_next_pending_job(&session, &core, &derived, &planner).expect("worker");
+    assert!(report.is_none());
+    assert!(derived.calls().is_empty());
+}

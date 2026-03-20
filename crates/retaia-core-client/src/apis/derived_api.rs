@@ -523,9 +523,7 @@ impl DerivedApi for DerivedApiClient {
         let mut local_var_form = reqwest::multipart::Form::new();
         local_var_form = local_var_form.text("upload_id", upload_id.to_string());
         local_var_form = local_var_form.text("part_number", part_number.to_string());
-        if let Some(ref path) = chunk {
-            local_var_form = local_var_form.file("chunk", path.as_os_str()).await?;
-        }
+        local_var_form = local_var_form.file("chunk", &chunk).await?;
         local_var_req_builder = local_var_req_builder.multipart(local_var_form);
 
         let local_var_req = local_var_req_builder.build()?;

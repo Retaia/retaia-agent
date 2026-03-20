@@ -4,13 +4,9 @@ use retaia_agent::{
 };
 
 #[test]
-fn tdd_notification_sink_profile_for_agent_and_mcp_targets_is_headless() {
+fn tdd_notification_sink_profile_for_agent_target_is_headless() {
     assert_eq!(
         notification_sink_profile_for_target(ClientRuntimeTarget::Agent),
-        NotificationSinkProfile::HeadlessCli
-    );
-    assert_eq!(
-        notification_sink_profile_for_target(ClientRuntimeTarget::Mcp),
         NotificationSinkProfile::HeadlessCli
     );
 }
