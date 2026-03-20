@@ -13,6 +13,12 @@ pub enum PhotoProxyFormat {
     Webp,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThumbnailFormat {
+    Jpeg,
+    Webp,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VideoProxyRequest {
     pub input_path: String,
@@ -41,6 +47,15 @@ pub struct PhotoProxyRequest {
     pub max_height: u16,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VideoThumbnailRequest {
+    pub input_path: String,
+    pub output_path: String,
+    pub format: ThumbnailFormat,
+    pub max_width: u16,
+    pub seek_ms: u64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ProxyGenerationError {
     #[error("invalid proxy request: {0}")]
@@ -61,6 +76,14 @@ pub trait ProxyGenerator {
     -> Result<(), ProxyGenerationError>;
     fn generate_photo_proxy(&self, request: &PhotoProxyRequest)
     -> Result<(), ProxyGenerationError>;
+    fn generate_video_thumbnail(
+        &self,
+        _request: &VideoThumbnailRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        Err(ProxyGenerationError::InvalidRequest(
+            "video thumbnail generation is not supported by this generator".to_string(),
+        ))
+    }
 }
 
 pub fn resolve_processing_input_path(

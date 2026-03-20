@@ -1,7 +1,7 @@
 use retaia_agent::{
     AudioProxyRequest, ClaimedDerivedJob, DerivedExecutionPlanner, DerivedJobType, DerivedKind,
     PhotoProxyRequest, ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner,
-    VideoProxyRequest,
+    VideoProxyRequest, VideoThumbnailRequest,
 };
 use std::sync::Arc;
 
@@ -30,6 +30,14 @@ impl ProxyGenerator for WritingPreviewGenerator {
         request: &PhotoProxyRequest,
     ) -> Result<(), ProxyGenerationError> {
         std::fs::write(&request.output_path, b"generated-photo")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_video_thumbnail(
+        &self,
+        request: &VideoThumbnailRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-thumbnail")
             .map_err(|error| ProxyGenerationError::Process(error.to_string()))
     }
 }
@@ -148,6 +156,46 @@ fn tdd_runtime_derived_planner_builds_photo_preview_upload_as_webp() {
         metrics.get("preview_profile"),
         Some(&serde_json::json!("photo_review_default_v1"))
     );
+}
+
+#[test]
+fn tdd_runtime_derived_planner_builds_thumbnail_upload_as_webp() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-thumb-1".to_string(),
+        asset_uuid: "asset-thumb-1".to_string(),
+        lock_token: "lock-thumb-1".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GenerateThumbnails,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/clip.mov".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("clip.mov");
+    std::fs::write(&staged, b"generated-video").expect("write");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::Thumb);
+    assert_eq!(plan.uploads[0].init.content_type, "image/webp");
+    assert!(
+        plan.uploads[0].parts[0]
+            .chunk_path
+            .ends_with("clip.thumb.webp")
+    );
+    let metrics = plan.submit.metrics.expect("thumbnail metrics");
+    assert_eq!(
+        metrics.get("thumbnail_profile"),
+        Some(&serde_json::json!("video_representative_v1"))
+    );
+    assert_eq!(metrics.get("thumbnail_count"), Some(&serde_json::json!(1)));
 }
 
 #[test]

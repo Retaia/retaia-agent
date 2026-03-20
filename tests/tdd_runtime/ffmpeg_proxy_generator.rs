@@ -2,7 +2,8 @@ use std::sync::Mutex;
 
 use retaia_agent::{
     AudioProxyFormat, AudioProxyRequest, CommandOutput, CommandRunner, FfmpegProxyGenerator,
-    ProxyGenerationError, ProxyGenerator, VideoProxyRequest,
+    ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
+    VideoThumbnailRequest,
 };
 
 #[derive(Debug)]
@@ -126,6 +127,31 @@ fn tdd_ffmpeg_proxy_rejects_invalid_request_before_running_process() {
         .expect_err("invalid request must fail");
     assert!(matches!(err, ProxyGenerationError::InvalidRequest(_)));
     assert_eq!(generator_runner_call_count(&generator), 0);
+}
+
+#[test]
+fn tdd_ffmpeg_thumbnail_uses_webp_encoder_and_representative_seek() {
+    let runner = FakeRunner::success();
+    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let request = VideoThumbnailRequest {
+        input_path: "/tmp/in.mov".to_string(),
+        output_path: "/tmp/out.webp".to_string(),
+        format: ThumbnailFormat::Webp,
+        max_width: 480,
+        seek_ms: 1_000,
+    };
+
+    generator
+        .generate_video_thumbnail(&request)
+        .expect("thumbnail generation should succeed");
+
+    let call = generator_runner_call(&generator);
+    let joined = call.args.join(" ");
+    assert!(joined.contains("-ss 1.000"));
+    assert!(joined.contains("-frames:v 1"));
+    assert!(joined.contains("-c:v libwebp"));
+    assert!(joined.contains("-quality 75"));
+    assert!(joined.contains("scale=w=480:h=-2:force_original_aspect_ratio=decrease"));
 }
 
 fn generator_runner_call(generator: &FfmpegProxyGenerator<FakeRunner>) -> RecordedCall {

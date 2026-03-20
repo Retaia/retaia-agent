@@ -74,11 +74,12 @@ Historique notable sur `2026-03-20`:
 - `src/domain/capabilities.rs` déclare `media.facts@1`, `media.thumbnails@1` et `audio.waveform@1` comme capacités disponibles par défaut.
 - `src/application/runtime_job_worker.rs` n'utilise aucun générateur réel; il se contente d'appeler le planner puis le gateway.
 - Les implémentations `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` sont désormais branchées pour `generate_preview`, ce qui permet au planner de produire un vrai artefact preview local avant upload.
-- Ce branchement reste partiel: `generate_thumbnails`, `generate_audio_waveform` et `extract_facts` ne passent toujours pas par une génération/extraction réelle conforme.
+- Ce branchement reste partiel: `generate_audio_waveform` et `extract_facts` ne passent toujours pas par une génération/extraction réelle conforme. `generate_thumbnails` produit désormais un thumb représentatif réel en `WEBP`, mais le mode `video_storyboard_v1` n'est pas implémenté.
 - `src/application/runtime_derived_planner.rs` écrit des références `agent://derived/...`, alors que la spec impose des URLs Core stables et same-origin pour les dérivés exposés par Core.
 - Pour `extract_facts`, le planner produit un `manifest` vide et aucun upload; le gateway OpenAPI soumet ensuite un `FactsPatch::new()` vide. Il n'y a pas d'extraction de faits réelle.
 - Pour `generate_audio_waveform`, le planner ne calcule aucune waveform; il marque juste un item de manifest de kind `Waveform` et peut uploader le fichier source brut.
-- Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source avec un mapping explicite vers les profils canoniques v1 (`video_review_default_v1`, `audio_review_default_v1`, `photo_review_default_v1`). Les écarts restants sont surtout l'absence de références Core stables et le fait que `generate_thumbnails` reste séparé et non implémenté.
+- Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source avec un mapping explicite vers les profils canoniques v1 (`video_review_default_v1`, `audio_review_default_v1`, `photo_review_default_v1`). Les écarts restants sont surtout l'absence de références Core stables.
+- Pour `generate_thumbnails`, le moteur produit maintenant un thumb principal réel avec le profil canonique local `video_representative_v1`, mais il n'implémente pas encore `video_storyboard_v1` ni la sélection temporelle fine basée sur la durée.
 - La spec dit explicitement qu'une waveform requise doit être produite et qu'un asset audio ne doit pas dépasser `READY` sans `waveform_url`; l'implémentation courante ne garantit rien de cela.
 
 ### 2.7 Stockage des secrets et sécurité locale

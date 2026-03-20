@@ -7,7 +7,7 @@ use crate::application::derived_processing_gateway::{
 };
 use crate::application::proxy_generator::{
     AudioProxyFormat, AudioProxyRequest, PhotoProxyFormat, PhotoProxyRequest, ProxyGenerationError,
-    ProxyGenerator, VideoProxyRequest,
+    ProxyGenerator, ThumbnailFormat, VideoProxyRequest, VideoThumbnailRequest,
 };
 use crate::domain::capabilities::photo_source_extension_supported;
 use crate::infrastructure::ffmpeg_proxy_generator::FfmpegProxyGenerator;
@@ -96,6 +96,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
             DerivedJobType::GeneratePreview => {
                 self.generate_preview_artifact(source_path, upload_kind)?
             }
+            DerivedJobType::GenerateThumbnails => self.generate_thumbnail_artifact(source_path)?,
             _ => source_path.to_path_buf(),
         };
 
@@ -219,6 +220,20 @@ impl RuntimeDerivedPlanner {
         result.map_err(map_preview_generation_error)?;
         Ok(output_path)
     }
+
+    fn generate_thumbnail_artifact(
+        &self,
+        source_path: &Path,
+    ) -> Result<PathBuf, DerivedJobExecutorError> {
+        let output_path = generated_preview_output_path(source_path, DerivedKind::Thumb);
+        self.av_generator
+            .generate_video_thumbnail(&canonical_thumbnail_request(
+                source_path.to_string_lossy().to_string(),
+                output_path.to_string_lossy().to_string(),
+            ))
+            .map_err(map_preview_generation_error)?;
+        Ok(output_path)
+    }
 }
 
 fn generated_preview_output_path(source_path: &Path, kind: DerivedKind) -> PathBuf {
@@ -269,6 +284,16 @@ fn canonical_photo_preview_request(input_path: String, output_path: String) -> P
     }
 }
 
+fn canonical_thumbnail_request(input_path: String, output_path: String) -> VideoThumbnailRequest {
+    VideoThumbnailRequest {
+        input_path,
+        output_path,
+        format: ThumbnailFormat::Webp,
+        max_width: 480,
+        seek_ms: 1_000,
+    }
+}
+
 fn map_preview_generation_error(error: ProxyGenerationError) -> DerivedJobExecutorError {
     DerivedJobExecutorError::Planner(format!("preview generation failed: {error}"))
 }
@@ -285,7 +310,7 @@ fn content_type_for_kind(kind: DerivedKind) -> &'static str {
         DerivedKind::PreviewVideo => "video/mp4",
         DerivedKind::PreviewAudio => "audio/mp4",
         DerivedKind::PreviewPhoto => "image/webp",
-        DerivedKind::Thumb => "image/jpeg",
+        DerivedKind::Thumb => "image/webp",
         DerivedKind::Waveform => "application/json",
     }
 }
@@ -302,6 +327,12 @@ fn base_metrics_for_job(claimed: &ClaimedDerivedJob) -> Option<HashMap<String, V
             "preview_profile".to_string(),
             Value::from(canonical_preview_profile_for_kind(kind)),
         );
+    } else if claimed.job_type == DerivedJobType::GenerateThumbnails {
+        metrics.insert(
+            "thumbnail_profile".to_string(),
+            Value::from("video_representative_v1"),
+        );
+        metrics.insert("thumbnail_count".to_string(), Value::from(1_u64));
     }
 
     if metrics.is_empty() {

@@ -2,7 +2,7 @@ use std::process::Command;
 
 use crate::application::proxy_generator::{
     AudioProxyFormat, AudioProxyRequest, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
-    VideoProxyRequest,
+    ThumbnailFormat, VideoProxyRequest, VideoThumbnailRequest,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,6 +89,18 @@ impl<R: CommandRunner> ProxyGenerator for FfmpegProxyGenerator<R> {
             "photo proxy generation is handled by RustPhotoProxyGenerator".to_string(),
         ))
     }
+
+    fn generate_video_thumbnail(
+        &self,
+        request: &VideoThumbnailRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        validate_thumbnail_request(request)?;
+        run_ffmpeg(
+            &self.runner,
+            &self.ffmpeg_binary,
+            &build_video_thumbnail_args(request),
+        )
+    }
 }
 
 fn run_ffmpeg<R: CommandRunner>(
@@ -149,6 +161,25 @@ fn validate_audio_request(request: &AudioProxyRequest) -> Result<(), ProxyGenera
     if request.sample_rate_hz == 0 {
         return Err(ProxyGenerationError::InvalidRequest(
             "audio sample rate must be > 0".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_thumbnail_request(request: &VideoThumbnailRequest) -> Result<(), ProxyGenerationError> {
+    if request.input_path.trim().is_empty() {
+        return Err(ProxyGenerationError::InvalidRequest(
+            "thumbnail input path is required".to_string(),
+        ));
+    }
+    if request.output_path.trim().is_empty() {
+        return Err(ProxyGenerationError::InvalidRequest(
+            "thumbnail output path is required".to_string(),
+        ));
+    }
+    if request.max_width == 0 {
+        return Err(ProxyGenerationError::InvalidRequest(
+            "thumbnail max width must be > 0".to_string(),
         ));
     }
     Ok(())
@@ -236,5 +267,36 @@ pub fn build_audio_proxy_args(request: &AudioProxyRequest) -> Vec<String> {
         request.sample_rate_hz.to_string(),
         request.output_path.clone(),
     ]);
+    args
+}
+
+pub fn build_video_thumbnail_args(request: &VideoThumbnailRequest) -> Vec<String> {
+    let codec = match request.format {
+        ThumbnailFormat::Jpeg => "mjpeg",
+        ThumbnailFormat::Webp => "libwebp",
+    };
+    let quality_args = match request.format {
+        ThumbnailFormat::Jpeg => vec!["-q:v".to_string(), "2".to_string()],
+        ThumbnailFormat::Webp => vec!["-quality".to_string(), "75".to_string()],
+    };
+
+    let mut args = vec![
+        "-y".to_string(),
+        "-ss".to_string(),
+        format!("{:.3}", request.seek_ms as f64 / 1000.0),
+        "-i".to_string(),
+        request.input_path.clone(),
+        "-frames:v".to_string(),
+        "1".to_string(),
+        "-vf".to_string(),
+        format!(
+            "scale=w={}:h=-2:force_original_aspect_ratio=decrease",
+            request.max_width
+        ),
+        "-c:v".to_string(),
+        codec.to_string(),
+    ];
+    args.extend(quality_args);
+    args.push(request.output_path.clone());
     args
 }
