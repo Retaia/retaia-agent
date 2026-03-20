@@ -163,14 +163,14 @@ fn default_manifest_for_job(claimed: &ClaimedDerivedJob) -> Vec<DerivedManifestI
 fn manifest_item_for_kind(claimed: &ClaimedDerivedJob, kind: DerivedKind) -> DerivedManifestItem {
     DerivedManifestItem {
         kind,
-        reference: format!(
-            "agent://derived/{}/{}/v1",
-            claimed.asset_uuid,
-            kind.as_str()
-        ),
+        reference: stable_core_derived_reference(&claimed.asset_uuid, kind),
         size_bytes: None,
         sha256: None,
     }
+}
+
+fn stable_core_derived_reference(asset_uuid: &str, kind: DerivedKind) -> String {
+    format!("/api/v1/assets/{asset_uuid}/derived/{}", kind.as_str())
 }
 
 fn infer_preview_kind(claimed: &ClaimedDerivedJob) -> DerivedKind {

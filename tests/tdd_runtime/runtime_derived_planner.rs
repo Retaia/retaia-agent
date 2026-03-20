@@ -86,6 +86,10 @@ fn tdd_runtime_derived_planner_infers_audio_proxy_manifest_from_extension() {
     assert_eq!(plan.submit.job_type, DerivedJobType::GeneratePreview);
     assert_eq!(plan.submit.manifest.len(), 1);
     assert_eq!(plan.submit.manifest[0].kind, DerivedKind::PreviewAudio);
+    assert_eq!(
+        plan.submit.manifest[0].reference,
+        "/api/v1/assets/asset-audio-1/derived/preview_audio"
+    );
     assert!(plan.uploads.is_empty());
     assert_eq!(plan.submit_idempotency_key, "agent-submit-job-audio-1");
     let metrics = plan.submit.metrics.expect("preview metrics");
@@ -133,6 +137,10 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
             .chunk_path
             .ends_with("clip.preview_video.mp4")
     );
+    assert_eq!(
+        plan.submit.manifest[0].reference,
+        "/api/v1/assets/asset-video-1/derived/preview_video"
+    );
     assert_eq!(plan.submit.manifest[0].size_bytes, Some(15));
     let metrics = plan.submit.metrics.expect("preview metrics");
     assert_eq!(
@@ -177,6 +185,10 @@ fn tdd_runtime_derived_planner_builds_photo_preview_upload_as_webp() {
             .chunk_path
             .ends_with("frame.preview_photo.webp")
     );
+    assert_eq!(
+        plan.submit.manifest[0].reference,
+        "/api/v1/assets/asset-photo-1/derived/preview_photo"
+    );
     let metrics = plan.submit.metrics.expect("preview metrics");
     assert_eq!(
         metrics.get("preview_profile"),
@@ -215,6 +227,10 @@ fn tdd_runtime_derived_planner_builds_thumbnail_upload_as_webp() {
         plan.uploads[0].parts[0]
             .chunk_path
             .ends_with("clip.thumb.webp")
+    );
+    assert_eq!(
+        plan.submit.manifest[0].reference,
+        "/api/v1/assets/asset-thumb-1/derived/thumb"
     );
     let metrics = plan.submit.metrics.expect("thumbnail metrics");
     assert_eq!(
@@ -255,6 +271,10 @@ fn tdd_runtime_derived_planner_builds_waveform_upload_as_json() {
         plan.uploads[0].parts[0]
             .chunk_path
             .ends_with("audio.waveform.json")
+    );
+    assert_eq!(
+        plan.submit.manifest[0].reference,
+        "/api/v1/assets/asset-wave-1/derived/waveform"
     );
     let metrics = plan.submit.metrics.expect("waveform metrics");
     assert_eq!(

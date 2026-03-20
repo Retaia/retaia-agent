@@ -75,12 +75,12 @@ Historique notable sur `2026-03-20`:
 - `src/application/runtime_job_worker.rs` n'utilise aucun générateur réel; il se contente d'appeler le planner puis le gateway.
 - Les implémentations `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` sont désormais branchées pour `generate_preview`, ce qui permet au planner de produire un vrai artefact preview local avant upload.
 - Ce branchement reste partiel: `generate_thumbnails` produit désormais un thumb représentatif réel en `WEBP`, mais le mode `video_storyboard_v1` n'est pas implémenté.
-- `src/application/runtime_derived_planner.rs` écrit des références `agent://derived/...`, alors que la spec impose des URLs Core stables et same-origin pour les dérivés exposés par Core.
+- `src/application/runtime_derived_planner.rs` écrit désormais des références Core stables same-origin de la forme `/api/v1/assets/{uuid}/derived/{kind}` pour les dérivés runtime.
 - Pour `extract_facts`, le planner produit désormais un `facts_patch` réel à partir du média source, sans upload, et le gateway OpenAPI soumet ce patch à `SubmitExtractFacts`.
 - Pour `generate_audio_waveform`, le planner génère désormais un payload JSON réel (`duration_ms`, `bucket_count`, `samples[]`) avec `bucket_count=1000`, puis l'uploade comme dérivé `waveform`.
-- Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source avec un mapping explicite vers les profils canoniques v1 (`video_review_default_v1`, `audio_review_default_v1`, `photo_review_default_v1`). Les écarts restants sont surtout l'absence de références Core stables.
+- Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source avec un mapping explicite vers les profils canoniques v1 (`video_review_default_v1`, `audio_review_default_v1`, `photo_review_default_v1`) et une référence Core stable same-origin.
 - Pour `generate_thumbnails`, le moteur produit maintenant un thumb principal réel avec le profil canonique local `video_representative_v1`, mais il n'implémente pas encore `video_storyboard_v1` ni la sélection temporelle fine basée sur la durée.
-- La spec dit explicitement qu'une waveform requise doit être produite et qu'un asset audio ne doit pas dépasser `READY` sans `waveform_url`; l'executor local n'accepte plus une waveform vide, mais l'implémentation reste incomplète tant que les références finales restent en `agent://derived/...` au lieu d'URLs Core stables.
+- La spec dit explicitement qu'une waveform requise doit être produite et qu'un asset audio ne doit pas dépasser `READY` sans `waveform_url`; l'executor local n'accepte plus une waveform vide et les références runtime sont désormais same-origin, mais la publication finale dépend encore du Core et du contrat `If-Match`/`ETag`.
 
 ### 2.7 Stockage des secrets et sécurité locale
 
