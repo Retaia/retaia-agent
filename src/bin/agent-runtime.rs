@@ -101,7 +101,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     register_daemon_agent(session.settings())?;
     let gateway = build_gateway(session.settings());
     let derived_gateway = build_derived_gateway(session.settings());
-    let planner = RuntimeDerivedPlanner;
+    let planner = RuntimeDerivedPlanner::default();
     let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
     let sleep_duration = Duration::from_millis(tick_ms.max(100));
     let mut history_store = match RuntimeHistoryStore::open_default() {

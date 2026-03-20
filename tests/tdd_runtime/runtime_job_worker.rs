@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use image::{Rgb, RgbImage};
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ClaimedDerivedJob, CoreApiGateway, CoreApiGatewayError,
     CoreJobState, CoreJobView, DerivedJobType, DerivedProcessingError, DerivedProcessingGateway,
@@ -117,7 +118,8 @@ fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
     write_storage_marker(source_root.path(), "nas-main");
     let source_path = source_root.path().join("INBOX/asset.jpg");
     std::fs::create_dir_all(source_path.parent().expect("parent")).expect("create dirs");
-    std::fs::write(&source_path, b"fixture").expect("write source");
+    let image = RgbImage::from_pixel(2, 2, Rgb([32, 64, 96]));
+    image.save(&source_path).expect("write source");
 
     let mut mounts = std::collections::BTreeMap::new();
     mounts.insert(
@@ -139,7 +141,7 @@ fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
 
     let core = SinglePendingGateway;
     let derived = RecordingDerivedGateway::default();
-    let planner = RuntimeDerivedPlanner;
+    let planner = RuntimeDerivedPlanner::default();
 
     let report = process_next_pending_job(&session, &core, &derived, &planner)
         .expect("worker")
@@ -194,7 +196,7 @@ fn tdd_runtime_job_worker_refuses_processing_for_non_agent_targets() {
 
     let core = SinglePendingGateway;
     let derived = RecordingDerivedGateway::default();
-    let planner = RuntimeDerivedPlanner;
+    let planner = RuntimeDerivedPlanner::default();
 
     let report = process_next_pending_job(&session, &core, &derived, &planner).expect("worker");
     assert!(report.is_none());

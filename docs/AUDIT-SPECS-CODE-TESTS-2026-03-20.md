@@ -73,12 +73,12 @@ Historique notable sur `2026-03-20`:
 
 - `src/domain/capabilities.rs` déclare `media.facts@1`, `media.thumbnails@1` et `audio.waveform@1` comme capacités disponibles par défaut.
 - `src/application/runtime_job_worker.rs` n'utilise aucun générateur réel; il se contente d'appeler le planner puis le gateway.
-- Les implémentations `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` existent, mais elles ne sont pas intégrées au runtime worker/planner.
-- `src/application/runtime_derived_planner.rs` réutilise le fichier source stagé comme unique chunk uploadé pour les jobs de preview/dérivés, au lieu de générer un vrai output conforme au `preview_profile` ou au profil de dérivé attendu.
+- Les implémentations `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` sont désormais branchées pour `generate_preview`, ce qui permet au planner de produire un vrai artefact preview local avant upload.
+- Ce branchement reste partiel: `generate_thumbnails`, `generate_audio_waveform` et `extract_facts` ne passent toujours pas par une génération/extraction réelle conforme.
 - `src/application/runtime_derived_planner.rs` écrit des références `agent://derived/...`, alors que la spec impose des URLs Core stables et same-origin pour les dérivés exposés par Core.
 - Pour `extract_facts`, le planner produit un `manifest` vide et aucun upload; le gateway OpenAPI soumet ensuite un `FactsPatch::new()` vide. Il n'y a pas d'extraction de faits réelle.
 - Pour `generate_audio_waveform`, le planner ne calcule aucune waveform; il marque juste un item de manifest de kind `Waveform` et peut uploader le fichier source brut.
-- Pour `generate_preview`, le renommage de types (`GeneratePreview`, `PreviewVideo`, `PreviewAudio`, `PreviewPhoto`) est correct, mais le moteur n'appelle toujours pas les générateurs concrets; il requalifie surtout le source file en dérivé uploadé.
+- Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source, mais l'implémentation ne démontre pas encore toute la conformité fine aux profils canoniques (`preview_profile` explicite absent, thumbnails séparés absents, références Core stables absentes).
 - La spec dit explicitement qu'une waveform requise doit être produite et qu'un asset audio ne doit pas dépasser `READY` sans `waveform_url`; l'implémentation courante ne garantit rien de cela.
 
 ### 2.7 Stockage des secrets et sécurité locale
@@ -156,6 +156,7 @@ Historique notable sur `2026-03-20`:
 ## 4. Ecarts docs/test/code sur le runtime réel
 
 - Le README annonce "Derived-processing v1 runtime support", mais le runtime ne fait ni génération effective de previews, ni thumbnails, ni waveform, ni facts extraction.
+- Le README annonce "Derived-processing v1 runtime support"; la génération effective des previews est désormais branchée, mais les thumbnails, la waveform, les facts et les références Core stables restent incomplètes.
 - Le README annonce "Strict contract alignment with specs/", mais le policy polling, la waveform obligatoire et la génération effective des previews/facts divergent encore au niveau du code et des tests.
 - Le README annonce le même contrat de configuration GUI/CLI; en pratique le build par défaut ne livre pas la GUI.
 - Les docs locales de contraintes runtime annoncent un stockage OS-native des secrets, mais la config persistée garde toujours `secret_key` en clair.

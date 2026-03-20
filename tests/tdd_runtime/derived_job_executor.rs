@@ -1,18 +1,50 @@
 use std::sync::Mutex;
 
 use retaia_agent::{
-    AgentRuntimeConfig, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner,
-    DerivedJobExecutorError, DerivedJobType, DerivedKind, DerivedManifestItem,
-    DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit,
-    DerivedUploadPart, HeartbeatReceipt, LogLevel, RuntimeDerivedPlanner, SubmitDerivedPayload,
-    UploadedDerivedPart, execute_derived_job_once, execute_derived_job_once_with_source_staging,
+    AgentRuntimeConfig, AudioProxyRequest, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan,
+    DerivedExecutionPlanner, DerivedJobExecutorError, DerivedJobType, DerivedKind,
+    DerivedManifestItem, DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete,
+    DerivedUploadInit, DerivedUploadPart, HeartbeatReceipt, LogLevel, PhotoProxyRequest,
+    ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner, SubmitDerivedPayload,
+    UploadedDerivedPart, VideoProxyRequest, execute_derived_job_once,
+    execute_derived_job_once_with_source_staging,
 };
+use std::sync::Arc;
 
 fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
     let marker = format!(
         r#"{{"version":1,"storage_id":"{storage_id}","paths":{{"inbox":"INBOX","archive":"ARCHIVE","rejects":"REJECTS"}}}}"#
     );
     std::fs::write(root.join(".retaia"), marker).expect("write marker");
+}
+
+#[derive(Debug, Default)]
+struct WritingPreviewGenerator;
+
+impl ProxyGenerator for WritingPreviewGenerator {
+    fn generate_video_proxy(
+        &self,
+        request: &VideoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-video")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_proxy(
+        &self,
+        request: &AudioProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-audio")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_photo_proxy(
+        &self,
+        request: &PhotoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-photo")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
 }
 
 #[derive(Default)]
@@ -756,13 +788,13 @@ fn tdd_execute_derived_job_once_with_runtime_planner_emits_upload_calls_with_sta
     };
 
     let gateway = MemoryGateway::default();
-    let report = execute_derived_job_once_with_source_staging(
-        &gateway,
-        &RuntimeDerivedPlanner,
-        "job-1",
-        &settings,
-    )
-    .expect("flow with runtime planner");
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let report =
+        execute_derived_job_once_with_source_staging(&gateway, &planner, "job-1", &settings)
+            .expect("flow with runtime planner");
     assert_eq!(report.upload_count, 1);
     let calls = gateway.calls();
     assert!(calls.iter().any(|call| call.starts_with("upload_init:")));
@@ -803,13 +835,13 @@ fn tdd_execute_derived_job_once_with_runtime_planner_supports_extract_facts_with
     };
 
     let gateway = ExtractFactsGateway::default();
-    let report = execute_derived_job_once_with_source_staging(
-        &gateway,
-        &RuntimeDerivedPlanner,
-        "job-facts-1",
-        &settings,
-    )
-    .expect("extract_facts flow");
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let report =
+        execute_derived_job_once_with_source_staging(&gateway, &planner, "job-facts-1", &settings)
+            .expect("extract_facts flow");
     assert_eq!(report.upload_count, 0);
     let calls = gateway.calls();
     assert!(calls.contains(&"submit:job-facts-1".to_string()));
