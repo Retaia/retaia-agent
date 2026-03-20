@@ -3,6 +3,7 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::Arc;
+use std::sync::Once;
 use std::thread;
 
 use retaia_agent::{
@@ -25,6 +26,7 @@ struct MockExchange {
 }
 
 fn runtime_config(base_url: &str) -> AgentRuntimeConfig {
+    init_test_identity_env();
     AgentRuntimeConfig {
         core_api_url: base_url.to_string(),
         ollama_url: "http://127.0.0.1:11434".to_string(),
@@ -34,6 +36,21 @@ fn runtime_config(base_url: &str) -> AgentRuntimeConfig {
         max_parallel_jobs: 2,
         log_level: LogLevel::Info,
     }
+}
+
+fn init_test_identity_env() {
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        let identity_path = std::env::temp_dir().join(format!(
+            "retaia-agent-e2e-identity-{}.json",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&identity_path);
+        unsafe {
+            std::env::set_var("RETAIA_AGENT_IDENTITY_PATH", identity_path);
+            std::env::set_var("RETAIA_AGENT_SECRET_STORE_BACKEND", "memory");
+        }
+    });
 }
 
 fn spawn_mock_server(exchanges: Vec<MockExchange>) -> (thread::JoinHandle<()>, String) {

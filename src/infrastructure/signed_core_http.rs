@@ -60,7 +60,7 @@ pub fn signed_request(
     let timestamp = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let nonce = uuid::Uuid::new_v4().to_string();
     let payload = signature_payload(method, path, &identity.agent_id, &timestamp, &nonce, body);
-    let signature = identity.detached_signature_ascii_armored(payload.as_bytes())?;
+    let signature = identity.detached_signature_http_header_value(payload.as_bytes())?;
     Ok(SignedRequest {
         timestamp,
         nonce,
