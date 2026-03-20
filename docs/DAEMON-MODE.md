@@ -98,7 +98,8 @@ Bug report:
 
 Auth bearer pour polling API (build avec feature `core-api-client`):
 
-- env var optionnelle: `RETAIA_AGENT_BEARER_TOKEN`.
+- auth technique attendue: `technical_auth.client_id` + `technical_auth.secret_key`.
+- le daemon génère/persiste une identité agent locale (`agent_id` + clé OpenPGP) et s’enregistre avant de traiter des jobs.
 
 Le mode interactif local est desactive: seul `agent-runtime -- daemon` execute le runtime.
 CLI et GUI jouent le role de clients de controle/observabilite du daemon.

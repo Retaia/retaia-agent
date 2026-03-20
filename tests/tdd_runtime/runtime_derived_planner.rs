@@ -1,36 +1,73 @@
 use retaia_agent::{
-    ClaimedDerivedJob, DerivedExecutionPlanner, DerivedJobType, DerivedKind, RuntimeDerivedPlanner,
+    AudioProxyRequest, ClaimedDerivedJob, DerivedExecutionPlanner, DerivedJobType, DerivedKind,
+    PhotoProxyRequest, ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner,
+    VideoProxyRequest,
 };
+use std::sync::Arc;
+
+#[derive(Debug, Default)]
+struct WritingPreviewGenerator;
+
+impl ProxyGenerator for WritingPreviewGenerator {
+    fn generate_video_proxy(
+        &self,
+        request: &VideoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-video")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_proxy(
+        &self,
+        request: &AudioProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-audio")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_photo_proxy(
+        &self,
+        request: &PhotoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-photo")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+}
 
 #[test]
 fn tdd_runtime_derived_planner_infers_audio_proxy_manifest_from_extension() {
-    let planner = RuntimeDerivedPlanner;
+    let planner = RuntimeDerivedPlanner::default();
     let claimed = ClaimedDerivedJob {
         job_id: "job-audio-1".to_string(),
         asset_uuid: "asset-audio-1".to_string(),
         lock_token: "lock-audio-1".to_string(),
-        job_type: DerivedJobType::GenerateProxy,
+        fencing_token: 1,
+        job_type: DerivedJobType::GeneratePreview,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mp3".to_string(),
         source_sidecars_relative: Vec::new(),
     };
 
     let plan = planner.plan_for_claimed_job(&claimed).expect("plan");
-    assert_eq!(plan.submit.job_type, DerivedJobType::GenerateProxy);
+    assert_eq!(plan.submit.job_type, DerivedJobType::GeneratePreview);
     assert_eq!(plan.submit.manifest.len(), 1);
-    assert_eq!(plan.submit.manifest[0].kind, DerivedKind::ProxyAudio);
+    assert_eq!(plan.submit.manifest[0].kind, DerivedKind::PreviewAudio);
     assert!(plan.uploads.is_empty());
     assert_eq!(plan.submit_idempotency_key, "agent-submit-job-audio-1");
 }
 
 #[test]
 fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
-    let planner = RuntimeDerivedPlanner;
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
     let claimed = ClaimedDerivedJob {
         job_id: "job-video-1".to_string(),
         asset_uuid: "asset-video-1".to_string(),
         lock_token: "lock-video-1".to_string(),
-        job_type: DerivedJobType::GenerateProxy,
+        fencing_token: 1,
+        job_type: DerivedJobType::GeneratePreview,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mov".to_string(),
         source_sidecars_relative: Vec::new(),
@@ -43,20 +80,27 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
         .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
         .expect("plan");
     assert_eq!(plan.uploads.len(), 1);
-    assert_eq!(plan.uploads[0].init.kind, DerivedKind::ProxyVideo);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::PreviewVideo);
     assert_eq!(plan.uploads[0].init.content_type, "video/mp4");
     assert_eq!(plan.uploads[0].parts.len(), 1);
     assert_eq!(plan.uploads[0].parts[0].part_number, 1);
-    assert_eq!(plan.submit.manifest[0].size_bytes, Some(12));
+    assert_ne!(plan.uploads[0].parts[0].chunk_path, staged);
+    assert!(
+        plan.uploads[0].parts[0]
+            .chunk_path
+            .ends_with("clip.preview_video.mp4")
+    );
+    assert_eq!(plan.submit.manifest[0].size_bytes, Some(15));
 }
 
 #[test]
 fn tdd_runtime_derived_planner_extract_facts_stays_uploadless_with_staged_source() {
-    let planner = RuntimeDerivedPlanner;
+    let planner = RuntimeDerivedPlanner::default();
     let claimed = ClaimedDerivedJob {
         job_id: "job-facts-1".to_string(),
         asset_uuid: "asset-facts-1".to_string(),
         lock_token: "lock-facts-1".to_string(),
+        fencing_token: 1,
         job_type: DerivedJobType::ExtractFacts,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mov".to_string(),
@@ -76,11 +120,12 @@ fn tdd_runtime_derived_planner_extract_facts_stays_uploadless_with_staged_source
 
 #[test]
 fn tdd_runtime_derived_planner_includes_sidecar_metrics_when_sidecars_are_staged() {
-    let planner = RuntimeDerivedPlanner;
+    let planner = RuntimeDerivedPlanner::default();
     let claimed = ClaimedDerivedJob {
         job_id: "job-facts-2".to_string(),
         asset_uuid: "asset-facts-2".to_string(),
         lock_token: "lock-facts-2".to_string(),
+        fencing_token: 1,
         job_type: DerivedJobType::ExtractFacts,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mov".to_string(),

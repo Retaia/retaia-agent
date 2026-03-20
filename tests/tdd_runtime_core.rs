@@ -1,3 +1,5 @@
+#[path = "tdd_runtime/agent_identity.rs"]
+mod agent_identity;
 #[path = "tdd_runtime/application.rs"]
 mod application;
 #[path = "tdd_runtime/core_api_gateway.rs"]
@@ -52,6 +54,8 @@ mod runtime_sync;
 mod runtime_sync_coordinator;
 #[path = "tdd_runtime/rust_photo_proxy_generator.rs"]
 mod rust_photo_proxy_generator;
+#[path = "tdd_runtime/signed_core_http.rs"]
+mod signed_core_http;
 #[path = "tdd_runtime/source_path_resolver.rs"]
 mod source_path_resolver;
 #[path = "tdd_runtime/source_staging.rs"]

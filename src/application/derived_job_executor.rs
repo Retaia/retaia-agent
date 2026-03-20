@@ -111,10 +111,10 @@ fn execute_derived_job_once_internal<
     job_id: &str,
     settings: Option<&AgentRuntimeConfig>,
 ) -> Result<DerivedExecutionReport, DerivedJobExecutorError> {
-    let claimed = gateway
+    let mut claimed = gateway
         .claim_job(job_id)
         .map_err(DerivedJobExecutorError::Gateway)?;
-    send_heartbeat(gateway, &claimed)?;
+    send_heartbeat(gateway, &mut claimed)?;
     let staged_source = if let Some(settings) = settings {
         Some(
             stage_claimed_job_source(settings, &claimed)
@@ -123,7 +123,7 @@ fn execute_derived_job_once_internal<
     } else {
         None
     };
-    send_heartbeat(gateway, &claimed)?;
+    send_heartbeat(gateway, &mut claimed)?;
 
     let staged_sidecars: &[PathBuf] = staged_source
         .as_ref()
@@ -152,27 +152,32 @@ fn execute_derived_job_once_internal<
             return Err(DerivedJobExecutorError::UploadInitCompleteAssetMismatch);
         }
 
-        send_heartbeat(gateway, &claimed)?;
+        send_heartbeat(gateway, &mut claimed)?;
         gateway
             .upload_init(&upload.init)
             .map_err(DerivedJobExecutorError::Gateway)?;
+        let mut completed_parts = Vec::with_capacity(upload.parts.len());
         for part in &upload.parts {
-            send_heartbeat(gateway, &claimed)?;
-            gateway
+            send_heartbeat(gateway, &mut claimed)?;
+            let uploaded_part = gateway
                 .upload_part(part)
                 .map_err(DerivedJobExecutorError::Gateway)?;
+            completed_parts.push(uploaded_part);
         }
-        send_heartbeat(gateway, &claimed)?;
+        let mut complete = upload.complete.clone();
+        complete.parts = Some(completed_parts);
+        send_heartbeat(gateway, &mut claimed)?;
         gateway
-            .upload_complete(&upload.complete)
+            .upload_complete(&complete)
             .map_err(DerivedJobExecutorError::Gateway)?;
     }
 
-    send_heartbeat(gateway, &claimed)?;
+    send_heartbeat(gateway, &mut claimed)?;
     gateway
         .submit_derived(
             &claimed.job_id,
             &claimed.lock_token,
+            claimed.fencing_token,
             &plan.submit_idempotency_key,
             &plan.submit,
         )
@@ -199,19 +204,20 @@ fn validate_submit_payload_for_claimed_job(
     use crate::application::derived_processing_gateway::{DerivedJobType, DerivedKind};
     match submit.job_type {
         DerivedJobType::ExtractFacts => {}
-        DerivedJobType::GenerateProxy => {
+        DerivedJobType::GeneratePreview => {
             if submit.manifest.is_empty() {
                 return Err(DerivedJobExecutorError::MissingSubmitManifestForJobType(
-                    DerivedJobType::GenerateProxy,
+                    DerivedJobType::GeneratePreview,
                 ));
             }
             for item in &submit.manifest {
                 match item.kind {
-                    DerivedKind::ProxyVideo | DerivedKind::ProxyAudio | DerivedKind::ProxyPhoto => {
-                    }
+                    DerivedKind::PreviewVideo
+                    | DerivedKind::PreviewAudio
+                    | DerivedKind::PreviewPhoto => {}
                     kind => {
                         return Err(DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
-                            job_type: DerivedJobType::GenerateProxy,
+                            job_type: DerivedJobType::GeneratePreview,
                             kind,
                         });
                     }
@@ -250,11 +256,12 @@ fn validate_submit_payload_for_claimed_job(
 
 fn send_heartbeat<G: DerivedProcessingGateway + ?Sized>(
     gateway: &G,
-    claimed: &ClaimedDerivedJob,
+    claimed: &mut ClaimedDerivedJob,
 ) -> Result<(), DerivedJobExecutorError> {
-    gateway
-        .heartbeat(&claimed.job_id, &claimed.lock_token)
+    let receipt = gateway
+        .heartbeat(&claimed.job_id, &claimed.lock_token, claimed.fencing_token)
         .map_err(DerivedJobExecutorError::Gateway)?;
+    claimed.fencing_token = receipt.fencing_token;
     Ok(())
 }
 

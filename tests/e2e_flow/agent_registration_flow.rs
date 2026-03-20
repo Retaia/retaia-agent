@@ -63,13 +63,13 @@ fn e2e_agent_registration_flow_builds_declared_capabilities_and_returns_effectiv
         assert!(
             captured[0]
                 .capabilities
-                .contains(&"media.proxies.video@1".to_string())
+                .contains(&"media.previews.video@1".to_string())
         );
     } else {
         assert!(
             !captured[0]
                 .capabilities
-                .contains(&"media.proxies.video@1".to_string())
+                .contains(&"media.previews.video@1".to_string())
         );
     }
 }

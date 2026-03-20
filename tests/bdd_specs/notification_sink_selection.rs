@@ -6,7 +6,7 @@ use retaia_agent::{
 #[test]
 fn bdd_given_headless_runtime_targets_when_selecting_notification_profile_then_stdout_sink_policy_is_selected()
  {
-    let targets = [ClientRuntimeTarget::Agent, ClientRuntimeTarget::Mcp];
+    let targets = [ClientRuntimeTarget::Agent];
 
     for target in targets {
         let profile = notification_sink_profile_for_target(target);

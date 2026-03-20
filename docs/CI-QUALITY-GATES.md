@@ -16,6 +16,7 @@
 - `TDD`: basé sur le comportement du code.
 - `BDD`: basé sur les scénarios issus des specs.
 - `E2E`: basé sur les parcours complets.
+- La gate de base DOIT aussi échouer sur toute erreur de compilation de la feature `core-api-client`, même si les suites par défaut compilent encore.
 - Coverage minimal bloquant: `80%` (line coverage) sur la **couverture globale agrégée** des suites TDD+BDD+E2E.
 - Les résumés de coverage par suite (`TDD`, `BDD`, `E2E`) restent générés et publiés comme artefacts CI pour diagnostiquer les zones faibles, mais ne bloquent plus individuellement.
 
@@ -40,4 +41,5 @@ cargo install cargo-commitlint
 git config --unset core.hooksPath || true
 cargo clean -p cargo-husky
 cargo test
+cargo test --features core-api-client --tests --no-run
 ```

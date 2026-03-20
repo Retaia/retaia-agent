@@ -1,3 +1,4 @@
+pub mod agent_identity;
 pub mod config_repository;
 pub mod config_store;
 pub mod daemon_diagnostics;
@@ -15,5 +16,8 @@ pub mod openapi_jobs_gateway;
 pub mod runtime_history_store;
 pub mod runtime_stats_store;
 pub mod rust_photo_proxy_generator;
+pub mod signed_core_http;
 #[cfg(feature = "tauri-notifications")]
 pub mod tauri_notification_sink;
+#[cfg(feature = "core-api-client")]
+pub mod technical_auth;

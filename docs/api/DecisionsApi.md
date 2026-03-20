@@ -10,7 +10,7 @@ Method | HTTP request | Description
 
 ## assets_uuid_reopen_post
 
-> assets_uuid_reopen_post(uuid, if_match)
+> assets_uuid_reopen_post(uuid, if_match, accept_language)
 Reopen archived or rejected asset to decision pending
 
 ### Parameters
@@ -19,7 +19,8 @@ Reopen archived or rejected asset to decision pending
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
-**if_match** | **String** |  | [required] |
+**if_match** | **String** | Strong quoted HTTP entity-tag previously read from the asset `ETag` response header. | [required] |
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 

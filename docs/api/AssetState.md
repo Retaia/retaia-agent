@@ -7,6 +7,7 @@
 | Discovered | DISCOVERED |
 | Ready | READY |
 | ProcessingReview | PROCESSING_REVIEW |
+| ReviewPendingProfile | REVIEW_PENDING_PROFILE |
 | Processed | PROCESSED |
 | DecisionPending | DECISION_PENDING |
 | DecidedKeep | DECIDED_KEEP |

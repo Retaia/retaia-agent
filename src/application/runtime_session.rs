@@ -116,6 +116,10 @@ impl RuntimeSession {
     pub fn can_issue_mutation(&self) -> bool {
         self.loop_engine.can_issue_mutation()
     }
+
+    pub fn can_process_jobs(&self) -> bool {
+        matches!(self.target(), ClientRuntimeTarget::Agent)
+    }
 }
 
 fn command_from_menu_action(action: MenuAction) -> Option<RuntimeControlCommand> {

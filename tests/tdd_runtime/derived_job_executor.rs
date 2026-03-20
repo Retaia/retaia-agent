@@ -1,18 +1,50 @@
 use std::sync::Mutex;
 
 use retaia_agent::{
-    AgentRuntimeConfig, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner,
-    DerivedJobExecutorError, DerivedJobType, DerivedKind, DerivedManifestItem,
-    DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit,
-    DerivedUploadPart, HeartbeatReceipt, LogLevel, RuntimeDerivedPlanner, SubmitDerivedPayload,
-    execute_derived_job_once, execute_derived_job_once_with_source_staging,
+    AgentRuntimeConfig, AudioProxyRequest, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan,
+    DerivedExecutionPlanner, DerivedJobExecutorError, DerivedJobType, DerivedKind,
+    DerivedManifestItem, DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete,
+    DerivedUploadInit, DerivedUploadPart, HeartbeatReceipt, LogLevel, PhotoProxyRequest,
+    ProxyGenerationError, ProxyGenerator, RuntimeDerivedPlanner, SubmitDerivedPayload,
+    UploadedDerivedPart, VideoProxyRequest, execute_derived_job_once,
+    execute_derived_job_once_with_source_staging,
 };
+use std::sync::Arc;
 
 fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
     let marker = format!(
         r#"{{"version":1,"storage_id":"{storage_id}","paths":{{"inbox":"INBOX","archive":"ARCHIVE","rejects":"REJECTS"}}}}"#
     );
     std::fs::write(root.join(".retaia"), marker).expect("write marker");
+}
+
+#[derive(Debug, Default)]
+struct WritingPreviewGenerator;
+
+impl ProxyGenerator for WritingPreviewGenerator {
+    fn generate_video_proxy(
+        &self,
+        request: &VideoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-video")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_proxy(
+        &self,
+        request: &AudioProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-audio")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_photo_proxy(
+        &self,
+        request: &PhotoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-photo")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
 }
 
 #[derive(Default)]
@@ -36,7 +68,8 @@ impl DerivedProcessingGateway for MemoryGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
-            job_type: DerivedJobType::GenerateProxy,
+            fencing_token: 1,
+            job_type: DerivedJobType::GeneratePreview,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),
@@ -47,18 +80,23 @@ impl DerivedProcessingGateway for MemoryGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -77,12 +115,18 @@ impl DerivedProcessingGateway for MemoryGateway {
         Ok(())
     }
 
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("upload_part:{}", request.part_number));
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -108,7 +152,7 @@ impl DerivedExecutionPlanner for ProxyPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     content_type: "video/mp4".to_string(),
                     size_bytes: 1024,
                     sha256: None,
@@ -118,6 +162,7 @@ impl DerivedExecutionPlanner for ProxyPlanner {
                     asset_uuid: claimed.asset_uuid.clone(),
                     upload_id: "up-1".to_string(),
                     part_number: 1,
+                    chunk_path: std::path::PathBuf::from("/tmp/up-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
@@ -127,9 +172,9 @@ impl DerivedExecutionPlanner for ProxyPlanner {
                 },
             }],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     reference: "s3://derived/proxy.mp4".to_string(),
                     size_bytes: Some(1024),
                     sha256: None,
@@ -176,6 +221,7 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-facts".to_string(),
             lock_token: "lock-facts".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::ExtractFacts,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -190,18 +236,23 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -221,12 +272,18 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
         Ok(())
     }
 
-    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push("upload_part".to_string());
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -251,7 +308,7 @@ impl DerivedExecutionPlanner for MissingIdempotencyPlanner {
         Ok(DerivedExecutionPlan {
             uploads: vec![],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![],
                 warnings: None,
                 metrics: None,
@@ -296,7 +353,7 @@ impl DerivedExecutionPlanner for EmptyProxyManifestPlanner {
         Ok(DerivedExecutionPlan {
             uploads: vec![],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![],
                 warnings: None,
                 metrics: None,
@@ -317,7 +374,7 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
-                    kind: DerivedKind::ProxyAudio,
+                    kind: DerivedKind::PreviewAudio,
                     content_type: "audio/mp4".to_string(),
                     size_bytes: 512,
                     sha256: None,
@@ -332,9 +389,9 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
                 },
             }],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     reference: "s3://derived/proxy.mp4".to_string(),
                     size_bytes: Some(1024),
                     sha256: None,
@@ -375,6 +432,7 @@ impl DerivedProcessingGateway for WaveformGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-wave-1".to_string(),
             lock_token: "lock-wave-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateAudioWaveform,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -386,18 +444,23 @@ impl DerivedProcessingGateway for WaveformGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -416,12 +479,18 @@ impl DerivedProcessingGateway for WaveformGateway {
         Ok(())
     }
 
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("upload_part:{}", request.part_number));
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -457,6 +526,7 @@ impl DerivedExecutionPlanner for ValidWaveformPlanner {
                     asset_uuid: claimed.asset_uuid.clone(),
                     upload_id: "up-wave-1".to_string(),
                     part_number: 1,
+                    chunk_path: std::path::PathBuf::from("/tmp/up-wave-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
@@ -513,7 +583,7 @@ impl DerivedExecutionPlanner for IncompatibleWaveformPlanner {
             submit: SubmitDerivedPayload {
                 job_type: DerivedJobType::GenerateAudioWaveform,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyAudio,
+                    kind: DerivedKind::PreviewAudio,
                     reference: "s3://derived/proxy.m4a".to_string(),
                     size_bytes: Some(42),
                     sha256: None,
@@ -571,7 +641,7 @@ fn tdd_execute_derived_job_once_rejects_submit_job_type_mismatch_vs_claimed_job(
     assert_eq!(
         err,
         DerivedJobExecutorError::SubmitJobTypeMismatch {
-            claimed: DerivedJobType::GenerateProxy,
+            claimed: DerivedJobType::GeneratePreview,
             planned: DerivedJobType::GenerateThumbnails,
         }
     );
@@ -585,7 +655,7 @@ fn tdd_execute_derived_job_once_rejects_empty_manifest_for_proxy_job_type() {
         .expect_err("proxy manifest should be required");
     assert_eq!(
         err,
-        DerivedJobExecutorError::MissingSubmitManifestForJobType(DerivedJobType::GenerateProxy)
+        DerivedJobExecutorError::MissingSubmitManifestForJobType(DerivedJobType::GeneratePreview)
     );
 }
 
@@ -597,7 +667,7 @@ fn tdd_execute_derived_job_once_rejects_upload_kind_missing_from_submit_manifest
         .expect_err("upload kind must exist in manifest");
     assert_eq!(
         err,
-        DerivedJobExecutorError::UploadKindNotInSubmitManifest(DerivedKind::ProxyAudio)
+        DerivedJobExecutorError::UploadKindNotInSubmitManifest(DerivedKind::PreviewAudio)
     );
 }
 
@@ -620,7 +690,7 @@ fn tdd_execute_derived_job_once_rejects_non_waveform_manifest_for_waveform_job_t
         err,
         DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
             job_type: DerivedJobType::GenerateAudioWaveform,
-            kind: DerivedKind::ProxyAudio,
+            kind: DerivedKind::PreviewAudio,
         }
     );
 }
@@ -718,13 +788,13 @@ fn tdd_execute_derived_job_once_with_runtime_planner_emits_upload_calls_with_sta
     };
 
     let gateway = MemoryGateway::default();
-    let report = execute_derived_job_once_with_source_staging(
-        &gateway,
-        &RuntimeDerivedPlanner,
-        "job-1",
-        &settings,
-    )
-    .expect("flow with runtime planner");
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let report =
+        execute_derived_job_once_with_source_staging(&gateway, &planner, "job-1", &settings)
+            .expect("flow with runtime planner");
     assert_eq!(report.upload_count, 1);
     let calls = gateway.calls();
     assert!(calls.iter().any(|call| call.starts_with("upload_init:")));
@@ -765,13 +835,13 @@ fn tdd_execute_derived_job_once_with_runtime_planner_supports_extract_facts_with
     };
 
     let gateway = ExtractFactsGateway::default();
-    let report = execute_derived_job_once_with_source_staging(
-        &gateway,
-        &RuntimeDerivedPlanner,
-        "job-facts-1",
-        &settings,
-    )
-    .expect("extract_facts flow");
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let report =
+        execute_derived_job_once_with_source_staging(&gateway, &planner, "job-facts-1", &settings)
+            .expect("extract_facts flow");
     assert_eq!(report.upload_count, 0);
     let calls = gateway.calls();
     assert!(calls.contains(&"submit:job-facts-1".to_string()));

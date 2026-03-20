@@ -4,7 +4,8 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**app_feature_enabled** | **std::collections::HashMap<String, bool>** | Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` controls MCP AI-dependent capabilities (false => MCP AI-dependent functions disabled).  | 
+**app_feature_enabled** | **std::collections::HashMap<String, bool>** | Application-level feature switches. Effective feature availability requires Core `FeatureFlags` AND `AppFeatureEnabled`. `features.ai` gates pre-release dépendantes de l'AI capabilities ahead of their validated v1.1+ rollout.  | 
+**app_feature_explanations** | [**std::collections::HashMap<String, models::FeatureExplanation>**](FeatureExplanation.md) |  | 
 **core_v1_global_features** | [**HashSet<models::CoreV1GlobalFeatureKey>**](CoreV1GlobalFeatureKey.md) | Canonical list of non-disableable v1 global core feature keys. | 
 **feature_governance** | [**Vec<models::FeatureGovernanceRule>**](FeatureGovernanceRule.md) |  | 
 

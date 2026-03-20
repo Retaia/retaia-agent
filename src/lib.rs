@@ -27,7 +27,7 @@ pub use application::derived_job_executor::{
 pub use application::derived_processing_gateway::{
     ClaimedDerivedJob, DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload, validate_derived_upload_init,
+    HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart, validate_derived_upload_init,
 };
 pub use application::notification_bridge::{
     NotificationBridgeError, NotificationDispatchReport, NotificationMessage, NotificationSink,
@@ -92,6 +92,7 @@ pub use domain::runtime_ui::{
     AgentRunState, AgentUiRuntime, ConnectivityState, JobFailure, JobStage, JobStatus, MenuAction,
     MenuVisibility, RuntimeSnapshot, SystemNotification, base_menu_actions, menu_visibility,
 };
+pub use infrastructure::agent_identity::{AgentIdentity, AgentIdentityError};
 pub use infrastructure::config_repository::{FileConfigRepository, SystemConfigRepository};
 pub use infrastructure::config_store::{
     CONFIG_FILE_ENV, CONFIG_FILE_NAME, ConfigStoreError, load_config_from_path, load_system_config,
@@ -133,5 +134,8 @@ pub use infrastructure::runtime_stats_store::{
 pub use infrastructure::rust_photo_proxy_generator::{
     RawPhotoDecoder, RawloaderPhotoDecoder, RustPhotoProxyGenerator,
 };
+pub use infrastructure::signed_core_http::{SignedCoreHttpError, signature_payload};
 #[cfg(feature = "tauri-notifications")]
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;
+#[cfg(feature = "core-api-client")]
+pub use infrastructure::technical_auth::{TechnicalAuthError, mint_technical_bearer};

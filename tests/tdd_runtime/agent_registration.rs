@@ -62,13 +62,13 @@ fn tdd_build_agent_registration_command_includes_declared_capabilities() {
         assert!(
             command
                 .capabilities
-                .contains(&"media.proxies.video@1".to_string())
+                .contains(&"media.previews.video@1".to_string())
         );
     } else {
         assert!(
             !command
                 .capabilities
-                .contains(&"media.proxies.video@1".to_string())
+                .contains(&"media.previews.video@1".to_string())
         );
     }
 }

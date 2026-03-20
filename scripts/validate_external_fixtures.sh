@@ -25,7 +25,7 @@ sha256_file() {
 
 is_valid_kind() {
   case "$1" in
-    raw_photo|proxy_video|proxy_audio) return 0 ;;
+    raw_photo|preview_video|preview_audio) return 0 ;;
     *) return 1 ;;
   esac
 }

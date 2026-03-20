@@ -14,7 +14,7 @@ Method | HTTP request | Description
 
 ## assets_uuid_derived_get
 
-> std::collections::HashMap<String, serde_json::Value> assets_uuid_derived_get(uuid)
+> models::AssetDerived assets_uuid_derived_get(uuid, accept_language)
 List available derived files for one asset
 
 ### Parameters
@@ -23,10 +23,11 @@ List available derived files for one asset
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
-[**std::collections::HashMap<String, serde_json::Value>**](serde_json::Value.md)
+[**models::AssetDerived**](AssetDerived.md)
 
 ### Authorization
 
@@ -42,8 +43,10 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_derived_kind_get
 
-> assets_uuid_derived_kind_get(uuid, kind)
+> std::path::PathBuf assets_uuid_derived_kind_get(uuid, kind, range, accept_language)
 Fetch one derived file by kind
+
+Direct Core byte delivery for the current derived file. No redirect response is part of the v1 contract.
 
 ### Parameters
 
@@ -52,10 +55,12 @@ Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
 **kind** | **String** |  | [required] |
+**range** | Option<**String**> | Optional byte range request. Supported for audio/video preview delivery. |  |
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
- (empty response body)
+[**std::path::PathBuf**](std::path::PathBuf.md)
 
 ### Authorization
 
@@ -64,14 +69,14 @@ Name | Type | Description  | Required | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
+- **Accept**: application/json, */*
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 
 ## assets_uuid_derived_upload_complete_post
 
-> assets_uuid_derived_upload_complete_post(uuid, if_match, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_complete_post_request)
+> assets_uuid_derived_upload_complete_post(uuid, if_match, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_complete_post_request, accept_language)
 Complete derived upload
 
 ### Parameters
@@ -80,7 +85,7 @@ Complete derived upload
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
-**if_match** | **String** |  | [required] |
+**if_match** | **String** | Strong quoted HTTP entity-tag previously read from the asset `ETag` response header. | [required] |
 **idempotency_key** | **String** |  | [required] |
 **x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
 **x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
@@ -88,6 +93,7 @@ Name | Type | Description  | Required | Notes
 **x_retaia_signature_timestamp** | **String** |  | [required] |
 **x_retaia_signature_nonce** | **String** |  | [required] |
 **assets_uuid_derived_upload_complete_post_request** | [**AssetsUuidDerivedUploadCompletePostRequest**](AssetsUuidDerivedUploadCompletePostRequest.md) |  | [required] |
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -107,10 +113,10 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_derived_upload_init_post
 
-> assets_uuid_derived_upload_init_post(uuid, if_match, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_init_post_request)
+> assets_uuid_derived_upload_init_post(uuid, if_match, idempotency_key, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_init_post_request, accept_language)
 Initialize derived upload
 
-Initializes upload for one derived file. Normative media profile constraints: - `proxy_video`: `video/mp4` (H.264/AVC, browser-compatible), source framerate preserved. - `proxy_audio`: `audio/mp4` (AAC-LC) or `audio/mpeg`. - `proxy_photo` / `thumb`: `image/jpeg` or `image/webp`. - `waveform`: `application/json` (preferred) or `application/octet-stream`. 
+Initializes upload for one derived file. Supported kinds: `preview_video`, `preview_audio`, `preview_photo`, `thumb`, `waveform`. Media format details are defined in the Markdown specifications. 
 
 ### Parameters
 
@@ -118,7 +124,7 @@ Initializes upload for one derived file. Normative media profile constraints: - 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
-**if_match** | **String** |  | [required] |
+**if_match** | **String** | Strong quoted HTTP entity-tag previously read from the asset `ETag` response header. | [required] |
 **idempotency_key** | **String** |  | [required] |
 **x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
 **x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
@@ -126,6 +132,7 @@ Name | Type | Description  | Required | Notes
 **x_retaia_signature_timestamp** | **String** |  | [required] |
 **x_retaia_signature_nonce** | **String** |  | [required] |
 **assets_uuid_derived_upload_init_post_request** | [**AssetsUuidDerivedUploadInitPostRequest**](AssetsUuidDerivedUploadInitPostRequest.md) |  | [required] |
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -145,7 +152,7 @@ Name | Type | Description  | Required | Notes
 
 ## assets_uuid_derived_upload_part_post
 
-> assets_uuid_derived_upload_part_post(uuid, if_match, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, assets_uuid_derived_upload_part_post_request)
+> models::AssetsUuidDerivedUploadPartPost200Response assets_uuid_derived_upload_part_post(uuid, if_match, x_retaia_agent_id, x_retaia_open_pgp_fingerprint, x_retaia_signature, x_retaia_signature_timestamp, x_retaia_signature_nonce, upload_id, part_number, chunk, accept_language)
 Upload one part
 
 ### Parameters
@@ -154,17 +161,20 @@ Upload one part
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
 **uuid** | **String** |  | [required] |
-**if_match** | **String** |  | [required] |
+**if_match** | **String** | Strong quoted HTTP entity-tag previously read from the asset `ETag` response header. | [required] |
 **x_retaia_agent_id** | **uuid::Uuid** |  | [required] |
 **x_retaia_open_pgp_fingerprint** | **String** |  | [required] |
 **x_retaia_signature** | **String** |  | [required] |
 **x_retaia_signature_timestamp** | **String** |  | [required] |
 **x_retaia_signature_nonce** | **String** |  | [required] |
-**assets_uuid_derived_upload_part_post_request** | [**AssetsUuidDerivedUploadPartPostRequest**](AssetsUuidDerivedUploadPartPostRequest.md) |  | [required] |
+**upload_id** | **String** |  | [required] |
+**part_number** | **i32** |  | [required] |
+**chunk** | **std::path::PathBuf** |  | [required] |
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
- (empty response body)
+[**models::AssetsUuidDerivedUploadPartPost200Response**](_assets__uuid__derived_upload_part_post_200_response.md)
 
 ### Authorization
 
@@ -172,7 +182,7 @@ Name | Type | Description  | Required | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: application/json
+- **Content-Type**: multipart/form-data
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

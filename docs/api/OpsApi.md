@@ -17,7 +17,7 @@ Method | HTTP request | Description
 
 ## ops_agents_get
 
-> models::OpsAgentsGet200Response ops_agents_get(status, limit, offset)
+> models::OpsAgentsGet200Response ops_agents_get(status, limit, offset, accept_language)
 List known agents with runtime status and debug information
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
@@ -30,6 +30,7 @@ Name | Type | Description  | Required | Notes
 **status** | Option<**String**> |  |  |
 **limit** | Option<**i32**> |  |  |[default to 50]
 **offset** | Option<**i32**> |  |  |[default to 0]
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -49,14 +50,17 @@ Name | Type | Description  | Required | Notes
 
 ## ops_ingest_diagnostics_get
 
-> models::OpsIngestDiagnosticsGet200Response ops_ingest_diagnostics_get()
+> models::OpsIngestDiagnosticsGet200Response ops_ingest_diagnostics_get(accept_language)
 Get ingest diagnostics counters and latest unmatched sidecars
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -76,7 +80,7 @@ This endpoint does not need any parameter.
 
 ## ops_ingest_requeue_post
 
-> models::OpsIngestRequeuePost202Response ops_ingest_requeue_post(ops_ingest_requeue_post_request)
+> models::OpsIngestRequeuePost202Response ops_ingest_requeue_post(ops_ingest_requeue_post_request, accept_language)
 Requeue ingest processing for a specific target
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
@@ -86,7 +90,8 @@ Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix.
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
-**ops_ingest_requeue_post_request** | [**OpsIngestRequeuePostRequest**](OpsIngestRequeuePostRequest.md) |  | [required] |
+**ops_ingest_requeue_post_request** | Option<[**OpsIngestRequeuePostRequest**](OpsIngestRequeuePostRequest.md)> |  | [required] |
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -106,7 +111,7 @@ Name | Type | Description  | Required | Notes
 
 ## ops_ingest_unmatched_get
 
-> models::OpsIngestUnmatchedGet200Response ops_ingest_unmatched_get(reason, since, limit)
+> models::OpsIngestUnmatchedGet200Response ops_ingest_unmatched_get(reason, since, limit, accept_language)
 List unmatched ingest sidecars
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
@@ -119,6 +124,7 @@ Name | Type | Description  | Required | Notes
 **reason** | Option<**String**> |  |  |
 **since** | Option<**String**> | ISO-8601 UTC lower bound for `detected_at` (invalid values return `400 VALIDATION_FAILED`). |  |
 **limit** | Option<**i32**> |  |  |[default to 50]
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -138,14 +144,17 @@ Name | Type | Description  | Required | Notes
 
 ## ops_jobs_queue_get
 
-> models::OpsJobsQueueGet200Response ops_jobs_queue_get()
+> models::OpsJobsQueueGet200Response ops_jobs_queue_get(accept_language)
 Get jobs queue diagnostics
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -165,7 +174,7 @@ This endpoint does not need any parameter.
 
 ## ops_locks_get
 
-> models::OpsLocksGet200Response ops_locks_get(asset_uuid, lock_type, limit, offset)
+> models::OpsLocksGet200Response ops_locks_get(asset_uuid, lock_type, limit, offset, accept_language)
 List active operation locks
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
@@ -179,6 +188,7 @@ Name | Type | Description  | Required | Notes
 **lock_type** | Option<**String**> |  |  |
 **limit** | Option<**i32**> | Maximum number of items to return. |  |[default to 50]
 **offset** | Option<**i32**> | Zero-based pagination offset. |  |[default to 0]
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 
@@ -198,7 +208,7 @@ Name | Type | Description  | Required | Notes
 
 ## ops_locks_recover_post
 
-> models::OpsLocksRecoverPost200Response ops_locks_recover_post(ops_locks_recover_post_request)
+> models::OpsLocksRecoverPost200Response ops_locks_recover_post(accept_language, ops_locks_recover_post_request)
 Recover stale operation locks
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
@@ -208,6 +218,7 @@ Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix.
 
 Name | Type | Description  | Required | Notes
 ------------- | ------------- | ------------- | ------------- | -------------
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 **ops_locks_recover_post_request** | Option<[**OpsLocksRecoverPostRequest**](OpsLocksRecoverPostRequest.md)> |  |  |
 
 ### Return type
@@ -228,14 +239,17 @@ Name | Type | Description  | Required | Notes
 
 ## ops_readiness_get
 
-> models::OpsReadinessGet200Response ops_readiness_get()
+> models::OpsReadinessGet200Response ops_readiness_get(accept_language)
 Get operational readiness checks
 
 Requires `UserBearerAuth` and an authenticated admin actor, per AUTHZ matrix. 
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Required | Notes
+------------- | ------------- | ------------- | ------------- | -------------
+**accept_language** | Option<**String**> | Optional locale preference for localized human-readable messages. Business payload semantics remain locale-independent. |  |
 
 ### Return type
 

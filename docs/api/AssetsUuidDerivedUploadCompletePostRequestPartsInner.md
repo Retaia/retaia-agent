@@ -1,13 +1,11 @@
-# AuthMcpTokenRequest
+# AssetsUuidDerivedUploadCompletePostRequestPartsInner
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**client_id** | **String** |  | 
-**openpgp_fingerprint** | **String** |  | 
-**challenge_id** | **String** |  | 
-**signature** | **String** |  | 
+**part_number** | **i32** |  | 
+**part_etag** | **String** |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

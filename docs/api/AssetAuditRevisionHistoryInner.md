@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **revision** | **i32** |  | 
+**created_at** | **String** |  | 
 **is_current** | **bool** |  | 
 **published_at** | Option<**String**> |  | [optional]
 **validation_status** | **ValidationStatus** |  (enum: VALIDATED, PENDING_VALIDATION, REJECTED) | 

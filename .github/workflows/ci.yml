@@ -151,6 +151,9 @@ jobs:
       - name: Pre-build test targets
         run: cargo test --tests --no-run
 
+      - name: Verify core-api-client test targets compile
+        run: cargo test --features core-api-client --tests --no-run
+
   test-tdd:
     runs-on: ubuntu-latest
     if: needs.changes.outputs.run_tests == 'true'

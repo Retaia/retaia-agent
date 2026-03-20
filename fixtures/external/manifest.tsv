@@ -3,22 +3,22 @@
 # raw/nikon/d750_sample.nef	<sha256>	raw_photo	supported	Nikon NEF preview extraction
 # raw/sony/a7_sample.arw	<sha256>	raw_photo	supported	Sony ARW preview extraction
 # raw/nikon/corrupted.nef	<sha256>	raw_photo	negative	Corrupted payload should fail deterministically
-# audio/flac/voice_sample.flac	<sha256>	proxy_audio	supported	FLAC input for audio proxy
-# audio/wav/music_sample.wav	<sha256>	proxy_audio	supported	WAV input for audio proxy
-# video/h264/sample_cfr.mp4	<sha256>	proxy_video	supported	H264 CFR
-# video/h265/sample_vfr.mp4	<sha256>	proxy_video	supported	H265 VFR
+# audio/flac/voice_sample.flac	<sha256>	preview_audio	supported	FLAC input for audio preview
+# audio/wav/music_sample.wav	<sha256>	preview_audio	supported	WAV input for audio preview
+# video/h264/sample_cfr.mp4	<sha256>	preview_video	supported	H264 CFR
+# video/h265/sample_vfr.mp4	<sha256>	preview_video	supported	H265 VFR
 raw/canon/sample1.cr2	8d24674dc6845efd89fc0df8cc0f6a79a6fde891e26026dd52e35768ef6fa6b3	raw_photo	supported	Canon CR2 sample
 raw/nikon/sample1.nef	9b8427deb4d29d220303fa0300c08015644fb11fa03746ff57d3180350f450a2	raw_photo	supported	Nikon NEF sample
 raw/nikon/sample1.nrw	563cb81e6aa0a857804ff09c8932074399c654e6b153b53cbc37a05565531cd7	raw_photo	supported	Nikon NRW sample
 raw/sony/sample1.arw	5d40f52f78e445a5722d8686216bae52cec24a44419be0ec6632030511e0e46d	raw_photo	supported	Sony ARW sample 1
 raw/sony/sample2.arw	799308bca0f73a9677952664f4d317bce4fbb0bffa5fe49f52399b0ee4a8aa2f	raw_photo	supported	Sony ARW sample 2
-audio/flac/sample1.flac	2865c70c0637ac4eac9e59c102ab87852eb988dfb4f4c0a72153134de8768f7a	proxy_audio	supported	FLAC sample
-audio/flac/sample2.flac	a9725d7a926597561715875acb7ae06bfb2b40ce656d7e669edc738e5faf3a94	proxy_audio	supported	FLAC sample
-audio/mp3/sample1.mp3	847f2d4ed5e6fb20463416396c021e8387442690ebb1df99e7b7c7b3bff277db	proxy_audio	supported	MP3 sample
-audio/mp3/sample2.mp3	8816d3ab9cd4c3c5230068eeb9551e4519343c3b884d6798692e6ef61c1a7ea2	proxy_audio	supported	MP3 sample
-audio/aac/sample1.aac	3d198dd8cc139a072a4ee39a6443d3e194a14f9c9f16e2a32569d4985a47edbb	proxy_audio	supported	AAC sample
-audio/aac/sample2.aac	387a3ed59b7c649ff667a3277513a7c8d9f22c91d456524a537989d765e1a12b	proxy_audio	supported	AAC sample
-audio/wav/sample1.wav	e4ea9a83f4c3065b579fc903c4d7aa35a1964665eddf712d7a2d6e0a4e580850	proxy_audio	supported	WAV sample
-audio/wav/sample2.wav	74cfe5df7a8be151e7d718a9abf76a3e4652485178287baa47e48a272934dc5f	proxy_audio	supported	WAV sample
-video/h264/sample-h264.mp4	8c78de69b765779b1c5eb9ad4fbfe41c349e0e10505d093ef924447db18920a0	proxy_video	supported	H264 sample
-video/h265/sample-h265.mp4	4007a9b3dee1d19c274ce2e467338c8f6a603dfda50a9a764039c1725c011fae	proxy_video	supported	H265 sample
+audio/flac/sample1.flac	2865c70c0637ac4eac9e59c102ab87852eb988dfb4f4c0a72153134de8768f7a	preview_audio	supported	FLAC sample
+audio/flac/sample2.flac	a9725d7a926597561715875acb7ae06bfb2b40ce656d7e669edc738e5faf3a94	preview_audio	supported	FLAC sample
+audio/mp3/sample1.mp3	847f2d4ed5e6fb20463416396c021e8387442690ebb1df99e7b7c7b3bff277db	preview_audio	supported	MP3 sample
+audio/mp3/sample2.mp3	8816d3ab9cd4c3c5230068eeb9551e4519343c3b884d6798692e6ef61c1a7ea2	preview_audio	supported	MP3 sample
+audio/aac/sample1.aac	3d198dd8cc139a072a4ee39a6443d3e194a14f9c9f16e2a32569d4985a47edbb	preview_audio	supported	AAC sample
+audio/aac/sample2.aac	387a3ed59b7c649ff667a3277513a7c8d9f22c91d456524a537989d765e1a12b	preview_audio	supported	AAC sample
+audio/wav/sample1.wav	e4ea9a83f4c3065b579fc903c4d7aa35a1964665eddf712d7a2d6e0a4e580850	preview_audio	supported	WAV sample
+audio/wav/sample2.wav	74cfe5df7a8be151e7d718a9abf76a3e4652485178287baa47e48a272934dc5f	preview_audio	supported	WAV sample
+video/h264/sample-h264.mp4	8c78de69b765779b1c5eb9ad4fbfe41c349e0e10505d093ef924447db18920a0	preview_video	supported	H264 sample
+video/h265/sample-h265.mp4	4007a9b3dee1d19c274ce2e467338c8f6a603dfda50a9a764039c1725c011fae	preview_video	supported	H265 sample

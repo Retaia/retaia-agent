@@ -4,7 +4,7 @@ use retaia_agent::{
     ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner, DerivedJobExecutorError,
     DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
     DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload, execute_derived_job_once,
+    HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart, execute_derived_job_once,
 };
 
 #[derive(Default)]
@@ -28,6 +28,7 @@ impl DerivedProcessingGateway for RecordingGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-22".to_string(),
             lock_token: "lock-22".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateThumbnails,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -39,6 +40,7 @@ impl DerivedProcessingGateway for RecordingGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
@@ -46,6 +48,7 @@ impl DerivedProcessingGateway for RecordingGateway {
             .push(format!("heartbeat:{job_id}"));
         Ok(HeartbeatReceipt {
             locked_until: Some("2026-02-17T12:00:00Z".to_string()),
+            fencing_token: 1,
         })
     }
 
@@ -53,6 +56,7 @@ impl DerivedProcessingGateway for RecordingGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -72,12 +76,18 @@ impl DerivedProcessingGateway for RecordingGateway {
         Ok(())
     }
 
-    fn upload_part(&self, request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         self.calls.lock().expect("calls").push(format!(
             "upload_part:{}:{}",
             request.asset_uuid, request.part_number
         ));
-        Ok(())
+        Ok(UploadedDerivedPart {
+            part_number: request.part_number,
+            part_etag: format!("etag-{}", request.part_number),
+        })
     }
 
     fn upload_complete(
@@ -113,6 +123,7 @@ impl DerivedExecutionPlanner for ThumbnailPlanner {
                     asset_uuid: claimed.asset_uuid.clone(),
                     upload_id: "up-thumb-1".to_string(),
                     part_number: 1,
+                    chunk_path: std::path::PathBuf::from("/tmp/up-thumb-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
@@ -177,7 +188,7 @@ impl DerivedExecutionPlanner for IncompatibleThumbnailManifestPlanner {
             submit: SubmitDerivedPayload {
                 job_type: DerivedJobType::GenerateThumbnails,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyPhoto,
+                    kind: DerivedKind::PreviewPhoto,
                     reference: format!("s3://derived/{}/proxy.webp", claimed.asset_uuid),
                     size_bytes: Some(1024),
                     sha256: None,
@@ -200,7 +211,7 @@ fn e2e_derived_job_executor_flow_rejects_submit_manifest_kind_not_compatible_wit
         err,
         DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
             job_type: DerivedJobType::GenerateThumbnails,
-            kind: DerivedKind::ProxyPhoto,
+            kind: DerivedKind::PreviewPhoto,
         }
     );
 }
@@ -226,6 +237,7 @@ impl DerivedProcessingGateway for WaveformOptionalGateway {
             job_id: job_id.to_string(),
             asset_uuid: "asset-wave-opt-1".to_string(),
             lock_token: "lock-wave-opt-1".to_string(),
+            fencing_token: 1,
             job_type: DerivedJobType::GenerateAudioWaveform,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
@@ -237,18 +249,23 @@ impl DerivedProcessingGateway for WaveformOptionalGateway {
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
     ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
         self.calls
             .lock()
             .expect("calls")
             .push(format!("heartbeat:{job_id}"));
-        Ok(HeartbeatReceipt { locked_until: None })
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
     }
 
     fn submit_derived(
         &self,
         job_id: &str,
         _lock_token: &str,
+        _fencing_token: i32,
         _idempotency_key: &str,
         _payload: &SubmitDerivedPayload,
     ) -> Result<(), DerivedProcessingError> {
@@ -263,7 +280,10 @@ impl DerivedProcessingGateway for WaveformOptionalGateway {
         panic!("waveform optional flow should not upload");
     }
 
-    fn upload_part(&self, _request: &DerivedUploadPart) -> Result<(), DerivedProcessingError> {
+    fn upload_part(
+        &self,
+        _request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
         panic!("waveform optional flow should not upload");
     }
 

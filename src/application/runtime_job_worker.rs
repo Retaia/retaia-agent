@@ -28,7 +28,7 @@ pub fn process_next_pending_job<
     derived_gateway: &D,
     planner: &P,
 ) -> Result<Option<DerivedExecutionReport>, RuntimeJobWorkerError> {
-    if !session.can_issue_mutation() {
+    if !session.can_process_jobs() || !session.can_issue_mutation() {
         return Ok(None);
     }
     let jobs = core_gateway

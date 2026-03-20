@@ -221,7 +221,6 @@ struct ConfigSetArgs {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum DaemonTargetArg {
     Agent,
-    Mcp,
     UiWeb,
     UiMobile,
 }
@@ -230,7 +229,6 @@ impl DaemonTargetArg {
     fn as_cli_value(self) -> &'static str {
         match self {
             Self::Agent => "agent",
-            Self::Mcp => "mcp",
             Self::UiWeb => "ui-web",
             Self::UiMobile => "ui-mobile",
         }
@@ -1249,7 +1247,7 @@ mod tests {
             "--program",
             "/tmp/agent-runtime",
             "--target",
-            "mcp",
+            "ui-web",
             "--config",
             "/tmp/config.toml",
         ])
@@ -1271,7 +1269,7 @@ mod tests {
             request.args,
             vec![
                 "--target".to_string(),
-                "mcp".to_string(),
+                "ui-web".to_string(),
                 "--config".to_string(),
                 "/tmp/config.toml".to_string(),
                 "daemon".to_string(),

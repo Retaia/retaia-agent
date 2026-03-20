@@ -10,11 +10,11 @@ fn e2e_external_fixture_flow_manifest_contains_supported_audio_and_video_entries
     let entries = load_manifest_entries();
     let audio = entries
         .iter()
-        .filter(|entry| entry.kind == "proxy_audio" && entry.expected == "supported")
+        .filter(|entry| entry.kind == "preview_audio" && entry.expected == "supported")
         .count();
     let video = entries
         .iter()
-        .filter(|entry| entry.kind == "proxy_video" && entry.expected == "supported")
+        .filter(|entry| entry.kind == "preview_video" && entry.expected == "supported")
         .count();
     assert!(audio > 0, "expected supported audio fixtures in manifest");
     assert!(video > 0, "expected supported video fixtures in manifest");
@@ -30,11 +30,11 @@ fn e2e_external_fixture_flow_generates_audio_video_proxies_with_ffmpeg_when_avai
     let entries = load_manifest_entries();
     let audio_entries: Vec<_> = entries
         .iter()
-        .filter(|entry| entry.kind == "proxy_audio" && entry.expected == "supported")
+        .filter(|entry| entry.kind == "preview_audio" && entry.expected == "supported")
         .collect();
     let video_entries: Vec<_> = entries
         .iter()
-        .filter(|entry| entry.kind == "proxy_video" && entry.expected == "supported")
+        .filter(|entry| entry.kind == "preview_video" && entry.expected == "supported")
         .collect();
     assert!(!audio_entries.is_empty(), "missing supported audio entries");
     assert!(!video_entries.is_empty(), "missing supported video entries");
