@@ -91,6 +91,17 @@ impl DerivedProcessingGateway for MemoryGateway {
         })
     }
 
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("fetch_revision_etag:{asset_uuid}"));
+        Ok("\"asset-rev-1\"".to_string())
+    }
+
     fn heartbeat(
         &self,
         job_id: &str,
@@ -167,6 +178,7 @@ impl DerivedExecutionPlanner for ProxyPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     kind: DerivedKind::PreviewVideo,
                     content_type: "video/mp4".to_string(),
                     size_bytes: 1024,
@@ -175,12 +187,14 @@ impl DerivedExecutionPlanner for ProxyPlanner {
                 },
                 parts: vec![DerivedUploadPart {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-1".to_string(),
                     part_number: 1,
                     chunk_path: std::path::PathBuf::from("/tmp/up-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-1".to_string(),
                     idempotency_key: "idem-complete".to_string(),
                     parts: None,
@@ -246,6 +260,17 @@ impl DerivedProcessingGateway for ExtractFactsGateway {
                 "INBOX/sidecars/sample-source.srt".to_string(),
             ],
         })
+    }
+
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("fetch_revision_etag:{asset_uuid}"));
+        Ok("\"asset-rev-facts\"".to_string())
     }
 
     fn heartbeat(
@@ -393,6 +418,7 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     kind: DerivedKind::PreviewAudio,
                     content_type: "audio/mp4".to_string(),
                     size_bytes: 512,
@@ -402,6 +428,7 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
                 parts: vec![],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-1".to_string(),
                     idempotency_key: "idem-complete".to_string(),
                     parts: None,
@@ -452,6 +479,17 @@ impl DerivedProcessingGateway for WaveformGateway {
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),
         })
+    }
+
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("fetch_revision_etag:{asset_uuid}"));
+        Ok("\"asset-rev-wave-1\"".to_string())
     }
 
     fn heartbeat(
@@ -530,6 +568,7 @@ impl DerivedExecutionPlanner for ValidWaveformPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     kind: DerivedKind::Waveform,
                     content_type: "application/json".to_string(),
                     size_bytes: 128,
@@ -538,12 +577,14 @@ impl DerivedExecutionPlanner for ValidWaveformPlanner {
                 },
                 parts: vec![DerivedUploadPart {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-wave-1".to_string(),
                     part_number: 1,
                     chunk_path: std::path::PathBuf::from("/tmp/up-wave-1.bin"),
                 }],
                 complete: DerivedUploadComplete {
                     asset_uuid: claimed.asset_uuid.clone(),
+                    revision_etag: String::new(),
                     upload_id: "up-wave-1".to_string(),
                     idempotency_key: "idem-wave-complete".to_string(),
                     parts: None,
@@ -628,6 +669,7 @@ fn tdd_execute_derived_job_once_runs_claim_heartbeat_upload_submit_flow() {
             "claim:job-1".to_string(),
             "heartbeat:job-1".to_string(),
             "heartbeat:job-1".to_string(),
+            "fetch_revision_etag:asset-1".to_string(),
             "heartbeat:job-1".to_string(),
             "upload_init:asset-1".to_string(),
             "heartbeat:job-1".to_string(),

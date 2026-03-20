@@ -35,6 +35,17 @@ impl DerivedProcessingGateway for MemoryDerivedGateway {
         })
     }
 
+    fn fetch_asset_revision_etag(
+        &self,
+        asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("fetch_revision_etag:{asset_uuid}"));
+        Ok("\"asset-rev-1\"".to_string())
+    }
+
     fn heartbeat(
         &self,
         job_id: &str,
@@ -113,6 +124,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
     gateway
         .upload_init(&DerivedUploadInit {
             asset_uuid: claimed.asset_uuid.clone(),
+            revision_etag: "\"asset-rev-1\"".to_string(),
             kind: DerivedKind::PreviewVideo,
             content_type: "video/mp4".to_string(),
             size_bytes: 2048,
@@ -123,6 +135,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
     gateway
         .upload_part(&DerivedUploadPart {
             asset_uuid: claimed.asset_uuid.clone(),
+            revision_etag: "\"asset-rev-1\"".to_string(),
             upload_id: "up-1".to_string(),
             part_number: 1,
             chunk_path: std::path::PathBuf::from("/tmp/up-1.bin"),
@@ -131,6 +144,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
     gateway
         .upload_complete(&DerivedUploadComplete {
             asset_uuid: claimed.asset_uuid.clone(),
+            revision_etag: "\"asset-rev-1\"".to_string(),
             upload_id: "up-1".to_string(),
             idempotency_key: "idem-up-complete".to_string(),
             parts: None,

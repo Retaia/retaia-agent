@@ -102,8 +102,6 @@ Historique notable sur `2026-03-20`:
 ### 2.10 API client OpenAPI
 
 - La compilation `core-api-client` est désormais réparée et la CI de base la compile explicitement.
-- En revanche, `src/infrastructure/openapi_derived_processing_gateway.rs` envoie encore `If-Match: *` comme placeholder fixe pour `upload/init`, `upload/part` et `upload/complete` (`src/infrastructure/openapi_derived_processing_gateway.rs:25`, `src/infrastructure/openapi_derived_processing_gateway.rs:199-215`, `src/infrastructure/openapi_derived_processing_gateway.rs:223-240`, `src/infrastructure/openapi_derived_processing_gateway.rs:273-290`).
-- Cette valeur n'est pas dérivée d'un `ETag`/d'une révision réellement lue côté Core; si le contrat serveur durcit la concurrence optimistic, cette implémentation risque de diverger.
 - Le mapping OpenAPI local est désormais aligné sur `GeneratePreview` / `Preview*`; le point restant est la sémantique effective des artefacts générés, pas leur nommage.
 
 ## 3. Ecarts tests vs specs
@@ -145,7 +143,6 @@ Historique notable sur `2026-03-20`:
 - Aucun test de production réelle de preview/thumb/waveform via les générateurs du repo.
 - Aucun test ne vérifie qu'un `extract_facts` produit un patch utile.
 - Aucun test de flux browser/approval `UI_WEB`.
-- Aucun test de concurrence `If-Match`/`ETag` réellement alimentée depuis Core sur `/derived/upload/*`.
 
 ### 3.5 Les tests "spec_compatible" ne prouvent pas la compatibilité spec
 

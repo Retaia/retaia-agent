@@ -136,11 +136,24 @@ fn execute_derived_job_once_internal<
         staged_source.as_ref().map(|s| s.path()),
         staged_sidecars,
     )?;
+    let mut plan = plan;
     if plan.submit_idempotency_key.trim().is_empty() {
         return Err(DerivedJobExecutorError::MissingSubmitIdempotencyKey);
     }
     validate_submit_payload_for_claimed_job(&claimed, &plan.submit)?;
     validate_uploads_against_submit_manifest(&plan)?;
+    if !plan.uploads.is_empty() {
+        let revision_etag = gateway
+            .fetch_asset_revision_etag(&claimed.asset_uuid)
+            .map_err(DerivedJobExecutorError::Gateway)?;
+        for upload in &mut plan.uploads {
+            upload.init.revision_etag = revision_etag.clone();
+            upload.complete.revision_etag = revision_etag.clone();
+            for part in &mut upload.parts {
+                part.revision_etag = revision_etag.clone();
+            }
+        }
+    }
 
     for upload in &plan.uploads {
         if upload.init.asset_uuid != claimed.asset_uuid

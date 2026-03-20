@@ -35,11 +35,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 ## Priorité P2
 
-- Corriger les contrats dérivés OpenAPI:
-  - remplacer `If-Match: *` par une stratégie conforme au contrat Core
-  - vérifier la concurrence optimistic sur `/derived/upload/*`
-  - ajouter tests E2E sur `ETag`/`If-Match`
-
 - Corriger les URLs/références de dérivés:
   - supprimer les références `agent://derived/...`
   - s'aligner sur les URLs Core stables/same-origin attendues par la spec
