@@ -36,9 +36,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 ## Priorité P2
 
 - Remplacer le processing "transport-only" par un processing réel:
-  - brancher `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` dans le planner/worker
-  - produire de vrais previews, thumbnails et waveforms
-  - cesser d'uploader le fichier source comme dérivé
+  - produire de vrais thumbnails et waveforms
   - produire de vrais `FactsPatch`
 
 - Corriger les contrats dérivés OpenAPI:

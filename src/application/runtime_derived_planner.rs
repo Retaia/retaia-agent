@@ -62,7 +62,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
                 job_type: claimed.job_type,
                 manifest,
                 warnings: None,
-                metrics: None,
+                metrics: base_metrics_for_job(claimed),
             },
             submit_idempotency_key: format!("agent-submit-{}", claimed.job_id),
         })
@@ -75,7 +75,10 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
         staged_sidecar_paths: &[PathBuf],
     ) -> Result<DerivedExecutionPlan, DerivedJobExecutorError> {
         let mut plan = self.plan_for_claimed_job(claimed)?;
-        plan.submit.metrics = sidecar_metrics(staged_source_path, staged_sidecar_paths)?;
+        merge_metrics(
+            &mut plan.submit.metrics,
+            sidecar_metrics(staged_source_path, staged_sidecar_paths)?,
+        );
         if claimed.job_type == DerivedJobType::ExtractFacts {
             return Ok(plan);
         }
@@ -187,37 +190,28 @@ impl RuntimeDerivedPlanner {
     ) -> Result<PathBuf, DerivedJobExecutorError> {
         let output_path = generated_preview_output_path(source_path, kind);
         let input_path = source_path.to_string_lossy().to_string();
-        let output = output_path.to_string_lossy().to_string();
 
         let result = match kind {
             DerivedKind::PreviewVideo => {
-                self.av_generator.generate_video_proxy(&VideoProxyRequest {
-                    input_path,
-                    output_path: output,
-                    max_width: 1280,
-                    max_height: 720,
-                    video_bitrate_kbps: 2_500,
-                    audio_bitrate_kbps: 128,
-                })
+                self.av_generator
+                    .generate_video_proxy(&canonical_video_preview_request(
+                        input_path,
+                        output_path.to_string_lossy().to_string(),
+                    ))
             }
             DerivedKind::PreviewAudio => {
-                self.av_generator.generate_audio_proxy(&AudioProxyRequest {
-                    input_path,
-                    output_path: output,
-                    format: AudioProxyFormat::Mp4Aac,
-                    audio_bitrate_kbps: 128,
-                    sample_rate_hz: 48_000,
-                })
+                self.av_generator
+                    .generate_audio_proxy(&canonical_audio_preview_request(
+                        input_path,
+                        output_path.to_string_lossy().to_string(),
+                    ))
             }
             DerivedKind::PreviewPhoto => {
                 self.photo_generator
-                    .generate_photo_proxy(&PhotoProxyRequest {
+                    .generate_photo_proxy(&canonical_photo_preview_request(
                         input_path,
-                        output_path: output,
-                        format: PhotoProxyFormat::Webp,
-                        max_width: 1920,
-                        max_height: 1920,
-                    })
+                        output_path.to_string_lossy().to_string(),
+                    ))
             }
             DerivedKind::Thumb | DerivedKind::Waveform => Ok(()),
         };
@@ -244,6 +238,37 @@ fn generated_preview_output_path(source_path: &Path, kind: DerivedKind) -> PathB
     parent.join(format!("{stem}.{}.{}", kind.as_str(), extension))
 }
 
+fn canonical_video_preview_request(input_path: String, output_path: String) -> VideoProxyRequest {
+    VideoProxyRequest {
+        input_path,
+        output_path,
+        max_width: 1280,
+        max_height: 720,
+        video_bitrate_kbps: 2_500,
+        audio_bitrate_kbps: 128,
+    }
+}
+
+fn canonical_audio_preview_request(input_path: String, output_path: String) -> AudioProxyRequest {
+    AudioProxyRequest {
+        input_path,
+        output_path,
+        format: AudioProxyFormat::Mp4Aac,
+        audio_bitrate_kbps: 128,
+        sample_rate_hz: 48_000,
+    }
+}
+
+fn canonical_photo_preview_request(input_path: String, output_path: String) -> PhotoProxyRequest {
+    PhotoProxyRequest {
+        input_path,
+        output_path,
+        format: PhotoProxyFormat::Webp,
+        max_width: 1920,
+        max_height: 1920,
+    }
+}
+
 fn map_preview_generation_error(error: ProxyGenerationError) -> DerivedJobExecutorError {
     DerivedJobExecutorError::Planner(format!("preview generation failed: {error}"))
 }
@@ -259,8 +284,52 @@ fn content_type_for_kind(kind: DerivedKind) -> &'static str {
     match kind {
         DerivedKind::PreviewVideo => "video/mp4",
         DerivedKind::PreviewAudio => "audio/mp4",
-        DerivedKind::PreviewPhoto | DerivedKind::Thumb => "image/jpeg",
+        DerivedKind::PreviewPhoto => "image/webp",
+        DerivedKind::Thumb => "image/jpeg",
         DerivedKind::Waveform => "application/json",
+    }
+}
+
+fn base_metrics_for_job(claimed: &ClaimedDerivedJob) -> Option<HashMap<String, Value>> {
+    let mut metrics = HashMap::new();
+    if claimed.job_type == DerivedJobType::GeneratePreview {
+        let kind = infer_preview_kind(claimed);
+        metrics.insert(
+            "preview_kind".to_string(),
+            Value::from(kind.as_str().to_string()),
+        );
+        metrics.insert(
+            "preview_profile".to_string(),
+            Value::from(canonical_preview_profile_for_kind(kind)),
+        );
+    }
+
+    if metrics.is_empty() {
+        None
+    } else {
+        Some(metrics)
+    }
+}
+
+fn canonical_preview_profile_for_kind(kind: DerivedKind) -> &'static str {
+    match kind {
+        DerivedKind::PreviewVideo => "video_review_default_v1",
+        DerivedKind::PreviewAudio => "audio_review_default_v1",
+        DerivedKind::PreviewPhoto => "photo_review_default_v1",
+        DerivedKind::Thumb | DerivedKind::Waveform => "unsupported",
+    }
+}
+
+fn merge_metrics(
+    target: &mut Option<HashMap<String, Value>>,
+    extra: Option<HashMap<String, Value>>,
+) {
+    let Some(extra) = extra else {
+        return;
+    };
+    let merged = target.get_or_insert_with(HashMap::new);
+    for (key, value) in extra {
+        merged.insert(key, value);
     }
 }
 

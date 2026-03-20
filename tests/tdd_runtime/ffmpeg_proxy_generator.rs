@@ -72,8 +72,13 @@ fn tdd_ffmpeg_video_proxy_uses_h264_aac_cfr_and_faststart() {
     let joined = call.args.join(" ");
     assert_eq!(call.program, "ffmpeg");
     assert!(joined.contains("-c:v libx264"));
+    assert!(joined.contains("-profile:v high"));
+    assert!(joined.contains("-preset medium"));
+    assert!(joined.contains("-crf 23"));
     assert!(joined.contains("-c:a aac"));
     assert!(joined.contains("-vsync cfr"));
+    assert!(joined.contains("-ac 2"));
+    assert!(joined.contains("-ar 48000"));
     assert!(joined.contains("-movflags +faststart"));
     assert!(joined.contains("force_original_aspect_ratio=decrease"));
 }
@@ -99,6 +104,7 @@ fn tdd_ffmpeg_audio_proxy_mp4_uses_aac_low_profile_and_faststart() {
     assert!(joined.contains("-c:a aac"));
     assert!(joined.contains("-profile:a aac_low"));
     assert!(joined.contains("-movflags +faststart"));
+    assert!(joined.contains("-ac 2"));
     assert!(joined.contains("-ar 48000"));
 }
 

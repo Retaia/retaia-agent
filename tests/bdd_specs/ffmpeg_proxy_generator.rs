@@ -105,7 +105,12 @@ fn bdd_given_video_proxy_request_when_generating_then_ffmpeg_is_called_with_h264
 
     let args = generator.runner().first_args().join(" ");
     assert!(args.contains("-c:v libx264"));
+    assert!(args.contains("-profile:v high"));
+    assert!(args.contains("-preset medium"));
+    assert!(args.contains("-crf 23"));
     assert!(args.contains("-vsync cfr"));
+    assert!(args.contains("-ac 2"));
+    assert!(args.contains("-ar 48000"));
     assert!(args.contains("-movflags +faststart"));
     assert!(args.contains("force_original_aspect_ratio=decrease"));
 }

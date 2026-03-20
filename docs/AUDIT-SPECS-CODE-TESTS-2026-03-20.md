@@ -78,7 +78,7 @@ Historique notable sur `2026-03-20`:
 - `src/application/runtime_derived_planner.rs` écrit des références `agent://derived/...`, alors que la spec impose des URLs Core stables et same-origin pour les dérivés exposés par Core.
 - Pour `extract_facts`, le planner produit un `manifest` vide et aucun upload; le gateway OpenAPI soumet ensuite un `FactsPatch::new()` vide. Il n'y a pas d'extraction de faits réelle.
 - Pour `generate_audio_waveform`, le planner ne calcule aucune waveform; il marque juste un item de manifest de kind `Waveform` et peut uploader le fichier source brut.
-- Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source, mais l'implémentation ne démontre pas encore toute la conformité fine aux profils canoniques (`preview_profile` explicite absent, thumbnails séparés absents, références Core stables absentes).
+- Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source avec un mapping explicite vers les profils canoniques v1 (`video_review_default_v1`, `audio_review_default_v1`, `photo_review_default_v1`). Les écarts restants sont surtout l'absence de références Core stables et le fait que `generate_thumbnails` reste séparé et non implémenté.
 - La spec dit explicitement qu'une waveform requise doit être produite et qu'un asset audio ne doit pas dépasser `READY` sans `waveform_url`; l'implémentation courante ne garantit rien de cela.
 
 ### 2.7 Stockage des secrets et sécurité locale

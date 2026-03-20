@@ -54,6 +54,15 @@ fn tdd_runtime_derived_planner_infers_audio_proxy_manifest_from_extension() {
     assert_eq!(plan.submit.manifest[0].kind, DerivedKind::PreviewAudio);
     assert!(plan.uploads.is_empty());
     assert_eq!(plan.submit_idempotency_key, "agent-submit-job-audio-1");
+    let metrics = plan.submit.metrics.expect("preview metrics");
+    assert_eq!(
+        metrics.get("preview_kind"),
+        Some(&serde_json::json!("preview_audio"))
+    );
+    assert_eq!(
+        metrics.get("preview_profile"),
+        Some(&serde_json::json!("audio_review_default_v1"))
+    );
 }
 
 #[test]
@@ -91,6 +100,54 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
             .ends_with("clip.preview_video.mp4")
     );
     assert_eq!(plan.submit.manifest[0].size_bytes, Some(15));
+    let metrics = plan.submit.metrics.expect("preview metrics");
+    assert_eq!(
+        metrics.get("preview_kind"),
+        Some(&serde_json::json!("preview_video"))
+    );
+    assert_eq!(
+        metrics.get("preview_profile"),
+        Some(&serde_json::json!("video_review_default_v1"))
+    );
+}
+
+#[test]
+fn tdd_runtime_derived_planner_builds_photo_preview_upload_as_webp() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-photo-1".to_string(),
+        asset_uuid: "asset-photo-1".to_string(),
+        lock_token: "lock-photo-1".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GeneratePreview,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/frame.jpg".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("frame.jpg");
+    std::fs::write(&staged, b"generated-photo").expect("write");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::PreviewPhoto);
+    assert_eq!(plan.uploads[0].init.content_type, "image/webp");
+    assert!(
+        plan.uploads[0].parts[0]
+            .chunk_path
+            .ends_with("frame.preview_photo.webp")
+    );
+    let metrics = plan.submit.metrics.expect("preview metrics");
+    assert_eq!(
+        metrics.get("preview_profile"),
+        Some(&serde_json::json!("photo_review_default_v1"))
+    );
 }
 
 #[test]
