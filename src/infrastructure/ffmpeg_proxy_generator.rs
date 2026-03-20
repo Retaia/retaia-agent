@@ -3,6 +3,7 @@ use std::io::BufWriter;
 use std::path::Path;
 use std::process::Command;
 
+use crate::application::derived_processing_gateway::FactsPatchPayload;
 use crate::application::proxy_generator::{
     AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, PhotoProxyRequest,
     ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
@@ -13,6 +14,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandOutput {
     pub status_code: Option<i32>,
+    pub stdout: String,
     pub stderr: String,
 }
 
@@ -31,6 +33,7 @@ impl CommandRunner for StdCommandRunner {
             .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
         Ok(CommandOutput {
             status_code: output.status.code(),
+            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
             stderr: String::from_utf8_lossy(&output.stderr).to_string(),
         })
     }
@@ -141,6 +144,28 @@ impl<R: CommandRunner> ProxyGenerator for FfmpegProxyGenerator<R> {
 
         let _ = fs::remove_file(&wav_path);
         generation_result
+    }
+
+    fn extract_media_facts(
+        &self,
+        input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        if input_path.trim().is_empty() {
+            return Err(ProxyGenerationError::InvalidRequest(
+                "facts input path is required".to_string(),
+            ));
+        }
+        let output = self.runner.run(
+            &ffprobe_binary(&self.ffmpeg_binary),
+            &build_ffprobe_args(input_path),
+        )?;
+        if output.status_code != Some(0) {
+            return Err(ProxyGenerationError::CommandFailed {
+                status_code: output.status_code,
+                stderr: output.stderr,
+            });
+        }
+        parse_ffprobe_facts(&output.stdout)
     }
 }
 
@@ -380,6 +405,18 @@ pub fn build_audio_waveform_decode_args(
     ]
 }
 
+pub fn build_ffprobe_args(input_path: &str) -> Vec<String> {
+    vec![
+        "-v".to_string(),
+        "quiet".to_string(),
+        "-print_format".to_string(),
+        "json".to_string(),
+        "-show_format".to_string(),
+        "-show_streams".to_string(),
+        input_path.to_string(),
+    ]
+}
+
 #[derive(Serialize)]
 struct WaveformJson {
     duration_ms: u64,
@@ -439,4 +476,74 @@ fn write_waveform_json_from_wav(
         },
     )
     .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+}
+
+fn ffprobe_binary(ffmpeg_binary: &str) -> String {
+    ffmpeg_binary
+        .rsplit_once("ffmpeg")
+        .map(|(prefix, _)| format!("{prefix}ffprobe"))
+        .unwrap_or_else(|| "ffprobe".to_string())
+}
+
+fn parse_ffprobe_facts(stdout: &str) -> Result<FactsPatchPayload, ProxyGenerationError> {
+    let value: serde_json::Value = serde_json::from_str(stdout)
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+    let format = value.get("format");
+    let streams = value
+        .get("streams")
+        .and_then(|streams| streams.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let video_stream = streams
+        .iter()
+        .find(|stream| stream.get("codec_type").and_then(|v| v.as_str()) == Some("video"));
+    let audio_stream = streams
+        .iter()
+        .find(|stream| stream.get("codec_type").and_then(|v| v.as_str()) == Some("audio"));
+
+    let duration_ms = format
+        .and_then(|format| format.get("duration").and_then(|v| v.as_str()))
+        .and_then(|value| value.parse::<f64>().ok())
+        .map(|value| (value * 1000.0).round() as i32);
+    let media_format = format
+        .and_then(|format| format.get("format_name").and_then(|v| v.as_str()))
+        .map(|value| value.split(',').next().unwrap_or(value).to_string());
+    let video_codec = video_stream
+        .and_then(|stream| stream.get("codec_name").and_then(|v| v.as_str()))
+        .map(ToString::to_string);
+    let audio_codec = audio_stream
+        .and_then(|stream| stream.get("codec_name").and_then(|v| v.as_str()))
+        .map(ToString::to_string);
+    let width = video_stream
+        .and_then(|stream| stream.get("width").and_then(|v| v.as_i64()))
+        .and_then(|value| i32::try_from(value).ok());
+    let height = video_stream
+        .and_then(|stream| stream.get("height").and_then(|v| v.as_i64()))
+        .and_then(|value| i32::try_from(value).ok());
+    let fps = video_stream.and_then(parse_stream_fps);
+
+    Ok(FactsPatchPayload {
+        duration_ms,
+        media_format,
+        video_codec,
+        audio_codec,
+        width,
+        height,
+        fps,
+    })
+}
+
+fn parse_stream_fps(stream: &serde_json::Value) -> Option<f64> {
+    let fps = stream
+        .get("avg_frame_rate")
+        .or_else(|| stream.get("r_frame_rate"))
+        .and_then(|value| value.as_str())?;
+    let (num, den) = fps.split_once('/')?;
+    let numerator = num.parse::<f64>().ok()?;
+    let denominator = den.parse::<f64>().ok()?;
+    if denominator == 0.0 {
+        return None;
+    }
+    Some(numerator / denominator)
 }

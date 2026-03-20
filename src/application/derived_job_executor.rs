@@ -48,6 +48,8 @@ pub enum DerivedJobExecutorError {
     },
     #[error("execution plan invalid: submit manifest is required for job type {0:?}")]
     MissingSubmitManifestForJobType(crate::application::derived_processing_gateway::DerivedJobType),
+    #[error("execution plan invalid: facts patch is required for extract_facts")]
+    MissingFactsPatchForExtractFacts,
     #[error(
         "execution plan invalid: derived kind {kind:?} is incompatible with job type {job_type:?}"
     )]
@@ -203,7 +205,11 @@ fn validate_submit_payload_for_claimed_job(
 
     use crate::application::derived_processing_gateway::{DerivedJobType, DerivedKind};
     match submit.job_type {
-        DerivedJobType::ExtractFacts => {}
+        DerivedJobType::ExtractFacts => {
+            if submit.facts_patch.is_none() {
+                return Err(DerivedJobExecutorError::MissingFactsPatchForExtractFacts);
+            }
+        }
         DerivedJobType::GeneratePreview => {
             if submit.manifest.is_empty() {
                 return Err(DerivedJobExecutorError::MissingSubmitManifestForJobType(

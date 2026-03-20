@@ -137,7 +137,12 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
     ) -> Result<(), DerivedProcessingError> {
         let path = format!("/jobs/{job_id}/submit");
         let request = if payload.job_type == DerivedJobType::ExtractFacts {
-            let mut result = models::SubmitExtractFactsResult::new(models::FactsPatch::new());
+            let facts_patch = payload
+                .facts_patch
+                .as_ref()
+                .map(map_facts_patch)
+                .unwrap_or_else(models::FactsPatch::new);
+            let mut result = models::SubmitExtractFactsResult::new(facts_patch);
             result.warnings = payload.warnings.clone();
             result.metrics = payload.metrics.clone();
             models::JobSubmitRequest::SubmitExtractFacts(Box::new(models::SubmitExtractFacts::new(
@@ -372,6 +377,21 @@ fn build_derived_patch(
 
     patch.derived_manifest = Some(items);
     Ok(patch)
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_facts_patch(
+    facts: &crate::application::derived_processing_gateway::FactsPatchPayload,
+) -> models::FactsPatch {
+    models::FactsPatch {
+        duration_ms: facts.duration_ms,
+        media_format: facts.media_format.clone(),
+        video_codec: facts.video_codec.clone(),
+        audio_codec: facts.audio_codec.clone(),
+        width: facts.width,
+        height: facts.height,
+        fps: facts.fps,
+    }
 }
 
 #[cfg(feature = "core-api-client")]

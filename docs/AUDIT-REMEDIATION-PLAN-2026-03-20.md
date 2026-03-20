@@ -35,9 +35,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 ## Priorité P2
 
-- Remplacer le processing "transport-only" par un processing réel:
-  - produire de vrais `FactsPatch`
-
 - Corriger les contrats dérivés OpenAPI:
   - remplacer `If-Match: *` par une stratégie conforme au contrat Core
   - vérifier la concurrence optimistic sur `/derived/upload/*`

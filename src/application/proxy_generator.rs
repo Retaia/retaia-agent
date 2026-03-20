@@ -1,3 +1,4 @@
+use crate::application::derived_processing_gateway::FactsPatchPayload;
 use crate::{AgentRuntimeConfig, resolve_source_path};
 use thiserror::Error;
 
@@ -97,6 +98,14 @@ pub trait ProxyGenerator {
     ) -> Result<(), ProxyGenerationError> {
         Err(ProxyGenerationError::InvalidRequest(
             "audio waveform generation is not supported by this generator".to_string(),
+        ))
+    }
+    fn extract_media_facts(
+        &self,
+        _input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        Err(ProxyGenerationError::InvalidRequest(
+            "fact extraction is not supported by this generator".to_string(),
         ))
     }
 }

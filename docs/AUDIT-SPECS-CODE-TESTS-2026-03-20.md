@@ -74,9 +74,9 @@ Historique notable sur `2026-03-20`:
 - `src/domain/capabilities.rs` déclare `media.facts@1`, `media.thumbnails@1` et `audio.waveform@1` comme capacités disponibles par défaut.
 - `src/application/runtime_job_worker.rs` n'utilise aucun générateur réel; il se contente d'appeler le planner puis le gateway.
 - Les implémentations `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` sont désormais branchées pour `generate_preview`, ce qui permet au planner de produire un vrai artefact preview local avant upload.
-- Ce branchement reste partiel: `extract_facts` ne passe toujours pas par une extraction réelle conforme. `generate_thumbnails` produit désormais un thumb représentatif réel en `WEBP`, mais le mode `video_storyboard_v1` n'est pas implémenté.
+- Ce branchement reste partiel: `generate_thumbnails` produit désormais un thumb représentatif réel en `WEBP`, mais le mode `video_storyboard_v1` n'est pas implémenté.
 - `src/application/runtime_derived_planner.rs` écrit des références `agent://derived/...`, alors que la spec impose des URLs Core stables et same-origin pour les dérivés exposés par Core.
-- Pour `extract_facts`, le planner produit un `manifest` vide et aucun upload; le gateway OpenAPI soumet ensuite un `FactsPatch::new()` vide. Il n'y a pas d'extraction de faits réelle.
+- Pour `extract_facts`, le planner produit désormais un `facts_patch` réel à partir du média source, sans upload, et le gateway OpenAPI soumet ce patch à `SubmitExtractFacts`.
 - Pour `generate_audio_waveform`, le planner génère désormais un payload JSON réel (`duration_ms`, `bucket_count`, `samples[]`) avec `bucket_count=1000`, puis l'uploade comme dérivé `waveform`.
 - Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source avec un mapping explicite vers les profils canoniques v1 (`video_review_default_v1`, `audio_review_default_v1`, `photo_review_default_v1`). Les écarts restants sont surtout l'absence de références Core stables.
 - Pour `generate_thumbnails`, le moteur produit maintenant un thumb principal réel avec le profil canonique local `video_representative_v1`, mais il n'implémente pas encore `video_storyboard_v1` ni la sélection temporelle fine basée sur la durée.
@@ -119,11 +119,11 @@ Historique notable sur `2026-03-20`:
 - Cela aligne l'executor local avec `specs/workflows/AGENT-PROTOCOL.md` et `specs/api/API-CONTRACTS.md` sur l'obligation de dérivé waveform.
 - Les trous restants sont surtout la projection finale via URL Core stable et la validation fine du contenu rendu côté Core.
 
-### 3.3 Les tests de planner/executor acceptent une extraction de faits vide
+### 3.3 Les tests couvrent maintenant un `facts_patch` utile, mais pas encore toute la finesse métier
 
-- `tests/tdd_runtime/runtime_derived_planner.rs:57-79` vérifie surtout que `extract_facts` reste sans upload et avec `manifest` vide.
-- `tests/tdd_runtime/derived_job_executor.rs:778-812` considère valide un flow `extract_facts` sans vérifier la production d'un patch de faits utile.
-- Ces tests verrouillent une implémentation "transport-only" du job `extract_facts`, alors que la spec attend une extraction de faits effective.
+- `tests/tdd_runtime/runtime_derived_planner.rs` vérifie désormais qu'un `extract_facts` runtime remplit un `facts_patch` utile sans upload.
+- `tests/tdd_runtime/derived_job_executor.rs` vérifie désormais qu'un flow runtime `extract_facts` soumet bien ce patch.
+- Les trous restants sont surtout la validation fine des champs minimaux par type média sur de vrais fixtures audio/vidéo/photo et la projection finale côté Core.
 
 ### 3.4 Les tests ne couvrent pas des pans normatifs majeurs
 
