@@ -204,19 +204,20 @@ fn validate_submit_payload_for_claimed_job(
     use crate::application::derived_processing_gateway::{DerivedJobType, DerivedKind};
     match submit.job_type {
         DerivedJobType::ExtractFacts => {}
-        DerivedJobType::GenerateProxy => {
+        DerivedJobType::GeneratePreview => {
             if submit.manifest.is_empty() {
                 return Err(DerivedJobExecutorError::MissingSubmitManifestForJobType(
-                    DerivedJobType::GenerateProxy,
+                    DerivedJobType::GeneratePreview,
                 ));
             }
             for item in &submit.manifest {
                 match item.kind {
-                    DerivedKind::ProxyVideo | DerivedKind::ProxyAudio | DerivedKind::ProxyPhoto => {
-                    }
+                    DerivedKind::PreviewVideo
+                    | DerivedKind::PreviewAudio
+                    | DerivedKind::PreviewPhoto => {}
                     kind => {
                         return Err(DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
-                            job_type: DerivedJobType::GenerateProxy,
+                            job_type: DerivedJobType::GeneratePreview,
                             kind,
                         });
                     }

@@ -7,16 +7,16 @@ use thiserror::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DerivedJobType {
     ExtractFacts,
-    GenerateProxy,
+    GeneratePreview,
     GenerateThumbnails,
     GenerateAudioWaveform,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DerivedKind {
-    ProxyVideo,
-    ProxyAudio,
-    ProxyPhoto,
+    PreviewVideo,
+    PreviewAudio,
+    PreviewPhoto,
     Thumb,
     Waveform,
 }
@@ -24,9 +24,9 @@ pub enum DerivedKind {
 impl DerivedKind {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::ProxyVideo => "proxy_video",
-            Self::ProxyAudio => "proxy_audio",
-            Self::ProxyPhoto => "proxy_photo",
+            Self::PreviewVideo => "preview_video",
+            Self::PreviewAudio => "preview_audio",
+            Self::PreviewPhoto => "preview_photo",
             Self::Thumb => "thumb",
             Self::Waveform => "waveform",
         }
@@ -35,9 +35,9 @@ impl DerivedKind {
     pub fn allows_content_type(self, content_type: &str) -> bool {
         let value = content_type.trim().to_ascii_lowercase();
         match self {
-            Self::ProxyVideo => value == "video/mp4",
-            Self::ProxyAudio => value == "audio/mp4" || value == "audio/mpeg",
-            Self::ProxyPhoto | Self::Thumb => value == "image/jpeg" || value == "image/webp",
+            Self::PreviewVideo => value == "video/mp4",
+            Self::PreviewAudio => value == "audio/mp4" || value == "audio/mpeg",
+            Self::PreviewPhoto | Self::Thumb => value == "image/jpeg" || value == "image/webp",
             Self::Waveform => value == "application/json" || value == "application/octet-stream",
         }
     }

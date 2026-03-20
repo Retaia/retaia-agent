@@ -6,9 +6,9 @@ use image::ImageFormat;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentCapability {
     MediaFactsV1,
-    MediaProxiesVideoV1,
-    MediaProxiesAudioV1,
-    MediaProxiesPhotoV1,
+    MediaPreviewsVideoV1,
+    MediaPreviewsAudioV1,
+    MediaPreviewsPhotoV1,
     MediaThumbnailsV1,
     AudioWaveformV1,
 }
@@ -17,9 +17,9 @@ impl AgentCapability {
     pub const fn as_str(self) -> &'static str {
         match self {
             AgentCapability::MediaFactsV1 => "media.facts@1",
-            AgentCapability::MediaProxiesVideoV1 => "media.proxies.video@1",
-            AgentCapability::MediaProxiesAudioV1 => "media.proxies.audio@1",
-            AgentCapability::MediaProxiesPhotoV1 => "media.proxies.photo@1",
+            AgentCapability::MediaPreviewsVideoV1 => "media.previews.video@1",
+            AgentCapability::MediaPreviewsAudioV1 => "media.previews.audio@1",
+            AgentCapability::MediaPreviewsPhotoV1 => "media.previews.photo@1",
             AgentCapability::MediaThumbnailsV1 => "media.thumbnails@1",
             AgentCapability::AudioWaveformV1 => "audio.waveform@1",
         }
@@ -45,12 +45,12 @@ pub fn declared_agent_capabilities_with_runtime(
     ];
 
     if ffmpeg_is_available {
-        capabilities.push(AgentCapability::MediaProxiesVideoV1);
-        capabilities.push(AgentCapability::MediaProxiesAudioV1);
+        capabilities.push(AgentCapability::MediaPreviewsVideoV1);
+        capabilities.push(AgentCapability::MediaPreviewsAudioV1);
     }
 
     if photo_proxy_is_available {
-        capabilities.push(AgentCapability::MediaProxiesPhotoV1);
+        capabilities.push(AgentCapability::MediaPreviewsPhotoV1);
     }
 
     capabilities

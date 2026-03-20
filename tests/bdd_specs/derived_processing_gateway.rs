@@ -1,11 +1,11 @@
 use retaia_agent::{DerivedKind, DerivedUploadInit, validate_derived_upload_init};
 
 #[test]
-fn bdd_given_derived_upload_init_request_when_kind_proxy_audio_then_only_mp4_or_mpeg_are_accepted()
-{
+fn bdd_given_derived_upload_init_request_when_kind_preview_audio_then_only_mp4_or_mpeg_are_accepted()
+ {
     let accepted_mp4 = DerivedUploadInit {
         asset_uuid: "asset-a".to_string(),
-        kind: DerivedKind::ProxyAudio,
+        kind: DerivedKind::PreviewAudio,
         content_type: "audio/mp4".to_string(),
         size_bytes: 2048,
         sha256: None,

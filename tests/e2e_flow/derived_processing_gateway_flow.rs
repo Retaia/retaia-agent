@@ -28,7 +28,7 @@ impl DerivedProcessingGateway for MemoryDerivedGateway {
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
             fencing_token: 1,
-            job_type: DerivedJobType::GenerateProxy,
+            job_type: DerivedJobType::GeneratePreview,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),
@@ -113,7 +113,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
     gateway
         .upload_init(&DerivedUploadInit {
             asset_uuid: claimed.asset_uuid.clone(),
-            kind: DerivedKind::ProxyVideo,
+            kind: DerivedKind::PreviewVideo,
             content_type: "video/mp4".to_string(),
             size_bytes: 2048,
             sha256: None,
@@ -144,9 +144,9 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
             claimed.fencing_token,
             "idem-submit",
             &SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     reference: "s3://derived/proxy.mp4".to_string(),
                     size_bytes: Some(2048),
                     sha256: None,
@@ -163,7 +163,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
         vec![
             "claim:job-1".to_string(),
             "heartbeat:job-1".to_string(),
-            "upload_init:asset-1:proxy_video".to_string(),
+            "upload_init:asset-1:preview_video".to_string(),
             "upload_part:asset-1:1".to_string(),
             "upload_complete:asset-1".to_string(),
             "submit:job-1".to_string(),

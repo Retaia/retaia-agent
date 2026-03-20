@@ -36,10 +36,8 @@ Historique notable sur `2026-03-20`:
 
 ### 2.1 Capabilities et noms contractuels
 
-- Le code déclare `media.proxies.video@1`, `media.proxies.audio@1`, `media.proxies.photo@1` dans `src/domain/capabilities.rs`.
-- La spec normative déclare `media.previews.video@1`, `media.previews.audio@1`, `media.previews.photo@1` dans `specs/definitions/CAPABILITIES.md` et `specs/definitions/JOB-TYPES.md`.
-- Conséquence: un Core conforme à la spec peut publier des jobs `generate_preview` avec des capabilities `media.previews.*@1` que l'agent filtrera comme incompatibles.
-- Le drift existe aussi dans `README.md`, donc la doc locale renforce un contrat faux.
+- Le nommage contractuel est maintenant aligné sur `media.previews.*@1` et `generate_preview`.
+- Le point restant n'est plus un drift de nommage, mais un drift d'implémentation: le pipeline runtime de preview ne produit pas encore les outputs structurants conformes aux profils canoniques attendus.
 
 ### 2.2 Runtime feature flags / policy
 
@@ -76,10 +74,11 @@ Historique notable sur `2026-03-20`:
 - `src/domain/capabilities.rs` déclare `media.facts@1`, `media.thumbnails@1` et `audio.waveform@1` comme capacités disponibles par défaut.
 - `src/application/runtime_job_worker.rs` n'utilise aucun générateur réel; il se contente d'appeler le planner puis le gateway.
 - Les implémentations `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` existent, mais elles ne sont pas intégrées au runtime worker/planner.
-- `src/application/runtime_derived_planner.rs` réutilise le fichier source stagé comme unique chunk uploadé pour les jobs de dérivés, au lieu de générer un preview/thumb/waveform conforme.
+- `src/application/runtime_derived_planner.rs` réutilise le fichier source stagé comme unique chunk uploadé pour les jobs de preview/dérivés, au lieu de générer un vrai output conforme au `preview_profile` ou au profil de dérivé attendu.
 - `src/application/runtime_derived_planner.rs` écrit des références `agent://derived/...`, alors que la spec impose des URLs Core stables et same-origin pour les dérivés exposés par Core.
 - Pour `extract_facts`, le planner produit un `manifest` vide et aucun upload; le gateway OpenAPI soumet ensuite un `FactsPatch::new()` vide. Il n'y a pas d'extraction de faits réelle.
 - Pour `generate_audio_waveform`, le planner ne calcule aucune waveform; il marque juste un item de manifest de kind `Waveform` et peut uploader le fichier source brut.
+- Pour `generate_preview`, le renommage de types (`GeneratePreview`, `PreviewVideo`, `PreviewAudio`, `PreviewPhoto`) est correct, mais le moteur n'appelle toujours pas les générateurs concrets; il requalifie surtout le source file en dérivé uploadé.
 - La spec dit explicitement qu'une waveform requise doit être produite et qu'un asset audio ne doit pas dépasser `READY` sans `waveform_url`; l'implémentation courante ne garantit rien de cela.
 
 ### 2.7 Stockage des secrets et sécurité locale
@@ -104,16 +103,14 @@ Historique notable sur `2026-03-20`:
 - La compilation `core-api-client` est désormais réparée et la CI de base la compile explicitement.
 - En revanche, `src/infrastructure/openapi_derived_processing_gateway.rs` envoie encore `If-Match: *` comme placeholder fixe pour `upload/init`, `upload/part` et `upload/complete` (`src/infrastructure/openapi_derived_processing_gateway.rs:25`, `src/infrastructure/openapi_derived_processing_gateway.rs:199-215`, `src/infrastructure/openapi_derived_processing_gateway.rs:223-240`, `src/infrastructure/openapi_derived_processing_gateway.rs:273-290`).
 - Cette valeur n'est pas dérivée d'un `ETag`/d'une révision réellement lue côté Core; si le contrat serveur durcit la concurrence optimistic, cette implémentation risque de diverger.
-- Le mapping OpenAPI local conserve aussi une terminologie interne `GenerateProxy` alors que le contrat HTTP est `generate_preview` (`src/infrastructure/openapi_derived_processing_gateway.rs:296-315`), ce qui ajoute un drift sémantique interne même si le mapping sortant rattrape partiellement le contrat HTTP.
+- Le mapping OpenAPI local est désormais aligné sur `GeneratePreview` / `Preview*`; le point restant est la sémantique effective des artefacts générés, pas leur nommage.
 
 ## 3. Ecarts tests vs specs
 
-### 3.1 Les tests encodent des capabilities non conformes
+### 3.1 Les tests restent centrés sur un pipeline preview encore transport-only
 
-- Les tests utilisent massivement `media.proxies.*@1` au lieu de `media.previews.*@1`.
-- Cela apparaît dans les tests de capabilities, d'agent registration, de job worker et dans les flows OpenAPI mockés.
-- Exemples explicites: `tests/bdd_specs/capabilities.rs:4-8`, `tests/tdd_runtime/capabilities.rs`, `tests/e2e_flow/capabilities_flow.rs`, `tests/e2e_openapi_http_flow.rs:258`, `tests/e2e_openapi_http_flow.rs:298`.
-- Conséquence: la suite de tests protège un contrat local faux et masquera un drift avec Core/specs.
+- Le nommage de contrat a été aligné dans les tests (`media.previews.*`, `GeneratePreview`, `Preview*`).
+- En revanche, plusieurs tests continuent de protéger un pipeline qui accepte surtout des manifests/artefacts transportés, sans exiger la génération effective des previews normatives.
 
 ### 3.2 Les tests valident une waveform vide alors que la spec impose un dérivé
 
@@ -159,7 +156,7 @@ Historique notable sur `2026-03-20`:
 ## 4. Ecarts docs/test/code sur le runtime réel
 
 - Le README annonce "Derived-processing v1 runtime support", mais le runtime ne fait ni génération effective de previews, ni thumbnails, ni waveform, ni facts extraction.
-- Le README annonce "Strict contract alignment with specs/", mais les noms de capabilities, le policy polling et la waveform obligatoire divergent déjà au niveau du code et des tests.
+- Le README annonce "Strict contract alignment with specs/", mais le policy polling, la waveform obligatoire et la génération effective des previews/facts divergent encore au niveau du code et des tests.
 - Le README annonce le même contrat de configuration GUI/CLI; en pratique le build par défaut ne livre pas la GUI.
 - Les docs locales de contraintes runtime annoncent un stockage OS-native des secrets, mais la config persistée garde toujours `secret_key` en clair.
 - Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, alors que les flows normatifs complets attendus côté agent ne sont pas encore implémentés.
@@ -169,7 +166,6 @@ Historique notable sur `2026-03-20`:
 
 Le repo est partiellement structuré pour la spec v1, mais il n'est pas aligné sur plusieurs axes contractuels centraux:
 
-- noms de capabilities non conformes
 - absence de policy runtime et de device flow
 - secret technique persisté en clair
 - backoff 429 non conforme

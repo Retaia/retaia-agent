@@ -16,7 +16,7 @@ impl DerivedExecutionPlanner for AssetMismatchPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: format!("{}-mismatch", claimed.asset_uuid),
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     content_type: "video/mp4".to_string(),
                     size_bytes: 1,
                     sha256: None,
@@ -36,9 +36,9 @@ impl DerivedExecutionPlanner for AssetMismatchPlanner {
                 },
             }],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     reference: "s3://derived/proxy.mp4".to_string(),
                     size_bytes: Some(1),
                     sha256: None,
@@ -60,7 +60,7 @@ impl DerivedProcessingGateway for NoopGateway {
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
             fencing_token: 1,
-            job_type: DerivedJobType::GenerateProxy,
+            job_type: DerivedJobType::GeneratePreview,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),

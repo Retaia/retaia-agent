@@ -21,16 +21,16 @@ fn tdd_declared_agent_capabilities_contains_v1_processing_capability_set() {
     assert!(expected_base.is_subset(&declared));
 
     let proxy_caps = BTreeSet::from([
-        "media.proxies.audio@1".to_string(),
-        "media.proxies.photo@1".to_string(),
-        "media.proxies.video@1".to_string(),
+        "media.previews.audio@1".to_string(),
+        "media.previews.photo@1".to_string(),
+        "media.previews.video@1".to_string(),
     ]);
     if ffmpeg_available() {
         assert!(proxy_caps.is_subset(&declared));
     } else {
-        assert!(!declared.contains("media.proxies.video@1"));
-        assert!(!declared.contains("media.proxies.audio@1"));
-        assert!(declared.contains("media.proxies.photo@1"));
+        assert!(!declared.contains("media.previews.video@1"));
+        assert!(!declared.contains("media.previews.audio@1"));
+        assert!(declared.contains("media.previews.photo@1"));
     }
 }
 
@@ -39,9 +39,9 @@ fn tdd_declared_agent_capabilities_without_ffmpeg_excludes_only_audio_video_prox
     let declared = declared_agent_capabilities_with_ffmpeg(false);
     assert!(declared.contains("media.facts@1"));
     assert!(declared.contains("media.thumbnails@1"));
-    assert!(!declared.contains("media.proxies.video@1"));
-    assert!(!declared.contains("media.proxies.audio@1"));
-    assert!(declared.contains("media.proxies.photo@1"));
+    assert!(!declared.contains("media.previews.video@1"));
+    assert!(!declared.contains("media.previews.audio@1"));
+    assert!(declared.contains("media.previews.photo@1"));
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn tdd_has_required_capabilities_checks_subset_relation() {
         &declared
     ));
     assert!(!has_required_capabilities(
-        &["media.proxies.video@1".to_string()],
+        &["media.previews.video@1".to_string()],
         &declared
     ));
 }

@@ -13,7 +13,7 @@ Rust agent client for the Retaia platform.
 ## Features
 
 - Contract-driven runtime behavior.
-- Capability-driven scheduling guard (`media.facts@1`, `media.thumbnails@1`, `audio.waveform@1`; `media.proxies.video@1` and `media.proxies.audio@1` require `ffmpeg`; `media.proxies.photo@1` is backed by Rust image/raw codecs).
+- Capability-driven scheduling guard (`media.facts@1`, `media.thumbnails@1`, `audio.waveform@1`; `media.previews.video@1` and `media.previews.audio@1` require `ffmpeg`; `media.previews.photo@1` is backed by Rust image/raw codecs).
 - Derived-processing v1 runtime support (`claim/heartbeat/submit` + `/derived/upload/*` gateway).
 - Runtime i18n v2 data-driven (`locales/en.json`, `locales/fr.json`) for CLI/desktop labels (override with `RETAIA_AGENT_LANG=fr|en`), with debug-time missing-key guard.
 - CLI runtime plus desktop shell in this repo.

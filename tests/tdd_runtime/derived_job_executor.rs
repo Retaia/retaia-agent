@@ -37,7 +37,7 @@ impl DerivedProcessingGateway for MemoryGateway {
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
             fencing_token: 1,
-            job_type: DerivedJobType::GenerateProxy,
+            job_type: DerivedJobType::GeneratePreview,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/sample-source.bin".to_string(),
             source_sidecars_relative: Vec::new(),
@@ -120,7 +120,7 @@ impl DerivedExecutionPlanner for ProxyPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     content_type: "video/mp4".to_string(),
                     size_bytes: 1024,
                     sha256: None,
@@ -140,9 +140,9 @@ impl DerivedExecutionPlanner for ProxyPlanner {
                 },
             }],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     reference: "s3://derived/proxy.mp4".to_string(),
                     size_bytes: Some(1024),
                     sha256: None,
@@ -276,7 +276,7 @@ impl DerivedExecutionPlanner for MissingIdempotencyPlanner {
         Ok(DerivedExecutionPlan {
             uploads: vec![],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![],
                 warnings: None,
                 metrics: None,
@@ -321,7 +321,7 @@ impl DerivedExecutionPlanner for EmptyProxyManifestPlanner {
         Ok(DerivedExecutionPlan {
             uploads: vec![],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![],
                 warnings: None,
                 metrics: None,
@@ -342,7 +342,7 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
             uploads: vec![retaia_agent::DerivedUploadPlan {
                 init: DerivedUploadInit {
                     asset_uuid: claimed.asset_uuid.clone(),
-                    kind: DerivedKind::ProxyAudio,
+                    kind: DerivedKind::PreviewAudio,
                     content_type: "audio/mp4".to_string(),
                     size_bytes: 512,
                     sha256: None,
@@ -357,9 +357,9 @@ impl DerivedExecutionPlanner for UploadNotInManifestPlanner {
                 },
             }],
             submit: SubmitDerivedPayload {
-                job_type: DerivedJobType::GenerateProxy,
+                job_type: DerivedJobType::GeneratePreview,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyVideo,
+                    kind: DerivedKind::PreviewVideo,
                     reference: "s3://derived/proxy.mp4".to_string(),
                     size_bytes: Some(1024),
                     sha256: None,
@@ -551,7 +551,7 @@ impl DerivedExecutionPlanner for IncompatibleWaveformPlanner {
             submit: SubmitDerivedPayload {
                 job_type: DerivedJobType::GenerateAudioWaveform,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyAudio,
+                    kind: DerivedKind::PreviewAudio,
                     reference: "s3://derived/proxy.m4a".to_string(),
                     size_bytes: Some(42),
                     sha256: None,
@@ -609,7 +609,7 @@ fn tdd_execute_derived_job_once_rejects_submit_job_type_mismatch_vs_claimed_job(
     assert_eq!(
         err,
         DerivedJobExecutorError::SubmitJobTypeMismatch {
-            claimed: DerivedJobType::GenerateProxy,
+            claimed: DerivedJobType::GeneratePreview,
             planned: DerivedJobType::GenerateThumbnails,
         }
     );
@@ -623,7 +623,7 @@ fn tdd_execute_derived_job_once_rejects_empty_manifest_for_proxy_job_type() {
         .expect_err("proxy manifest should be required");
     assert_eq!(
         err,
-        DerivedJobExecutorError::MissingSubmitManifestForJobType(DerivedJobType::GenerateProxy)
+        DerivedJobExecutorError::MissingSubmitManifestForJobType(DerivedJobType::GeneratePreview)
     );
 }
 
@@ -635,7 +635,7 @@ fn tdd_execute_derived_job_once_rejects_upload_kind_missing_from_submit_manifest
         .expect_err("upload kind must exist in manifest");
     assert_eq!(
         err,
-        DerivedJobExecutorError::UploadKindNotInSubmitManifest(DerivedKind::ProxyAudio)
+        DerivedJobExecutorError::UploadKindNotInSubmitManifest(DerivedKind::PreviewAudio)
     );
 }
 
@@ -658,7 +658,7 @@ fn tdd_execute_derived_job_once_rejects_non_waveform_manifest_for_waveform_job_t
         err,
         DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
             job_type: DerivedJobType::GenerateAudioWaveform,
-            kind: DerivedKind::ProxyAudio,
+            kind: DerivedKind::PreviewAudio,
         }
     );
 }

@@ -10,16 +10,16 @@ fn tdd_runtime_derived_planner_infers_audio_proxy_manifest_from_extension() {
         asset_uuid: "asset-audio-1".to_string(),
         lock_token: "lock-audio-1".to_string(),
         fencing_token: 1,
-        job_type: DerivedJobType::GenerateProxy,
+        job_type: DerivedJobType::GeneratePreview,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mp3".to_string(),
         source_sidecars_relative: Vec::new(),
     };
 
     let plan = planner.plan_for_claimed_job(&claimed).expect("plan");
-    assert_eq!(plan.submit.job_type, DerivedJobType::GenerateProxy);
+    assert_eq!(plan.submit.job_type, DerivedJobType::GeneratePreview);
     assert_eq!(plan.submit.manifest.len(), 1);
-    assert_eq!(plan.submit.manifest[0].kind, DerivedKind::ProxyAudio);
+    assert_eq!(plan.submit.manifest[0].kind, DerivedKind::PreviewAudio);
     assert!(plan.uploads.is_empty());
     assert_eq!(plan.submit_idempotency_key, "agent-submit-job-audio-1");
 }
@@ -32,7 +32,7 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
         asset_uuid: "asset-video-1".to_string(),
         lock_token: "lock-video-1".to_string(),
         fencing_token: 1,
-        job_type: DerivedJobType::GenerateProxy,
+        job_type: DerivedJobType::GeneratePreview,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: "INBOX/clip.mov".to_string(),
         source_sidecars_relative: Vec::new(),
@@ -45,7 +45,7 @@ fn tdd_runtime_derived_planner_with_staged_source_builds_upload_plan() {
         .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
         .expect("plan");
     assert_eq!(plan.uploads.len(), 1);
-    assert_eq!(plan.uploads[0].init.kind, DerivedKind::ProxyVideo);
+    assert_eq!(plan.uploads[0].init.kind, DerivedKind::PreviewVideo);
     assert_eq!(plan.uploads[0].init.content_type, "video/mp4");
     assert_eq!(plan.uploads[0].parts.len(), 1);
     assert_eq!(plan.uploads[0].parts[0].part_number, 1);

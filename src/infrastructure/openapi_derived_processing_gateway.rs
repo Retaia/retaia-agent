@@ -296,7 +296,7 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
 fn map_job_type(job_type: models::job::JobType) -> Result<DerivedJobType, DerivedProcessingError> {
     match job_type {
         models::job::JobType::ExtractFacts => Ok(DerivedJobType::ExtractFacts),
-        models::job::JobType::GeneratePreview => Ok(DerivedJobType::GenerateProxy),
+        models::job::JobType::GeneratePreview => Ok(DerivedJobType::GeneratePreview),
         models::job::JobType::GenerateThumbnails => Ok(DerivedJobType::GenerateThumbnails),
         models::job::JobType::GenerateAudioWaveform => Ok(DerivedJobType::GenerateAudioWaveform),
     }
@@ -306,7 +306,7 @@ fn map_job_type(job_type: models::job::JobType) -> Result<DerivedJobType, Derive
 fn map_submit_job_type(job_type: DerivedJobType) -> models::submit_derived::JobType {
     match job_type {
         DerivedJobType::ExtractFacts => unreachable!("extract_facts must use SubmitExtractFacts"),
-        DerivedJobType::GenerateProxy => models::submit_derived::JobType::GeneratePreview,
+        DerivedJobType::GeneratePreview => models::submit_derived::JobType::GeneratePreview,
         DerivedJobType::GenerateThumbnails => models::submit_derived::JobType::GenerateThumbnails,
         DerivedJobType::GenerateAudioWaveform => {
             models::submit_derived::JobType::GenerateAudioWaveform
@@ -319,13 +319,13 @@ fn map_upload_kind(
     kind: crate::application::derived_processing_gateway::DerivedKind,
 ) -> models::_assets__uuid__derived_upload_init_post_request::Kind {
     match kind {
-        crate::application::derived_processing_gateway::DerivedKind::ProxyVideo => {
+        crate::application::derived_processing_gateway::DerivedKind::PreviewVideo => {
             models::_assets__uuid__derived_upload_init_post_request::Kind::PreviewVideo
         }
-        crate::application::derived_processing_gateway::DerivedKind::ProxyAudio => {
+        crate::application::derived_processing_gateway::DerivedKind::PreviewAudio => {
             models::_assets__uuid__derived_upload_init_post_request::Kind::PreviewAudio
         }
-        crate::application::derived_processing_gateway::DerivedKind::ProxyPhoto => {
+        crate::application::derived_processing_gateway::DerivedKind::PreviewPhoto => {
             models::_assets__uuid__derived_upload_init_post_request::Kind::PreviewPhoto
         }
         crate::application::derived_processing_gateway::DerivedKind::Thumb => {
@@ -347,13 +347,13 @@ fn build_derived_patch(
     for item in manifest {
         let mut mapped = models::DerivedPatchDerivedManifestInner::new(
             match item.kind {
-                crate::application::derived_processing_gateway::DerivedKind::ProxyVideo => {
+                crate::application::derived_processing_gateway::DerivedKind::PreviewVideo => {
                     models::derived_patch_derived_manifest_inner::Kind::PreviewVideo
                 }
-                crate::application::derived_processing_gateway::DerivedKind::ProxyAudio => {
+                crate::application::derived_processing_gateway::DerivedKind::PreviewAudio => {
                     models::derived_patch_derived_manifest_inner::Kind::PreviewAudio
                 }
-                crate::application::derived_processing_gateway::DerivedKind::ProxyPhoto => {
+                crate::application::derived_processing_gateway::DerivedKind::PreviewPhoto => {
                     models::derived_patch_derived_manifest_inner::Kind::PreviewPhoto
                 }
                 crate::application::derived_processing_gateway::DerivedKind::Thumb => {

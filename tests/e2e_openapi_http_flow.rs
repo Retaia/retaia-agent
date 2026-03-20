@@ -255,7 +255,7 @@ fn e2e_openapi_derived_gateway_claim_rejects_missing_lock_token_from_http_payloa
         path: "/api/v1/jobs/job-1/claim",
         status: 200,
         content_type: "application/json",
-        body: r#"{"job_id":"job-1","job_type":"generate_preview","status":"claimed","asset_uuid":"asset-1","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.proxies.photo@1"]}"#,
+        body: r#"{"job_id":"job-1","job_type":"generate_preview","status":"claimed","asset_uuid":"asset-1","source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov"},"required_capabilities":["media.previews.photo@1"]}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));
@@ -295,7 +295,7 @@ fn e2e_openapi_derived_gateway_claim_maps_optional_sidecars_from_http_payload() 
         path: "/api/v1/jobs/job-sidecars/claim",
         status: 200,
         content_type: "application/json",
-        body: r#"{"job_id":"job-sidecars","job_type":"generate_preview","status":"claimed","asset_uuid":"asset-sidecars","lock_token":"lock-sidecars","fencing_token":1,"source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov","sidecars_relative":["INBOX/a.xmp","INBOX/a.srt"]},"required_capabilities":["media.proxies.video@1"]}"#,
+        body: r#"{"job_id":"job-sidecars","job_type":"generate_preview","status":"claimed","asset_uuid":"asset-sidecars","lock_token":"lock-sidecars","fencing_token":1,"source":{"storage_id":"nas-main","original_relative":"INBOX/a.mov","sidecars_relative":["INBOX/a.xmp","INBOX/a.srt"]},"required_capabilities":["media.previews.video@1"]}"#,
     }]);
 
     let client = build_core_api_client(&runtime_config(&base_url));
@@ -349,7 +349,7 @@ fn e2e_openapi_derived_gateway_upload_init_maps_422_from_http_response() {
     let gateway = OpenApiDerivedProcessingGateway::new(client);
     let request = DerivedUploadInit {
         asset_uuid: "asset-1".to_string(),
-        kind: DerivedKind::ProxyPhoto,
+        kind: DerivedKind::PreviewPhoto,
         content_type: "image/jpeg".to_string(),
         size_bytes: 64,
         sha256: None,
@@ -512,9 +512,9 @@ fn e2e_openapi_derived_gateway_submit_maps_401_from_http_response() {
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiDerivedProcessingGateway::new(client);
     let payload = SubmitDerivedPayload {
-        job_type: DerivedJobType::GenerateProxy,
+        job_type: DerivedJobType::GeneratePreview,
         manifest: vec![DerivedManifestItem {
-            kind: DerivedKind::ProxyPhoto,
+            kind: DerivedKind::PreviewPhoto,
             reference: "s3://bucket/proxy.webp".to_string(),
             size_bytes: Some(12),
             sha256: None,

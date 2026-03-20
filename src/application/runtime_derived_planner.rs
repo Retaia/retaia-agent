@@ -94,7 +94,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
 fn default_manifest_for_job(claimed: &ClaimedDerivedJob) -> Vec<DerivedManifestItem> {
     match claimed.job_type {
         DerivedJobType::ExtractFacts => Vec::new(),
-        DerivedJobType::GenerateProxy => {
+        DerivedJobType::GeneratePreview => {
             vec![manifest_item_for_kind(claimed, infer_proxy_kind(claimed))]
         }
         DerivedJobType::GenerateThumbnails => {
@@ -127,12 +127,12 @@ fn infer_proxy_kind(claimed: &ClaimedDerivedJob) -> DerivedKind {
         .unwrap_or_default()
         .to_ascii_lowercase();
     if photo_source_extension_supported(&extension) {
-        return DerivedKind::ProxyPhoto;
+        return DerivedKind::PreviewPhoto;
     }
     if is_audio_extension(&extension) {
-        return DerivedKind::ProxyAudio;
+        return DerivedKind::PreviewAudio;
     }
-    DerivedKind::ProxyVideo
+    DerivedKind::PreviewVideo
 }
 
 fn is_audio_extension(extension: &str) -> bool {
@@ -144,9 +144,9 @@ fn is_audio_extension(extension: &str) -> bool {
 
 fn content_type_for_kind(kind: DerivedKind) -> &'static str {
     match kind {
-        DerivedKind::ProxyVideo => "video/mp4",
-        DerivedKind::ProxyAudio => "audio/mp4",
-        DerivedKind::ProxyPhoto | DerivedKind::Thumb => "image/jpeg",
+        DerivedKind::PreviewVideo => "video/mp4",
+        DerivedKind::PreviewAudio => "audio/mp4",
+        DerivedKind::PreviewPhoto | DerivedKind::Thumb => "image/jpeg",
         DerivedKind::Waveform => "application/json",
     }
 }

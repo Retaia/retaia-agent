@@ -188,7 +188,7 @@ impl DerivedExecutionPlanner for IncompatibleThumbnailManifestPlanner {
             submit: SubmitDerivedPayload {
                 job_type: DerivedJobType::GenerateThumbnails,
                 manifest: vec![DerivedManifestItem {
-                    kind: DerivedKind::ProxyPhoto,
+                    kind: DerivedKind::PreviewPhoto,
                     reference: format!("s3://derived/{}/proxy.webp", claimed.asset_uuid),
                     size_bytes: Some(1024),
                     sha256: None,
@@ -211,7 +211,7 @@ fn e2e_derived_job_executor_flow_rejects_submit_manifest_kind_not_compatible_wit
         err,
         DerivedJobExecutorError::IncompatibleDerivedKindForJobType {
             job_type: DerivedJobType::GenerateThumbnails,
-            kind: DerivedKind::ProxyPhoto,
+            kind: DerivedKind::PreviewPhoto,
         }
     );
 }

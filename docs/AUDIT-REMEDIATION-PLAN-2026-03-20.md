@@ -6,11 +6,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 ## Priorité P0
 
-- Corriger le contrat capabilities/jobs:
-  - renommer `media.proxies.*@1` en `media.previews.*@1` dans le domaine, les gateways, les fixtures et tous les tests
-  - aligner aussi la terminologie interne `GenerateProxy` vers `GeneratePreview`
-  - objectif: éviter qu'un Core conforme publie des jobs rejetés par l'agent
-
 - Implémenter le respect réel de `effective_feature_enabled`:
   - intégrer `GET /app/policy`
   - consommer la policy dans la boucle runtime
@@ -71,19 +66,17 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 ## Ordre d'exécution recommandé
 
-1. Capabilities/jobs naming
-2. Policy/effective features
-3. Secret storage
-4. Device flow/browser/rotation
-5. Polling/backoff
-6. Processing réel previews/thumbs/waveform/facts
-7. Concurrence OpenAPI dérivés
-8. Docs et CI i18n
+1. Policy/effective features
+2. Secret storage
+3. Device flow/browser/rotation
+4. Polling/backoff
+5. Processing réel previews/thumbs/waveform/facts
+6. Concurrence OpenAPI dérivés
+7. Docs et CI i18n
 
 ## Découpage en lots de travail
 
 - Lot 1: contrat et authz
-  - capabilities
   - tests associés
 
 - Lot 2: policy et bootstrap

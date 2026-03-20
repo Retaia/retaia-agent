@@ -7,22 +7,22 @@ use retaia_agent::{
 fn e2e_capabilities_flow_ffmpeg_presence_toggles_only_audio_video_proxy_capabilities() {
     let without_ffmpeg = declared_agent_capabilities_with_ffmpeg(false);
     assert!(without_ffmpeg.contains("media.facts@1"));
-    assert!(!without_ffmpeg.contains("media.proxies.video@1"));
-    assert!(without_ffmpeg.contains("media.proxies.photo@1"));
+    assert!(!without_ffmpeg.contains("media.previews.video@1"));
+    assert!(without_ffmpeg.contains("media.previews.photo@1"));
 
     let with_ffmpeg = declared_agent_capabilities_with_ffmpeg(true);
-    assert!(with_ffmpeg.contains("media.proxies.video@1"));
-    assert!(with_ffmpeg.contains("media.proxies.audio@1"));
-    assert!(with_ffmpeg.contains("media.proxies.photo@1"));
+    assert!(with_ffmpeg.contains("media.previews.video@1"));
+    assert!(with_ffmpeg.contains("media.previews.audio@1"));
+    assert!(with_ffmpeg.contains("media.previews.photo@1"));
 }
 
 #[test]
 fn e2e_capabilities_flow_runtime_flags_can_disable_photo_proxy_independently() {
     let declared = declared_agent_capabilities_with_runtime(true, false);
     assert!(declared.contains("media.facts@1"));
-    assert!(declared.contains("media.proxies.video@1"));
-    assert!(declared.contains("media.proxies.audio@1"));
-    assert!(!declared.contains("media.proxies.photo@1"));
+    assert!(declared.contains("media.previews.video@1"));
+    assert!(declared.contains("media.previews.audio@1"));
+    assert!(!declared.contains("media.previews.photo@1"));
 }
 
 #[test]

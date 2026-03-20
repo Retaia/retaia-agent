@@ -24,7 +24,7 @@ impl CoreApiGateway for SinglePendingGateway {
             job_id: "job-1".to_string(),
             asset_uuid: "asset-1".to_string(),
             state: CoreJobState::Pending,
-            required_capabilities: vec!["media.proxies.photo@1".to_string()],
+            required_capabilities: vec!["media.previews.photo@1".to_string()],
         }])
     }
 }
@@ -51,7 +51,7 @@ impl DerivedProcessingGateway for RecordingDerivedGateway {
             asset_uuid: "asset-1".to_string(),
             lock_token: "lock-1".to_string(),
             fencing_token: 1,
-            job_type: DerivedJobType::GenerateProxy,
+            job_type: DerivedJobType::GeneratePreview,
             source_storage_id: "nas-main".to_string(),
             source_original_relative: "INBOX/asset.jpg".to_string(),
             source_sidecars_relative: Vec::new(),

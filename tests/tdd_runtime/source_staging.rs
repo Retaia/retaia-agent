@@ -34,7 +34,7 @@ fn claimed_job(relative: &str) -> ClaimedDerivedJob {
         asset_uuid: "asset-1".to_string(),
         lock_token: "lock-1".to_string(),
         fencing_token: 1,
-        job_type: DerivedJobType::GenerateProxy,
+        job_type: DerivedJobType::GeneratePreview,
         source_storage_id: "nas-main".to_string(),
         source_original_relative: relative.to_string(),
         source_sidecars_relative: Vec::new(),

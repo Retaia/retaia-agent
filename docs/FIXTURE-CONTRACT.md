@@ -29,7 +29,7 @@ columns:
 
 - `relative_path` (relatif à `fixtures/external/`)
 - `sha256`
-- `kind` (`raw_photo|proxy_video|proxy_audio`)
+- `kind` (`raw_photo|preview_video|preview_audio`)
 - `expected` (`supported|unsupported|negative`)
 - `notes` (optionnel)
 
