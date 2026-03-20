@@ -24,6 +24,7 @@ impl CommandRunner for FlowRunner {
             .push((program.to_string(), args.to_vec()));
         Ok(CommandOutput {
             status_code: Some(0),
+            stdout: String::new(),
             stderr: String::new(),
         })
     }
