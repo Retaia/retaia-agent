@@ -32,7 +32,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - couvert
 
 - Requalifier la suite de tests:
-  - renommer ou recadrer les suites `spec_compatible_*` si elles ne prouvent pas la compatibilité normative
+  - renommage/recadrage des anciennes suites `spec_compatible_*`: couvert
   - compléter la couverture sur authz matrix, policy runtime, anti-rejeu bout-en-bout
 
 ## Ordre d'exécution recommandé
@@ -66,4 +66,3 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 - Lot 5: hardening final
   - ETag/If-Match dérivés
   - docs locales
-  - renommage/recadrage des suites "spec_compatible"

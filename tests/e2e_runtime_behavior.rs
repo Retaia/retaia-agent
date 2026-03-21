@@ -18,6 +18,8 @@ mod notification_sink_flow;
 mod notification_sink_selection_flow;
 #[path = "e2e_flow/runtime_cli_shell_flow.rs"]
 mod runtime_cli_shell_flow;
+#[path = "e2e_flow/runtime_contract_coverage_flow.rs"]
+mod runtime_contract_coverage_flow;
 #[path = "e2e_flow/runtime_desktop_shell_controller_flow.rs"]
 mod runtime_desktop_shell_controller_flow;
 #[path = "e2e_flow/runtime_gui_shell_flow.rs"]
@@ -38,8 +40,6 @@ mod runtime_status_flow;
 mod runtime_sync_flow;
 #[path = "e2e_flow/rust_photo_proxy_generator_flow.rs"]
 mod rust_photo_proxy_generator_flow;
-#[path = "e2e_flow/spec_compatible_coverage_flow.rs"]
-mod spec_compatible_coverage_flow;
 #[path = "e2e_flow/spec_runtime_behavior_complement.rs"]
 mod spec_runtime_behavior_complement;
 #[path = "e2e_flow/status_notifications.rs"]
