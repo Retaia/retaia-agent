@@ -15,7 +15,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 - Implémenter le bootstrap agent conforme:
   - brancher aussi `PollEndpoint::DeviceFlow` dans le daemon
-  - ajouter les tests manquants sur `cancel` et ouverture browser
 
 - Corriger le backoff/polling:
   - rien de bloquant restant ici hors device flow daemon
@@ -56,8 +55,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 - Lot 2: policy et bootstrap
   - device flow daemon
-  - test `cancel`
-  - test ouverture browser
   - tests daemon `/app/policy`
   - tests refresh `30s` et floor `15s`
 
