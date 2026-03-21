@@ -50,10 +50,10 @@ Historique notable sur `2026-03-20`:
 
 ### 2.3 Auth technique, device flow et approval UI
 
-- Aucune implémentation de `POST /auth/clients/device/start`, `POST /auth/clients/device/poll` ou `POST /auth/clients/device/cancel` n'est présente dans `src/`.
-- Aucun code d'ouverture du browser vers `UI_WEB` pour l'approval humain n'est présent dans `src/`.
+- `src/bin/agentctl.rs` et `src/infrastructure/technical_auth.rs` implémentent désormais le bootstrap device flow CLI via `POST /auth/clients/device/start`, `POST /auth/clients/device/poll` et `POST /auth/clients/device/cancel`, avec persistance du `client_id` en config et du `secret_key` dans le secret store local après approval.
+- `src/bin/agentctl.rs` contient désormais un ouvreur de browser natif pour lancer l'approval humain vers `UI_WEB` via `verification_uri_complete`.
 - Aucune implémentation de rotation `POST /auth/clients/{client_id}/rotate-secret` n'est présente dans le runtime/CLI.
-- Le bootstrap réellement implémenté repose seulement sur `client_id + secret_key` déjà présents en config, pas sur le flow d'approbation décrit par la spec.
+- `PollEndpoint::DeviceFlow` reste non implémenté dans le daemon runtime; le flow actuellement présent est un bootstrap CLI synchrone.
 
 ### 2.4 MCP et acteurs autorisés
 
@@ -125,11 +125,10 @@ Historique notable sur `2026-03-20`:
 
 - Aucun test d'intégration de refresh périodique des flags/policy à `30s` dans la boucle daemon.
 - Aucun test de floor 15s sur refresh anticipé.
-- Aucun test de `POST /auth/clients/device/start`.
-- Aucun test de `POST /auth/clients/device/poll`.
+- Un test e2e `agentctl` couvre désormais `POST /auth/clients/device/start` puis `POST /auth/clients/device/poll` jusqu'à approval et persistance locale des credentials techniques.
 - Aucun test de `POST /auth/clients/device/cancel`.
 - Aucun test de rotation `POST /auth/clients/{client_id}/rotate-secret`.
-- Aucun test de flow browser vers `UI_WEB`.
+- Aucun test d'ouverture réelle du browser vers `UI_WEB`.
 - Aucun test de support `Accept-Language` sur les appels REST du runtime agent.
 - Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
 - Aucun test de refus explicite `LOCK_REQUIRED`, `LOCK_INVALID`, `STALE_LOCK_TOKEN`.
@@ -146,20 +145,19 @@ Historique notable sur `2026-03-20`:
 
 ## 4. Ecarts docs/test/code sur le runtime réel
 
-- Le README annonce "Derived-processing v1 runtime support", mais le runtime ne fait ni génération effective de previews, ni thumbnails, ni waveform, ni facts extraction.
 - Le README annonce "Derived-processing v1 runtime support"; la génération effective des previews est désormais branchée, mais les thumbnails, la waveform, les facts et les références Core stables restent incomplètes.
 - Le README annonce "Strict contract alignment with specs/", mais le policy polling, la waveform obligatoire et la génération effective des previews/facts divergent encore au niveau du code et des tests.
 - Le README annonce le même contrat de configuration GUI/CLI; en pratique le build par défaut ne livre pas la GUI.
-- Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, alors que les flows normatifs complets attendus côté agent ne sont pas encore implémentés.
+- Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, et le device flow normatif n'est encore branché que côté CLI, pas dans la boucle daemon.
 - Les tests passent en mode par défaut, mais ce succès reflète surtout le contrat local actuel, pas la conformité aux specs normatives lues.
 
 ## 5. Synthèse courte
 
 Le repo est partiellement structuré pour la spec v1, mais il n'est pas aligné sur plusieurs axes contractuels centraux:
 
-- absence de policy runtime et de device flow
-- backoff 429 non conforme
-- runtime de processing surtout "transport/protocole", pas "processing" réel
+- rotation de secret absente et device flow daemon non implémenté
+- couverture incomplète sur certains invariants policy/device flow
+- runtime de processing encore partiellement incomplet sur storyboard et sélection temporelle fine
 - tests qui valident plusieurs comportements contraires à la spec
 - couverture de tests absente sur plusieurs invariants normatifs
 - voie OpenAPI recompilable, mais encore avec hypothèses de concurrence et de sémantique locales discutables

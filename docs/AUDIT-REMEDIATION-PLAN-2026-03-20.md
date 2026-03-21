@@ -14,13 +14,12 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 ## Priorité P1
 
 - Implémenter le bootstrap agent conforme:
-  - device flow `start/poll/cancel`
-  - ouverture browser vers `UI_WEB`
   - rotation de secret
-  - tests CLI/daemon pour ces flows
+  - brancher aussi `PollEndpoint::DeviceFlow` dans le daemon
+  - ajouter les tests manquants sur `cancel` et ouverture browser
 
 - Corriger le backoff/polling:
-  - brancher aussi `PollEndpoint::DeviceFlow`
+  - rien de bloquant restant ici hors device flow daemon
 
 ## Priorité P2
 
@@ -45,7 +44,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 ## Ordre d'exécution recommandé
 
 1. Policy/effective features
-2. Device flow/browser/rotation
+2. Rotation/device flow daemon
 3. Polling/backoff
 4. Processing réel previews/thumbs/waveform/facts
 5. Concurrence OpenAPI dérivés
@@ -57,9 +56,10 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - tests associés
 
 - Lot 2: policy et bootstrap
-  - device flow
-  - browser approval
   - rotation secret
+  - device flow daemon
+  - test `cancel`
+  - test ouverture browser
   - tests daemon `/app/policy`
   - tests refresh `30s` et floor `15s`
 

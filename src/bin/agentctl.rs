@@ -26,6 +26,12 @@ use service_manager::{
 };
 use thiserror::Error;
 
+#[cfg(feature = "core-api-client")]
+use retaia_agent::{
+    DeviceBootstrapPollStatus, build_core_api_client, cancel_device_bootstrap,
+    poll_device_bootstrap, start_device_bootstrap,
+};
+
 #[derive(Debug, Parser)]
 #[command(name = "agentctl", about = "Retaia agent CLI utilities")]
 struct Cli {
@@ -52,6 +58,7 @@ enum ConfigCommand {
     Validate(ConfigValidateArgs),
     Init(ConfigInitArgs),
     Set(ConfigSetArgs),
+    BootstrapDevice(ConfigBootstrapDeviceArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -116,6 +123,7 @@ impl ConfigCommand {
             Self::Validate(args) => args.common.config.as_ref(),
             Self::Init(args) => args.common.config.as_ref(),
             Self::Set(args) => args.common.config.as_ref(),
+            Self::BootstrapDevice(args) => args.common.config.as_ref(),
         }
     }
 }
@@ -218,6 +226,16 @@ struct ConfigSetArgs {
     log_level: Option<LogLevelArg>,
 }
 
+#[derive(Debug, Clone, Args)]
+struct ConfigBootstrapDeviceArgs {
+    #[command(flatten)]
+    common: CommonConfigArgs,
+    #[arg(long = "client-label")]
+    client_label: Option<String>,
+    #[arg(long = "no-browser", default_value_t = false)]
+    no_browser: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum DaemonTargetArg {
     Agent,
@@ -279,6 +297,13 @@ enum AgentCtlError {
     EndpointUnreachable { url: String, reason: String },
     #[error("config endpoint incompatible ({url}): {reason}")]
     EndpointIncompatible { url: String, reason: String },
+    #[error("device bootstrap failed: {0}")]
+    DeviceBootstrap(String),
+    #[cfg(not(feature = "core-api-client"))]
+    #[error("device bootstrap requires core-api-client feature")]
+    DeviceBootstrapUnavailable,
+    #[error("browser open failed: {0}")]
+    BrowserOpen(String),
     #[error("unable to resolve daemon program path: {0}")]
     DaemonProgramResolve(String),
     #[error("daemon operation failed: {0}")]
@@ -1042,6 +1067,122 @@ fn wait_until_daemon_not_running<M: DaemonManager>(
     }
 }
 
+fn open_url_in_browser(url: &str) -> Result<(), AgentCtlError> {
+    let status = if cfg!(target_os = "macos") {
+        std::process::Command::new("open").arg(url).status()
+    } else if cfg!(target_os = "windows") {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", url])
+            .status()
+    } else {
+        std::process::Command::new("xdg-open").arg(url).status()
+    }
+    .map_err(|error| AgentCtlError::BrowserOpen(error.to_string()))?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(AgentCtlError::BrowserOpen(format!(
+            "browser command exited with status {status}"
+        )))
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn bootstrap_device_auth<R: ConfigRepository>(
+    repository: &R,
+    args: &ConfigBootstrapDeviceArgs,
+) -> Result<(), AgentCtlError> {
+    let config = repository.load().map_err(AgentCtlError::Load)?;
+    let client = build_core_api_client(&config);
+    let flow = start_device_bootstrap(&client, args.client_label.clone())
+        .map_err(|error| AgentCtlError::DeviceBootstrap(error.to_string()))?;
+
+    println!("user_code={}", flow.user_code);
+    println!("verification_uri={}", flow.verification_uri);
+    println!(
+        "verification_uri_complete={}",
+        flow.verification_uri_complete
+    );
+    println!("expires_in_seconds={}", flow.expires_in_seconds);
+
+    if !args.no_browser {
+        open_url_in_browser(&flow.verification_uri_complete)?;
+    }
+
+    let interrupted = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let handler_flag = std::sync::Arc::clone(&interrupted);
+    ctrlc::set_handler(move || {
+        handler_flag.store(true, std::sync::atomic::Ordering::Relaxed);
+    })
+    .map_err(|error| AgentCtlError::DeviceBootstrap(error.to_string()))?;
+
+    let mut interval_seconds = flow.interval_seconds.max(1);
+    loop {
+        if interrupted.load(std::sync::atomic::Ordering::Relaxed) {
+            let _ = cancel_device_bootstrap(&client, &flow.device_code);
+            return Err(AgentCtlError::DeviceBootstrap(
+                "device flow canceled by user".to_string(),
+            ));
+        }
+
+        match poll_device_bootstrap(&client, &flow.device_code)
+            .map_err(|error| AgentCtlError::DeviceBootstrap(error.to_string()))?
+        {
+            DeviceBootstrapPollStatus::Pending {
+                interval_seconds: next_interval,
+            } => {
+                interval_seconds = next_interval.unwrap_or(interval_seconds).max(1);
+                std::thread::sleep(Duration::from_secs(interval_seconds));
+            }
+            DeviceBootstrapPollStatus::Approved {
+                client_id,
+                secret_key,
+            } => {
+                let next = apply_config_update(
+                    &config,
+                    &RuntimeConfigUpdate {
+                        core_api_url: None,
+                        ollama_url: None,
+                        auth_mode: Some(AuthMode::Technical),
+                        technical_client_id: Some(client_id),
+                        technical_secret_key: Some(secret_key),
+                        clear_technical_auth: false,
+                        storage_mounts: None,
+                        clear_storage_mounts: false,
+                        max_parallel_jobs: None,
+                        log_level: None,
+                    },
+                    ConfigInterface::Cli,
+                )
+                .map_err(validation_error)
+                .map_err(AgentCtlError::InvalidConfigUpdate)?;
+                repository.save(&next).map_err(AgentCtlError::Save)?;
+                println!("device_bootstrap=approved");
+                return Ok(());
+            }
+            DeviceBootstrapPollStatus::Denied => {
+                return Err(AgentCtlError::DeviceBootstrap(
+                    "device flow denied".to_string(),
+                ));
+            }
+            DeviceBootstrapPollStatus::Expired => {
+                return Err(AgentCtlError::DeviceBootstrap(
+                    "device flow expired".to_string(),
+                ));
+            }
+        }
+    }
+}
+
+#[cfg(not(feature = "core-api-client"))]
+fn bootstrap_device_auth<R: ConfigRepository>(
+    _repository: &R,
+    _args: &ConfigBootstrapDeviceArgs,
+) -> Result<(), AgentCtlError> {
+    Err(AgentCtlError::DeviceBootstrapUnavailable)
+}
+
 fn run_with_repository<R: ConfigRepository>(
     repository: &R,
     command: ConfigCommand,
@@ -1089,6 +1230,7 @@ fn run_with_repository<R: ConfigRepository>(
             println!("{}", t(lang, "config.updated"));
             Ok(())
         }
+        ConfigCommand::BootstrapDevice(args) => bootstrap_device_auth(repository, &args),
     }
 }
 
@@ -1115,8 +1257,10 @@ fn run(cli: Cli) -> Result<(), AgentCtlError> {
     let lang = detect_language();
     match cli.command {
         RootCommand::Config { command } => {
-            let restart_daemon_after_save =
-                matches!(&command, ConfigCommand::Set(_)) && command.config_path().is_none();
+            let restart_daemon_after_save = matches!(
+                &command,
+                ConfigCommand::Set(_) | ConfigCommand::BootstrapDevice(_)
+            ) && command.config_path().is_none();
             let result = match command.config_path().cloned() {
                 Some(path) => run_with_repository(&FileConfigRepository::new(path), command, lang),
                 None => run_with_repository(&SystemConfigRepository, command, lang),
@@ -1197,6 +1341,29 @@ mod tests {
             } => {
                 assert_eq!(args.storage_mounts, vec!["nas-main=/mnt/nas/main/"]);
                 assert!(args.clear_storage_mounts);
+            }
+            _ => panic!("unexpected parse result"),
+        }
+    }
+
+    #[test]
+    fn tdd_clap_parses_bootstrap_device_flags() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "config",
+            "bootstrap-device",
+            "--client-label",
+            "Studio Mac",
+            "--no-browser",
+        ])
+        .expect("bootstrap-device args should parse");
+
+        match cli.command {
+            RootCommand::Config {
+                command: ConfigCommand::BootstrapDevice(args),
+            } => {
+                assert_eq!(args.client_label.as_deref(), Some("Studio Mac"));
+                assert!(args.no_browser);
             }
             _ => panic!("unexpected parse result"),
         }
