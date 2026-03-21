@@ -7,7 +7,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 ## Priorité P0
 
 - Compléter la couverture policy runtime:
-  - ajouter les tests de floor `15s` sur refresh anticipé
   - ajouter un test d'intégration daemon pour `GET /app/policy`
 
 ## Priorité P1
@@ -55,7 +54,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 - Lot 2: policy et bootstrap
   - device flow daemon
   - tests daemon `/app/policy`
-  - test floor `15s`
 
 - Lot 3: sécurité locale et polling
   - migration config

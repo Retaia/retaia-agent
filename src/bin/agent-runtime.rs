@@ -468,7 +468,19 @@ fn policy_refresh_interval_ms() -> u64 {
 }
 
 fn policy_poll_wait_ms_from_plan(plan: &retaia_agent::RuntimeSyncPlan) -> u64 {
-    scheduled_wait_ms_from_plan(plan)
+    const POLICY_EARLY_REFRESH_FLOOR_MS: u64 = 15_000;
+
+    match plan {
+        retaia_agent::RuntimeSyncPlan::SchedulePoll(decision)
+            if matches!(
+                decision.reason,
+                retaia_agent::PollDecisionReason::BackoffFrom429
+            ) =>
+        {
+            decision.wait_ms.max(POLICY_EARLY_REFRESH_FLOOR_MS)
+        }
+        _ => scheduled_wait_ms_from_plan(plan),
+    }
 }
 
 fn init_logging(level: LogLevel) {
@@ -677,5 +689,27 @@ mod tests {
             }
             other => panic!("unexpected plan: {other:?}"),
         }
+    }
+
+    #[test]
+    fn tdd_policy_early_refresh_is_floored_to_fifteen_seconds() {
+        let plan = RuntimeSyncPlan::SchedulePoll(retaia_agent::PollDecision {
+            endpoint: PollEndpoint::Policy,
+            wait_ms: 2_000,
+            reason: retaia_agent::PollDecisionReason::BackoffFrom429,
+        });
+
+        assert_eq!(policy_poll_wait_ms_from_plan(&plan), 15_000);
+    }
+
+    #[test]
+    fn tdd_policy_early_refresh_keeps_longer_waits() {
+        let plan = RuntimeSyncPlan::SchedulePoll(retaia_agent::PollDecision {
+            endpoint: PollEndpoint::Policy,
+            wait_ms: 22_000,
+            reason: retaia_agent::PollDecisionReason::BackoffFrom429,
+        });
+
+        assert_eq!(policy_poll_wait_ms_from_plan(&plan), 22_000);
     }
 }
