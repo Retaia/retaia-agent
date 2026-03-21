@@ -1080,7 +1080,9 @@ fn wait_until_daemon_not_running<M: DaemonManager>(
 }
 
 fn open_url_in_browser(url: &str) -> Result<(), AgentCtlError> {
-    let status = if cfg!(target_os = "macos") {
+    let status = if let Some(command) = std::env::var_os("RETAIA_AGENT_BROWSER_OPEN_COMMAND") {
+        std::process::Command::new(command).arg(url).status()
+    } else if cfg!(target_os = "macos") {
         std::process::Command::new("open").arg(url).status()
     } else if cfg!(target_os = "windows") {
         std::process::Command::new("cmd")
