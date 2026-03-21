@@ -2,7 +2,7 @@ use retaia_agent::{
     AgentRunState, AgentRuntimeConfig, AuthMode, CORE_JOBS_RUNTIME_FEATURE, ClientRuntimeTarget,
     CoreServerPolicy, LogLevel, MenuAction, NotificationBridgeError, NotificationMessage,
     NotificationSink, PollDecisionReason, PollEndpoint, PollSignal, PushChannel, PushHint,
-    RuntimeSession, RuntimeSnapshot, RuntimeSyncPlan, SystemNotification,
+    RuntimeSession, RuntimeSnapshot, RuntimeSyncPlan, SystemNotification, TechnicalAuthConfig,
 };
 use std::cell::RefCell;
 
@@ -101,6 +101,30 @@ fn tdd_runtime_session_enforces_jobs_poll_floor_of_five_seconds() {
     });
 
     assert_eq!(session.jobs_poll_interval_ms(), 5_000);
+}
+
+#[test]
+fn tdd_runtime_session_can_replace_settings_after_device_bootstrap() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let mut next = settings();
+    next.auth_mode = AuthMode::Technical;
+    next.technical_auth = Some(TechnicalAuthConfig {
+        client_id: "agent-approved".to_string(),
+        secret_key: "approved-secret".to_string(),
+    });
+
+    session.replace_settings(next).expect("settings update");
+
+    assert_eq!(session.settings().auth_mode, AuthMode::Technical);
+    assert_eq!(
+        session
+            .settings()
+            .technical_auth
+            .as_ref()
+            .expect("technical auth")
+            .client_id,
+        "agent-approved"
+    );
 }
 
 #[derive(Default)]

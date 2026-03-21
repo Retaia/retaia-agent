@@ -5,7 +5,7 @@ use crate::application::notification_bridge::{
 };
 use crate::application::runtime_loop_engine::RuntimeLoopEngine;
 use crate::application::runtime_sync_coordinator::RuntimeSyncPlan;
-use crate::domain::configuration::{AgentRuntimeConfig, ConfigValidationError};
+use crate::domain::configuration::{AgentRuntimeConfig, ConfigValidationError, validate_config};
 use crate::domain::feature_flags::CORE_JOBS_RUNTIME_FEATURE;
 use crate::domain::runtime_control::RuntimeControlCommand;
 use crate::domain::runtime_orchestration::{
@@ -48,6 +48,17 @@ impl RuntimeSession {
 
     pub fn settings(&self) -> &AgentRuntimeConfig {
         self.app.settings()
+    }
+
+    pub fn replace_settings(
+        &mut self,
+        new_settings: AgentRuntimeConfig,
+    ) -> Result<(), Vec<ConfigValidationError>> {
+        validate_config(&new_settings)?;
+        self.app
+            .save_settings(new_settings)
+            .expect("validated settings should update in runtime session");
+        Ok(())
     }
 
     pub fn tray_menu_model(&self) -> TrayMenuModel {
