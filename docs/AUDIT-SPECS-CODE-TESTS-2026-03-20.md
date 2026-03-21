@@ -94,8 +94,8 @@ Historique notable sur `2026-03-20`:
 
 ### 2.9 i18n et garde-fous de validation
 
-- `src/infrastructure/i18n.rs` panique sur JSON de locale invalide (`src/infrastructure/i18n.rs:59-60`), ce qui fournit un garde-fou binaire de chargement mais pas une validation structurée de compatibilité inter-locales.
-- La détection de clés manquantes repose sur `debug_assert!` seulement (`src/infrastructure/i18n.rs:43-45`); en build non debug, une clé manquante peut tomber sur `""`.
+- `src/infrastructure/i18n.rs` panique désormais aussi sur clé i18n absente dans tous les builds, au lieu de retomber silencieusement sur `""`.
+- `scripts/validate_locales.py` et la job CI `validate-locales` valident désormais explicitement la parité de clés `locales/en.json` vs `locales/fr.json` et les valeurs non vides.
 
 ### 2.10 API client OpenAPI
 

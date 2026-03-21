@@ -40,9 +40,10 @@ pub fn t(lang: Language, key: &str) -> &'static str {
         Language::Fr => locale(Language::En).get(key),
         Language::En => None,
     };
-    let resolved = localized.or(fallback);
-    debug_assert!(resolved.is_some(), "missing i18n key: {key}");
-    resolved.map(String::as_str).unwrap_or("")
+    localized
+        .or(fallback)
+        .map(String::as_str)
+        .unwrap_or_else(|| panic!("missing i18n key: {key}"))
 }
 
 fn locale(lang: Language) -> &'static LocaleMap {

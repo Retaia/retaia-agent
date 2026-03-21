@@ -130,12 +130,25 @@ jobs:
             exit 1
           fi
 
+  validate-locales:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true'
+    needs:
+      - changes
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate locale parity
+        run: python3 scripts/validate_locales.py
+
   rust-build-cache:
     runs-on: ubuntu-latest
     if: needs.changes.outputs.run_tests == 'true' || needs.changes.outputs.run_external_fixtures == 'true'
     needs:
       - changes
       - commitlint
+      - validate-locales
     steps:
       - name: Checkout
         uses: actions/checkout@v4
