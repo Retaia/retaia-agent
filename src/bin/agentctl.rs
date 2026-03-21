@@ -29,7 +29,7 @@ use thiserror::Error;
 #[cfg(feature = "core-api-client")]
 use retaia_agent::{
     DeviceBootstrapPollStatus, build_core_api_client, cancel_device_bootstrap,
-    poll_device_bootstrap, start_device_bootstrap,
+    poll_device_bootstrap, rotate_client_secret, start_device_bootstrap,
 };
 
 #[derive(Debug, Parser)]
@@ -59,6 +59,7 @@ enum ConfigCommand {
     Init(ConfigInitArgs),
     Set(ConfigSetArgs),
     BootstrapDevice(ConfigBootstrapDeviceArgs),
+    RotateSecret(ConfigRotateSecretArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -124,6 +125,7 @@ impl ConfigCommand {
             Self::Init(args) => args.common.config.as_ref(),
             Self::Set(args) => args.common.config.as_ref(),
             Self::BootstrapDevice(args) => args.common.config.as_ref(),
+            Self::RotateSecret(args) => args.common.config.as_ref(),
         }
     }
 }
@@ -236,6 +238,14 @@ struct ConfigBootstrapDeviceArgs {
     no_browser: bool,
 }
 
+#[derive(Debug, Clone, Args)]
+struct ConfigRotateSecretArgs {
+    #[command(flatten)]
+    common: CommonConfigArgs,
+    #[arg(long = "client-id")]
+    client_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum DaemonTargetArg {
     Agent,
@@ -299,6 +309,8 @@ enum AgentCtlError {
     EndpointIncompatible { url: String, reason: String },
     #[error("device bootstrap failed: {0}")]
     DeviceBootstrap(String),
+    #[error("rotate secret failed: {0}")]
+    RotateSecret(String),
     #[cfg(not(feature = "core-api-client"))]
     #[error("device bootstrap requires core-api-client feature")]
     DeviceBootstrapUnavailable,
@@ -1183,6 +1195,67 @@ fn bootstrap_device_auth<R: ConfigRepository>(
     Err(AgentCtlError::DeviceBootstrapUnavailable)
 }
 
+#[cfg(feature = "core-api-client")]
+fn rotate_secret<R: ConfigRepository>(
+    repository: &R,
+    args: &ConfigRotateSecretArgs,
+) -> Result<(), AgentCtlError> {
+    let config = repository.load().map_err(AgentCtlError::Load)?;
+    let client = build_core_api_client(&config);
+    let configured_client_id = config
+        .technical_auth
+        .as_ref()
+        .map(|technical| technical.client_id.clone());
+    let client_id = args
+        .client_id
+        .clone()
+        .or(configured_client_id)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| {
+            AgentCtlError::RotateSecret(
+                "missing technical client_id; pass --client-id or configure technical auth first"
+                    .to_string(),
+            )
+        })?;
+    let rotated = rotate_client_secret(&client, &client_id)
+        .map_err(|error| AgentCtlError::RotateSecret(error.to_string()))?;
+    let updated = apply_config_update(
+        &config,
+        &RuntimeConfigUpdate {
+            core_api_url: None,
+            ollama_url: None,
+            auth_mode: Some(AuthMode::Technical),
+            technical_client_id: Some(rotated.client_id.clone()),
+            technical_secret_key: Some(rotated.secret_key),
+            clear_technical_auth: false,
+            storage_mounts: None,
+            clear_storage_mounts: false,
+            max_parallel_jobs: None,
+            log_level: None,
+        },
+        ConfigInterface::Cli,
+    )
+    .map_err(validation_error)
+    .map_err(AgentCtlError::InvalidConfigUpdate)?;
+    repository.save(&updated).map_err(AgentCtlError::Save)?;
+    println!("rotate_secret=ok");
+    println!("client_id={}", rotated.client_id);
+    if let Some(rotated_at) = rotated.rotated_at {
+        println!("rotated_at={rotated_at}");
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "core-api-client"))]
+fn rotate_secret<R: ConfigRepository>(
+    _repository: &R,
+    _args: &ConfigRotateSecretArgs,
+) -> Result<(), AgentCtlError> {
+    Err(AgentCtlError::RotateSecret(
+        "rotate secret requires core-api-client feature".to_string(),
+    ))
+}
+
 fn run_with_repository<R: ConfigRepository>(
     repository: &R,
     command: ConfigCommand,
@@ -1231,6 +1304,7 @@ fn run_with_repository<R: ConfigRepository>(
             Ok(())
         }
         ConfigCommand::BootstrapDevice(args) => bootstrap_device_auth(repository, &args),
+        ConfigCommand::RotateSecret(args) => rotate_secret(repository, &args),
     }
 }
 
@@ -1259,7 +1333,9 @@ fn run(cli: Cli) -> Result<(), AgentCtlError> {
         RootCommand::Config { command } => {
             let restart_daemon_after_save = matches!(
                 &command,
-                ConfigCommand::Set(_) | ConfigCommand::BootstrapDevice(_)
+                ConfigCommand::Set(_)
+                    | ConfigCommand::BootstrapDevice(_)
+                    | ConfigCommand::RotateSecret(_)
             ) && command.config_path().is_none();
             let result = match command.config_path().cloned() {
                 Some(path) => run_with_repository(&FileConfigRepository::new(path), command, lang),
@@ -1364,6 +1440,33 @@ mod tests {
             } => {
                 assert_eq!(args.client_label.as_deref(), Some("Studio Mac"));
                 assert!(args.no_browser);
+            }
+            _ => panic!("unexpected parse result"),
+        }
+    }
+
+    #[test]
+    fn tdd_clap_parses_rotate_secret_flags() {
+        let cli = Cli::try_parse_from([
+            "agentctl",
+            "config",
+            "rotate-secret",
+            "--config",
+            "/tmp/retaia.toml",
+            "--client-id",
+            "agent-rot",
+        ])
+        .expect("rotate-secret args should parse");
+
+        match cli.command {
+            RootCommand::Config {
+                command: ConfigCommand::RotateSecret(args),
+            } => {
+                assert_eq!(
+                    args.common.config,
+                    Some(std::path::PathBuf::from("/tmp/retaia.toml"))
+                );
+                assert_eq!(args.client_id.as_deref(), Some("agent-rot"));
             }
             _ => panic!("unexpected parse result"),
         }

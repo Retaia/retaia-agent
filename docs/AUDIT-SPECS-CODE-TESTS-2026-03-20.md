@@ -52,7 +52,7 @@ Historique notable sur `2026-03-20`:
 
 - `src/bin/agentctl.rs` et `src/infrastructure/technical_auth.rs` implémentent désormais le bootstrap device flow CLI via `POST /auth/clients/device/start`, `POST /auth/clients/device/poll` et `POST /auth/clients/device/cancel`, avec persistance du `client_id` en config et du `secret_key` dans le secret store local après approval.
 - `src/bin/agentctl.rs` contient désormais un ouvreur de browser natif pour lancer l'approval humain vers `UI_WEB` via `verification_uri_complete`.
-- Aucune implémentation de rotation `POST /auth/clients/{client_id}/rotate-secret` n'est présente dans le runtime/CLI.
+- `src/bin/agentctl.rs` et `src/infrastructure/technical_auth.rs` implémentent désormais la rotation CLI `POST /auth/clients/{client_id}/rotate-secret`, avec mise à jour du secret store local.
 - `PollEndpoint::DeviceFlow` reste non implémenté dans le daemon runtime; le flow actuellement présent est un bootstrap CLI synchrone.
 
 ### 2.4 MCP et acteurs autorisés
@@ -127,7 +127,7 @@ Historique notable sur `2026-03-20`:
 - Aucun test de floor 15s sur refresh anticipé.
 - Un test e2e `agentctl` couvre désormais `POST /auth/clients/device/start` puis `POST /auth/clients/device/poll` jusqu'à approval et persistance locale des credentials techniques.
 - Aucun test de `POST /auth/clients/device/cancel`.
-- Aucun test de rotation `POST /auth/clients/{client_id}/rotate-secret`.
+- Un test e2e `agentctl` couvre désormais `POST /auth/clients/{client_id}/rotate-secret` et la mise à jour locale du secret technique.
 - Aucun test d'ouverture réelle du browser vers `UI_WEB`.
 - Aucun test de support `Accept-Language` sur les appels REST du runtime agent.
 - Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
@@ -155,7 +155,7 @@ Historique notable sur `2026-03-20`:
 
 Le repo est partiellement structuré pour la spec v1, mais il n'est pas aligné sur plusieurs axes contractuels centraux:
 
-- rotation de secret absente et device flow daemon non implémenté
+- device flow daemon non implémenté
 - couverture incomplète sur certains invariants policy/device flow
 - runtime de processing encore partiellement incomplet sur storyboard et sélection temporelle fine
 - tests qui valident plusieurs comportements contraires à la spec
