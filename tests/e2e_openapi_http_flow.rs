@@ -1,5 +1,6 @@
 #![cfg(feature = "core-api-client")]
 
+use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::Arc;
@@ -7,6 +8,12 @@ use std::sync::Mutex;
 use std::sync::Once;
 use std::thread;
 
+use chrono::{Duration, Utc};
+use reqwest::header::CONTENT_TYPE;
+use retaia_agent::infrastructure::agent_identity::AgentIdentity;
+use retaia_agent::infrastructure::signed_core_http::{
+    SignedRequest, absolute_url, apply_signed_headers, signature_payload,
+};
 use retaia_agent::{
     AgentRegistrationCommand, AgentRegistrationError, AgentRegistrationGateway, AgentRuntimeConfig,
     AuthMode, CoreApiGateway, CoreApiGatewayError, DerivedJobType, DerivedKind,
@@ -162,6 +169,65 @@ fn assert_request_contains_header(request: &str, header_line: &str) {
             .any(|line| line == expected),
         "missing header `{header_line}` in request:\n{request}"
     );
+}
+
+fn request_header_value(request: &str, name: &str) -> String {
+    let needle = format!("{}:", name.to_ascii_lowercase());
+    request
+        .lines()
+        .find_map(|line| {
+            let lower = line.to_ascii_lowercase();
+            lower
+                .starts_with(&needle)
+                .then(|| {
+                    line.split_once(':')
+                        .map(|(_, value)| value.trim().to_string())
+                })
+                .flatten()
+        })
+        .unwrap_or_else(|| panic!("missing header `{name}` in request:\n{request}"))
+}
+
+fn build_signed_request(
+    identity: &AgentIdentity,
+    method: reqwest::Method,
+    path: &str,
+    timestamp: &str,
+    nonce: &str,
+    body: &[u8],
+) -> SignedRequest {
+    let payload = signature_payload(method, path, &identity.agent_id, timestamp, nonce, body);
+    let signature = identity
+        .detached_signature_http_header_value(payload.as_bytes())
+        .expect("signature must be generated");
+    SignedRequest {
+        timestamp: timestamp.to_string(),
+        nonce: nonce.to_string(),
+        signature,
+    }
+}
+
+fn send_signed_json_request(
+    base_path: &str,
+    path: &str,
+    identity: &AgentIdentity,
+    signed: &SignedRequest,
+    body: &[u8],
+) -> reqwest::blocking::Response {
+    let client = reqwest::blocking::Client::new();
+    let url = absolute_url(base_path, path).expect("absolute url");
+    apply_signed_headers(
+        client
+            .request(reqwest::Method::POST, url)
+            .header(CONTENT_TYPE, "application/json")
+            .body(body.to_vec()),
+        identity,
+        signed,
+        None,
+        None,
+    )
+    .send()
+    .expect("signed request should be sent")
 }
 
 static LANG_ENV_GUARD: Mutex<()> = Mutex::new(());
@@ -1013,6 +1079,134 @@ fn e2e_openapi_agent_registration_gateway_maps_invalid_success_payload_to_transp
         AgentRegistrationError::Transport(message) => assert!(!message.trim().is_empty()),
         other => panic!("unexpected error variant: {other:?}"),
     }
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_signed_core_http_replay_nonce_is_rejected_by_mock_core_validator() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+    let base_path = build_core_api_client(&runtime_config(&base_url)).base_path;
+    let seen_nonces = Arc::new(Mutex::new(HashSet::<String>::new()));
+    let seen_nonces_server = Arc::clone(&seen_nonces);
+
+    let server = thread::spawn(move || {
+        for expected_status in [200_u16, 401_u16] {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buffer = [0_u8; 4096];
+            let size = stream.read(&mut buffer).expect("read request");
+            let request = String::from_utf8_lossy(&buffer[..size]).to_string();
+            let first_line = request.lines().next().unwrap_or_default().to_string();
+            assert!(
+                first_line.starts_with("POST /api/v1/agents/register"),
+                "unexpected request line: {first_line}"
+            );
+
+            let nonce = request_header_value(&request, "X-Retaia-Signature-Nonce");
+            let mut nonces = seen_nonces_server.lock().expect("nonce set");
+            let accepted = nonces.insert(nonce);
+            drop(nonces);
+
+            let (status, body) = if accepted {
+                (
+                    200,
+                    r#"{"agent_id":"550e8400-e29b-41d4-a716-446655440021","effective_capabilities":[],"capability_warnings":[]}"#,
+                )
+            } else {
+                (401, r#"{"code":"REPLAYED_SIGNATURE_NONCE"}"#)
+            };
+            assert_eq!(status, expected_status, "unexpected server status order");
+
+            let response = format!(
+                "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                status,
+                reason_phrase(status),
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
+        }
+    });
+
+    let identity = AgentIdentity::generate_ephemeral(Some("550e8400-e29b-41d4-a716-446655440021"))
+        .expect("identity");
+    let body = br#"{"agent_name":"retaia-agent"}"#;
+    let path = "/agents/register";
+    let signed = build_signed_request(
+        &identity,
+        reqwest::Method::POST,
+        "/api/v1/agents/register",
+        &Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        "nonce-replay-test",
+        body,
+    );
+
+    let first = send_signed_json_request(&base_path, path, &identity, &signed, body);
+    assert_eq!(first.status(), 200);
+
+    let second = send_signed_json_request(&base_path, path, &identity, &signed, body);
+    assert_eq!(second.status(), 401);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_signed_core_http_stale_timestamp_is_rejected_by_mock_core_validator() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+    let base_path = build_core_api_client(&runtime_config(&base_url)).base_path;
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut buffer = [0_u8; 4096];
+        let size = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..size]).to_string();
+        let first_line = request.lines().next().unwrap_or_default().to_string();
+        assert!(
+            first_line.starts_with("POST /api/v1/agents/register"),
+            "unexpected request line: {first_line}"
+        );
+
+        let timestamp = request_header_value(&request, "X-Retaia-Signature-Timestamp");
+        let parsed = chrono::DateTime::parse_from_rfc3339(&timestamp)
+            .expect("timestamp should be rfc3339")
+            .with_timezone(&Utc);
+        assert!(
+            Utc::now() - parsed > Duration::seconds(60),
+            "request must be stale for validator"
+        );
+
+        let body = r#"{"code":"STALE_SIGNATURE_TIMESTAMP"}"#;
+        let response = format!(
+            "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    let identity = AgentIdentity::generate_ephemeral(Some("550e8400-e29b-41d4-a716-446655440022"))
+        .expect("identity");
+    let body = br#"{"agent_name":"retaia-agent"}"#;
+    let signed = build_signed_request(
+        &identity,
+        reqwest::Method::POST,
+        "/api/v1/agents/register",
+        &(Utc::now() - Duration::seconds(61)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        "nonce-stale-test",
+        body,
+    );
+
+    let response =
+        send_signed_json_request(&base_path, "/agents/register", &identity, &signed, body);
+    assert_eq!(response.status(), 401);
 
     server.join().expect("server thread");
 }

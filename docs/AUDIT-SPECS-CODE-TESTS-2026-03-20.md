@@ -129,8 +129,8 @@ Historique notable sur `2026-03-20`:
 - Un test e2e `agentctl` couvre désormais le chemin d'ouverture browser via une commande override injectée, avec vérification de `verification_uri_complete`.
 - La gateway runtime `jobs/policy` envoie désormais `Accept-Language`, et un test HTTP dédié le couvre sur les appels REST agent.
 - Les tests de `signed_core_http` couvrent désormais l'émission d'un nonce distinct par requête et une fenêtre de fraîcheur locale `<= 60s` sur le timestamp signé.
+- La suite HTTP OpenAPI couvre désormais aussi un validateur Core mocké qui rejette un `nonce` rejoué et un timestamp signé trop vieux depuis une requête réellement envoyée par l'agent.
 - Les suites `authz` couvrent désormais plus explicitement la matrice locale v1 modélisée par l'agent: `AGENT` seul peut mint un token technique et traiter des jobs, `UI_WEB`/`UI_MOBILE` sont refusés, et les flags `CORE_V1_GLOBAL` restent forcés à `true`.
-- Le point restant est l'absence de validation bout-en-bout anti-rejeu côté Core depuis l'agent de test.
 - La gateway OpenAPI dérivés mappe désormais explicitement `LOCK_REQUIRED`, `LOCK_INVALID` et `STALE_LOCK_TOKEN`, avec tests HTTP dédiés.
 - Un test dédié du binaire daemon couvre désormais le chemin de récupération et d'application de `GET /app/policy`.
 - Il n'y a toujours pas de test d'approval humain complet côté `UI_WEB`; la couverture actuelle s'arrête à l'ouverture du navigateur depuis `agentctl`.
@@ -139,7 +139,7 @@ Historique notable sur `2026-03-20`:
 
 - Les suites concernées ont été recadrées sous des noms plus précis orientés "runtime contract/config contract".
 - Le fond reste inchangé: elles vérifient surtout des contrats locaux de session/menu/config/notifications.
-- Elles ne valident toujours pas les exigences normatives les plus structurantes: policy runtime, auth bootstrap, device flow bout-en-bout, flags, authz matrice, URLs Core stables des dérivés, storyboard, anti-rejeu bout-en-bout.
+- Elles ne valident toujours pas les exigences normatives les plus structurantes: policy runtime, auth bootstrap, device flow bout-en-bout, flags, authz matrice, URLs Core stables des dérivés, storyboard.
 
 ## 4. Ecarts docs/test/code sur le runtime réel
 
