@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use retaia_agent::{
-    CORE_CLIENTS_BOOTSTRAP_FEATURE, CORE_JOBS_RUNTIME_FEATURE, ClientKind,
-    can_issue_client_token, can_process_jobs, resolve_effective_features,
+    CORE_CLIENTS_BOOTSTRAP_FEATURE, CORE_JOBS_RUNTIME_FEATURE, ClientKind, can_issue_client_token,
+    can_process_jobs, resolve_effective_features,
 };
 
 #[test]
@@ -38,8 +38,13 @@ fn e2e_core_v1_global_features_stay_enabled_even_if_runtime_payload_sets_them_fa
         (CORE_CLIENTS_BOOTSTRAP_FEATURE.to_string(), false),
     ]);
 
-    let effective =
-        resolve_effective_features(&flags, &BTreeMap::new(), &BTreeMap::new(), &BTreeMap::new(), &BTreeMap::new());
+    let effective = resolve_effective_features(
+        &flags,
+        &BTreeMap::new(),
+        &BTreeMap::new(),
+        &BTreeMap::new(),
+        &BTreeMap::new(),
+    );
 
     assert_eq!(effective.get(CORE_JOBS_RUNTIME_FEATURE), Some(&true));
     assert_eq!(effective.get(CORE_CLIENTS_BOOTSTRAP_FEATURE), Some(&true));
@@ -52,13 +57,8 @@ fn e2e_absent_runtime_flag_stays_false_for_non_global_feature_even_if_app_and_us
     let app = BTreeMap::from([(feature.clone(), true)]);
     let user = BTreeMap::from([(feature.clone(), true)]);
 
-    let effective = resolve_effective_features(
-        &flags,
-        &app,
-        &user,
-        &BTreeMap::new(),
-        &BTreeMap::new(),
-    );
+    let effective =
+        resolve_effective_features(&flags, &app, &user, &BTreeMap::new(), &BTreeMap::new());
 
     assert_eq!(effective.get(&feature), Some(&false));
 }

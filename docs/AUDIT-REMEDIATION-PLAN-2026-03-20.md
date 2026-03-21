@@ -33,7 +33,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 - Requalifier la suite de tests:
   - renommage/recadrage des anciennes suites `spec_compatible_*`: couvert
-  - compléter la couverture sur authz matrix, policy runtime, anti-rejeu bout-en-bout
+- compléter la couverture sur storyboard et les flows d'approbation humain complet restants
 
 ## Ordre d'exécution recommandé
 
