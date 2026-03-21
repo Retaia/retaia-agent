@@ -34,7 +34,7 @@ pub enum CoreApiGatewayError {
     #[error("core API unauthorized")]
     Unauthorized,
     #[error("core API throttled")]
-    Throttled,
+    Throttled { retry_after_ms: Option<u64> },
     #[error("core API returned unexpected status {0}")]
     UnexpectedStatus(u16),
     #[error("core API transport error: {0}")]

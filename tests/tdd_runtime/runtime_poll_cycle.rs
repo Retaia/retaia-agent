@@ -105,7 +105,9 @@ fn tdd_runtime_poll_cycle_maps_unauthorized_to_auth_notification_snapshot() {
 fn tdd_runtime_poll_cycle_maps_throttled_to_backoff_plan_without_notifications() {
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
     let gateway = StubGateway {
-        result: Err(CoreApiGatewayError::Throttled),
+        result: Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
     };
 
     let outcome = run_runtime_poll_cycle(
@@ -126,10 +128,16 @@ fn tdd_runtime_poll_cycle_maps_throttled_to_backoff_plan_without_notifications()
 fn tdd_runtime_poll_cycle_repeated_429_increases_backoff_then_resets_after_success() {
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
     let gateway = SequenceGateway::new(vec![
-        Err(CoreApiGatewayError::Throttled),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
         Ok(vec![]),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
     ]);
 
     let first = run_runtime_poll_cycle(
@@ -182,6 +190,33 @@ fn tdd_runtime_poll_cycle_repeated_429_increases_backoff_then_resets_after_succe
     assert!(second_wait >= first_wait);
     assert!(fourth_wait >= 2_000);
     assert!(fourth_wait <= second_wait);
+}
+
+#[test]
+fn tdd_runtime_poll_cycle_uses_retry_after_when_gateway_provides_it() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let gateway = StubGateway {
+        result: Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: Some(9_000),
+        }),
+    };
+
+    let outcome = run_runtime_poll_cycle(
+        &mut session,
+        &gateway,
+        &NopSink,
+        PollEndpoint::Jobs,
+        5_000,
+        42,
+    );
+
+    let wait_ms = match outcome.plan {
+        RuntimeSyncPlan::SchedulePoll(decision) => decision.wait_ms,
+        other => panic!("unexpected plan: {other:?}"),
+    };
+
+    assert_eq!(outcome.status, RuntimePollCycleStatus::Throttled);
+    assert_eq!(wait_ms, 9_000);
 }
 
 #[test]
@@ -251,7 +286,9 @@ fn tdd_runtime_poll_cycle_long_sequence_success_throttle_unauthorized_transport_
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
     let gateway = SequenceGateway::new(vec![
         Ok(vec![]),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
         Err(CoreApiGatewayError::Unauthorized),
         Err(CoreApiGatewayError::Unauthorized),
         Err(CoreApiGatewayError::Transport("offline".to_string())),
@@ -337,7 +374,9 @@ fn tdd_runtime_poll_cycle_5xx_then_429_then_5xx_keeps_backoff_and_disconnect_obs
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
     let gateway = SequenceGateway::new(vec![
         Err(CoreApiGatewayError::UnexpectedStatus(503)),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
         Err(CoreApiGatewayError::UnexpectedStatus(502)),
         Ok(vec![]),
     ]);
@@ -387,7 +426,9 @@ fn tdd_runtime_poll_cycle_high_volume_mixed_pattern_re_emits_only_on_real_transi
         Err(CoreApiGatewayError::Unauthorized),
         Ok(vec![]),
         Err(CoreApiGatewayError::UnexpectedStatus(503)),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
         Ok(vec![]),
     ]);
     let sink = RecordingSink::default();

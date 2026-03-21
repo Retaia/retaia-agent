@@ -1,23 +1,27 @@
 #[cfg(feature = "core-api-client")]
-use std::sync::Arc;
+use chrono::{DateTime, Utc};
+#[cfg(feature = "core-api-client")]
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, RETRY_AFTER, USER_AGENT};
+#[cfg(feature = "core-api-client")]
+use serde::de::DeserializeOwned;
 
 #[cfg(feature = "core-api-client")]
 use crate::application::core_api_gateway::{
     CoreApiGateway, CoreApiGatewayError, CoreJobState, CoreJobView, CoreServerPolicy,
 };
 
-#[cfg(feature = "core-api-client")]
+#[cfg(all(test, feature = "core-api-client"))]
 use retaia_core_client::apis::Error as OpenApiError;
-#[cfg(feature = "core-api-client")]
+#[cfg(all(test, feature = "core-api-client"))]
 use retaia_core_client::apis::auth_api::AppPolicyGetError;
 #[cfg(feature = "core-api-client")]
-use retaia_core_client::apis::auth_api::{AuthApi, AuthApiClient};
-#[cfg(feature = "core-api-client")]
 use retaia_core_client::apis::configuration::Configuration;
-#[cfg(feature = "core-api-client")]
-use retaia_core_client::apis::jobs_api::{JobsApi, JobsApiClient, JobsGetError};
+#[cfg(all(test, feature = "core-api-client"))]
+use retaia_core_client::apis::jobs_api::JobsGetError;
 #[cfg(feature = "core-api-client")]
 use retaia_core_client::models::job::Status;
+#[cfg(feature = "core-api-client")]
+use retaia_core_client::models::{AppPolicyResponse, Job};
 
 #[cfg(feature = "core-api-client")]
 #[derive(Debug, Clone)]
@@ -35,15 +39,7 @@ impl OpenApiJobsGateway {
 #[cfg(feature = "core-api-client")]
 impl CoreApiGateway for OpenApiJobsGateway {
     fn poll_jobs(&self) -> Result<Vec<CoreJobView>, CoreApiGatewayError> {
-        let api = JobsApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|error| CoreApiGatewayError::Transport(error.to_string()))?;
-
-        let jobs = runtime
-            .block_on(api.jobs_get(None))
-            .map_err(map_openapi_jobs_error)?;
+        let jobs: Vec<Job> = self.get_json("/jobs")?;
 
         Ok(jobs
             .into_iter()
@@ -57,15 +53,7 @@ impl CoreApiGateway for OpenApiJobsGateway {
     }
 
     fn fetch_server_policy(&self) -> Result<CoreServerPolicy, CoreApiGatewayError> {
-        let api = AuthApiClient::new(Arc::new(self.configuration.clone()));
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|error| CoreApiGatewayError::Transport(error.to_string()))?;
-
-        let response = runtime
-            .block_on(api.app_policy_get(None, None))
-            .map_err(map_openapi_policy_error)?;
+        let response: AppPolicyResponse = self.get_json("/app/policy")?;
 
         Ok(CoreServerPolicy {
             min_poll_interval_seconds: response
@@ -78,6 +66,81 @@ impl CoreApiGateway for OpenApiJobsGateway {
 }
 
 #[cfg(feature = "core-api-client")]
+impl OpenApiJobsGateway {
+    fn get_json<T: DeserializeOwned>(&self, relative_path: &str) -> Result<T, CoreApiGatewayError> {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|error| CoreApiGatewayError::Transport(error.to_string()))?;
+
+        runtime.block_on(async {
+            let url = format!("{}{}", self.configuration.base_path, relative_path);
+            let mut request = self.configuration.client.get(url);
+
+            if let Some(user_agent) = self.configuration.user_agent.as_deref() {
+                request = request.header(USER_AGENT, user_agent);
+            }
+            if let Some(token) = self.configuration.oauth_access_token.as_deref() {
+                request = request.header(AUTHORIZATION, format!("Bearer {token}"));
+            } else if let Some(token) = self.configuration.bearer_access_token.as_deref() {
+                request = request.header(AUTHORIZATION, format!("Bearer {token}"));
+            }
+
+            let response = request
+                .send()
+                .await
+                .map_err(|error| CoreApiGatewayError::Transport(error.to_string()))?;
+
+            let status = response.status();
+            if status == reqwest::StatusCode::UNAUTHORIZED {
+                return Err(CoreApiGatewayError::Unauthorized);
+            }
+            if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                return Err(CoreApiGatewayError::Throttled {
+                    retry_after_ms: parse_retry_after_ms(response.headers()),
+                });
+            }
+            if !status.is_success() {
+                return Err(CoreApiGatewayError::UnexpectedStatus(status.as_u16()));
+            }
+
+            let content_type = response
+                .headers()
+                .get(CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or_default()
+                .to_string();
+            if !content_type.starts_with("application/json") {
+                return Err(CoreApiGatewayError::Transport(format!(
+                    "unexpected content type for {relative_path}: {content_type}"
+                )));
+            }
+
+            response
+                .json::<T>()
+                .await
+                .map_err(|error| CoreApiGatewayError::Transport(error.to_string()))
+        })
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn parse_retry_after_ms(headers: &HeaderMap) -> Option<u64> {
+    let raw = headers.get(RETRY_AFTER)?.to_str().ok()?.trim();
+    if let Ok(seconds) = raw.parse::<u64>() {
+        return Some(seconds.saturating_mul(1_000));
+    }
+
+    let retry_at = DateTime::parse_from_rfc2822(raw).ok()?.with_timezone(&Utc);
+    let now = Utc::now();
+    let millis = retry_at
+        .signed_duration_since(now)
+        .num_milliseconds()
+        .max(0) as u64;
+    Some(millis)
+}
+
+#[cfg(feature = "core-api-client")]
 fn map_job_state(status: Status) -> CoreJobState {
     match status {
         Status::Pending => CoreJobState::Pending,
@@ -87,12 +150,14 @@ fn map_job_state(status: Status) -> CoreJobState {
     }
 }
 
-#[cfg(feature = "core-api-client")]
+#[cfg(all(test, feature = "core-api-client"))]
 fn map_openapi_jobs_error(error: OpenApiError<JobsGetError>) -> CoreApiGatewayError {
     match error {
         OpenApiError::ResponseError(response) => match response.status.as_u16() {
             401 => CoreApiGatewayError::Unauthorized,
-            429 => CoreApiGatewayError::Throttled,
+            429 => CoreApiGatewayError::Throttled {
+                retry_after_ms: None,
+            },
             code => CoreApiGatewayError::UnexpectedStatus(code),
         },
         OpenApiError::Reqwest(err) => CoreApiGatewayError::Transport(err.to_string()),
@@ -101,12 +166,14 @@ fn map_openapi_jobs_error(error: OpenApiError<JobsGetError>) -> CoreApiGatewayEr
     }
 }
 
-#[cfg(feature = "core-api-client")]
+#[cfg(all(test, feature = "core-api-client"))]
 fn map_openapi_policy_error(error: OpenApiError<AppPolicyGetError>) -> CoreApiGatewayError {
     match error {
         OpenApiError::ResponseError(response) => match response.status.as_u16() {
             401 => CoreApiGatewayError::Unauthorized,
-            429 => CoreApiGatewayError::Throttled,
+            429 => CoreApiGatewayError::Throttled {
+                retry_after_ms: None,
+            },
             code => CoreApiGatewayError::UnexpectedStatus(code),
         },
         OpenApiError::Reqwest(err) => CoreApiGatewayError::Transport(err.to_string()),
@@ -117,9 +184,11 @@ fn map_openapi_policy_error(error: OpenApiError<AppPolicyGetError>) -> CoreApiGa
 
 #[cfg(all(test, feature = "core-api-client"))]
 mod tests {
-    use super::{map_openapi_jobs_error, map_openapi_policy_error};
+    use super::{map_openapi_jobs_error, map_openapi_policy_error, parse_retry_after_ms};
     use crate::application::core_api_gateway::CoreApiGatewayError;
+    use chrono::{Duration, Utc};
     use reqwest::StatusCode;
+    use reqwest::header::{HeaderMap, HeaderValue, RETRY_AFTER};
     use retaia_core_client::apis::Error as OpenApiError;
     use retaia_core_client::apis::ResponseContent;
     use retaia_core_client::apis::auth_api::AppPolicyGetError;
@@ -141,7 +210,9 @@ mod tests {
         );
         assert_eq!(
             map_openapi_jobs_error(response_error(429)),
-            CoreApiGatewayError::Throttled
+            CoreApiGatewayError::Throttled {
+                retry_after_ms: None,
+            }
         );
         assert_eq!(
             map_openapi_jobs_error(response_error(422)),
@@ -178,11 +249,34 @@ mod tests {
         );
         assert_eq!(
             map_openapi_policy_error(policy_response_error(429)),
-            CoreApiGatewayError::Throttled
+            CoreApiGatewayError::Throttled {
+                retry_after_ms: None,
+            }
         );
         assert_eq!(
             map_openapi_policy_error(policy_response_error(503)),
             CoreApiGatewayError::UnexpectedStatus(503)
         );
+    }
+
+    #[test]
+    fn tdd_openapi_jobs_gateway_parses_retry_after_seconds_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert(RETRY_AFTER, HeaderValue::from_static("12"));
+
+        assert_eq!(parse_retry_after_ms(&headers), Some(12_000));
+    }
+
+    #[test]
+    fn tdd_openapi_jobs_gateway_parses_retry_after_http_date_header() {
+        let mut headers = HeaderMap::new();
+        let retry_at = (Utc::now() + Duration::seconds(5)).to_rfc2822();
+        headers.insert(
+            RETRY_AFTER,
+            HeaderValue::from_str(&retry_at).expect("header"),
+        );
+
+        let parsed = parse_retry_after_ms(&headers).expect("retry-after parsed");
+        assert!(parsed <= 5_000);
     }
 }

@@ -137,30 +137,38 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
             match gateway.fetch_server_policy() {
                 Ok(policy) => {
                     session.apply_server_policy(policy);
-                    let _ = session.on_poll_success(
+                    let plan = session.on_poll_success(
                         retaia_agent::PollEndpoint::Policy,
                         POLICY_REFRESH_INTERVAL_MS,
                         false,
                     );
+                    next_policy_poll_at =
+                        now + Duration::from_millis(scheduled_wait_ms_from_plan(&plan));
                 }
-                Err(retaia_agent::CoreApiGatewayError::Throttled) => {
-                    let _ = session.on_poll_throttled_tracked(
+                Err(retaia_agent::CoreApiGatewayError::Throttled { retry_after_ms }) => {
+                    let signal = retry_after_ms
+                        .map(|wait_ms| retaia_agent::PollSignal::RetryAfter429 { wait_ms })
+                        .unwrap_or(retaia_agent::PollSignal::SlowDown429);
+                    let plan = session.on_poll_throttled_tracked(
                         retaia_agent::PollEndpoint::Policy,
-                        retaia_agent::PollSignal::SlowDown429,
+                        signal,
                         tick,
                     );
+                    next_policy_poll_at =
+                        now + Duration::from_millis(scheduled_wait_ms_from_plan(&plan));
                     warn!(tick, "runtime policy poll throttled");
                 }
                 Err(error) => {
-                    let _ = session.on_poll_success(
+                    let plan = session.on_poll_success(
                         retaia_agent::PollEndpoint::Policy,
                         POLICY_REFRESH_INTERVAL_MS,
                         false,
                     );
+                    next_policy_poll_at =
+                        now + Duration::from_millis(scheduled_wait_ms_from_plan(&plan));
                     warn!(tick, error = %error, "runtime policy poll failed");
                 }
             }
-            next_policy_poll_at = now + Duration::from_millis(POLICY_REFRESH_INTERVAL_MS);
         }
 
         let jobs_interval_ms = session.jobs_poll_interval_ms();
@@ -174,7 +182,8 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                 tick,
             );
             last_outcome_status = outcome.status;
-            next_jobs_poll_at = now + Duration::from_millis(jobs_interval_ms.max(100));
+            next_jobs_poll_at =
+                now + Duration::from_millis(scheduled_wait_ms_from_plan(&outcome.plan));
             Some(outcome)
         } else {
             if now >= next_jobs_poll_at {
@@ -444,6 +453,14 @@ fn outcome_label(status: RuntimePollCycleStatus) -> &'static str {
         RuntimePollCycleStatus::Success => "success",
         RuntimePollCycleStatus::Throttled => "throttled",
         RuntimePollCycleStatus::Degraded => "degraded",
+    }
+}
+
+fn scheduled_wait_ms_from_plan(plan: &retaia_agent::RuntimeSyncPlan) -> u64 {
+    match plan {
+        retaia_agent::RuntimeSyncPlan::SchedulePoll(decision) => decision.wait_ms.max(100),
+        retaia_agent::RuntimeSyncPlan::None
+        | retaia_agent::RuntimeSyncPlan::TriggerPollNow { .. } => 100,
     }
 }
 

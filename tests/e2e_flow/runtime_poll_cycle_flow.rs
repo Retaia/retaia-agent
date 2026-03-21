@@ -100,7 +100,9 @@ fn e2e_runtime_poll_cycle_long_sequence_keeps_notification_dedup_stable() {
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
     let gateway = SequenceGateway::new(vec![
         Ok(vec![]),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
         Err(CoreApiGatewayError::Unauthorized),
         Err(CoreApiGatewayError::Unauthorized),
         Err(CoreApiGatewayError::Transport("offline".to_string())),
@@ -153,7 +155,9 @@ fn e2e_runtime_poll_cycle_5xx_and_429_flow_keeps_disconnect_dedup_and_backoff_si
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
     let gateway = SequenceGateway::new(vec![
         Err(CoreApiGatewayError::UnexpectedStatus(503)),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
         Err(CoreApiGatewayError::UnexpectedStatus(500)),
         Ok(vec![]),
     ]);
@@ -198,7 +202,9 @@ fn e2e_runtime_poll_cycle_high_volume_mixed_pattern_stays_deterministic() {
         Err(CoreApiGatewayError::Unauthorized),
         Ok(vec![]),
         Err(CoreApiGatewayError::UnexpectedStatus(503)),
-        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }),
         Ok(vec![]),
     ]);
     let sink = MemorySink::default();

@@ -64,7 +64,7 @@ Historique notable sur `2026-03-20`:
 
 - `src/domain/runtime_orchestration.rs` applique maintenant une base canonique `2s` et garde bien le plafond `60s`.
 - Le runtime suit désormais un compteur de tentatives 429 par endpoint dans le moteur de sync, avec reset après succès.
-- Aucun support de `Retry-After` n'est implémenté.
+- La gateway HTTP jobs/policy lit désormais `Retry-After` sur `429` et le daemon réutilise ce `wait_ms` pour recalculer les prochains polls.
 - `src/bin/agent-runtime.rs` respecte désormais `max(5s, server_policy.min_poll_interval_seconds)` pour le polling `/jobs`.
 - `PollEndpoint::Policy` est désormais câblé au daemon; `PollEndpoint::DeviceFlow` reste non implémenté.
 
@@ -131,7 +131,6 @@ Historique notable sur `2026-03-20`:
 - Aucun test de rotation `POST /auth/clients/{client_id}/rotate-secret`.
 - Aucun test de flow browser vers `UI_WEB`.
 - Aucun test de support `Accept-Language` sur les appels REST du runtime agent.
-- Aucun test de prise en compte `Retry-After` sur 429.
 - Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
 - Aucun test de refus explicite `LOCK_REQUIRED`, `LOCK_INVALID`, `STALE_LOCK_TOKEN`.
 - Aucun test bout-en-bout de récupération `GET /app/policy` dans le daemon.

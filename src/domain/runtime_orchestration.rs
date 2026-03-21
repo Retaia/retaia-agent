@@ -46,6 +46,7 @@ pub enum PollEndpoint {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PollSignal {
     ContractInterval { interval_ms: u64 },
+    RetryAfter429 { wait_ms: u64 },
     TooManyAttempts429,
     SlowDown429,
 }
@@ -137,6 +138,11 @@ pub fn next_poll_decision(
             endpoint,
             wait_ms: interval_ms.max(MIN_INTERVAL_MS),
             reason: PollDecisionReason::ContractInterval,
+        },
+        PollSignal::RetryAfter429 { wait_ms } => PollDecision {
+            endpoint,
+            wait_ms: wait_ms.max(MIN_INTERVAL_MS),
+            reason: PollDecisionReason::BackoffFrom429,
         },
         PollSignal::TooManyAttempts429 | PollSignal::SlowDown429 => PollDecision {
             endpoint,

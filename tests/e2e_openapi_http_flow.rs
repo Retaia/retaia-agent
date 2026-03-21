@@ -25,6 +25,15 @@ struct MockExchange {
     body: &'static str,
 }
 
+struct MockExchangeWithHeaders {
+    method: &'static str,
+    path: &'static str,
+    status: u16,
+    content_type: &'static str,
+    headers: Vec<&'static str>,
+    body: &'static str,
+}
+
 fn runtime_config(base_url: &str) -> AgentRuntimeConfig {
     init_test_identity_env();
     AgentRuntimeConfig {
@@ -75,6 +84,48 @@ fn spawn_mock_server(exchanges: Vec<MockExchange>) -> (thread::JoinHandle<()>, S
                 exchange.status,
                 reason_phrase(exchange.status),
                 exchange.content_type,
+                exchange.body.len(),
+                exchange.body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
+        }
+    });
+
+    (handle, base_url)
+}
+
+fn spawn_mock_server_with_headers(
+    exchanges: Vec<MockExchangeWithHeaders>,
+) -> (thread::JoinHandle<()>, String) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let handle = thread::spawn(move || {
+        for exchange in exchanges {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut buffer = [0_u8; 4096];
+            let size = stream.read(&mut buffer).expect("read request");
+            let request = String::from_utf8_lossy(&buffer[..size]);
+            let first_line = request.lines().next().unwrap_or_default().to_string();
+            assert!(
+                first_line.starts_with(&format!("{} {}", exchange.method, exchange.path)),
+                "unexpected request line: {first_line}"
+            );
+
+            let extra_headers = if exchange.headers.is_empty() {
+                String::new()
+            } else {
+                format!("{}\r\n", exchange.headers.join("\r\n"))
+            };
+            let response = format!(
+                "HTTP/1.1 {} {}\r\nContent-Type: {}\r\n{}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
+                exchange.status,
+                reason_phrase(exchange.status),
+                exchange.content_type,
+                extra_headers,
                 exchange.body.len(),
                 exchange.body
             );
@@ -161,7 +212,36 @@ fn e2e_openapi_jobs_gateway_maps_429_from_real_http_response() {
     let client = build_core_api_client(&runtime_config(&base_url));
     let gateway = OpenApiJobsGateway::new(client);
     let error = gateway.poll_jobs().expect_err("must fail on 429");
-    assert_eq!(error, CoreApiGatewayError::Throttled);
+    assert_eq!(
+        error,
+        CoreApiGatewayError::Throttled {
+            retry_after_ms: None,
+        }
+    );
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_jobs_gateway_maps_retry_after_from_real_http_response() {
+    let (server, base_url) = spawn_mock_server_with_headers(vec![MockExchangeWithHeaders {
+        method: "GET",
+        path: "/api/v1/jobs",
+        status: 429,
+        content_type: "application/json",
+        headers: vec!["Retry-After: 7"],
+        body: r#"{"code":"TOO_MANY_REQUESTS"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiJobsGateway::new(client);
+    let error = gateway.poll_jobs().expect_err("must fail on 429");
+    assert_eq!(
+        error,
+        CoreApiGatewayError::Throttled {
+            retry_after_ms: Some(7_000),
+        }
+    );
 
     server.join().expect("server thread");
 }
@@ -183,7 +263,11 @@ fn e2e_openapi_jobs_gateway_maps_invalid_payload_to_transport_error() {
         .expect_err("must fail on invalid payload");
     match error {
         CoreApiGatewayError::Transport(message) => {
-            assert!(message.contains("invalid type") || message.contains("expected"))
+            assert!(
+                message.contains("invalid type")
+                    || message.contains("expected")
+                    || message.contains("error decoding response body")
+            )
         }
         other => panic!("unexpected error variant: {other:?}"),
     }
