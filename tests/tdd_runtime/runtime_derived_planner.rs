@@ -4,6 +4,7 @@ use retaia_agent::{
     ProxyGenerator, RuntimeDerivedPlanner, VideoProxyRequest, VideoThumbnailRequest,
 };
 use std::sync::Arc;
+use std::sync::Mutex;
 
 #[derive(Debug, Default)]
 struct WritingPreviewGenerator;
@@ -58,6 +59,94 @@ impl ProxyGenerator for WritingPreviewGenerator {
     ) -> Result<FactsPatchPayload, ProxyGenerationError> {
         Ok(FactsPatchPayload {
             duration_ms: Some(2_000),
+            media_format: Some("mp4".to_string()),
+            video_codec: Some("h264".to_string()),
+            audio_codec: Some("aac".to_string()),
+            width: Some(1920),
+            height: Some(1080),
+            fps: Some(25.0),
+        })
+    }
+}
+
+#[derive(Debug)]
+struct ThumbnailFactsGenerator {
+    duration_ms: i32,
+    thumbnail_requests: Mutex<Vec<VideoThumbnailRequest>>,
+}
+
+impl ThumbnailFactsGenerator {
+    fn new(duration_ms: i32) -> Self {
+        Self {
+            duration_ms,
+            thumbnail_requests: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn last_thumbnail_request(&self) -> VideoThumbnailRequest {
+        self.thumbnail_requests
+            .lock()
+            .expect("thumbnail requests lock")
+            .last()
+            .cloned()
+            .expect("thumbnail request")
+    }
+}
+
+impl ProxyGenerator for ThumbnailFactsGenerator {
+    fn generate_video_proxy(
+        &self,
+        request: &VideoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-video")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_proxy(
+        &self,
+        request: &AudioProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-audio")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_photo_proxy(
+        &self,
+        request: &PhotoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-photo")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_video_thumbnail(
+        &self,
+        request: &VideoThumbnailRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        self.thumbnail_requests
+            .lock()
+            .expect("thumbnail requests lock")
+            .push(request.clone());
+        std::fs::write(&request.output_path, b"generated-thumbnail")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_waveform(
+        &self,
+        request: &AudioWaveformRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(
+            &request.output_path,
+            br#"{"duration_ms":1000,"bucket_count":1000,"samples":[0.1,0.5]}"#,
+        )
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn extract_media_facts(
+        &self,
+        _input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        Ok(FactsPatchPayload {
+            duration_ms: Some(self.duration_ms),
             media_format: Some("mp4".to_string()),
             video_codec: Some("h264".to_string()),
             audio_codec: Some("aac".to_string()),
@@ -238,6 +327,56 @@ fn tdd_runtime_derived_planner_builds_thumbnail_upload_as_webp() {
         Some(&serde_json::json!("video_representative_v1"))
     );
     assert_eq!(metrics.get("thumbnail_count"), Some(&serde_json::json!(1)));
+}
+
+#[test]
+fn tdd_runtime_derived_planner_uses_short_video_representative_seek() {
+    let generator = Arc::new(ThumbnailFactsGenerator::new(90_000));
+    let planner = RuntimeDerivedPlanner::new(generator.clone(), Arc::new(WritingPreviewGenerator));
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-thumb-short".to_string(),
+        asset_uuid: "asset-thumb-short".to_string(),
+        lock_token: "lock-thumb-short".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GenerateThumbnails,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/short.mov".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("short.mov");
+    std::fs::write(&staged, b"generated-video").expect("write");
+
+    planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(generator.last_thumbnail_request().seek_ms, 9_000);
+}
+
+#[test]
+fn tdd_runtime_derived_planner_uses_long_video_representative_seek_with_twenty_second_cap() {
+    let generator = Arc::new(ThumbnailFactsGenerator::new(600_000));
+    let planner = RuntimeDerivedPlanner::new(generator.clone(), Arc::new(WritingPreviewGenerator));
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-thumb-long".to_string(),
+        asset_uuid: "asset-thumb-long".to_string(),
+        lock_token: "lock-thumb-long".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GenerateThumbnails,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/long.mov".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("long.mov");
+    std::fs::write(&staged, b"generated-video").expect("write");
+
+    planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(generator.last_thumbnail_request().seek_ms, 20_000);
 }
 
 #[test]
