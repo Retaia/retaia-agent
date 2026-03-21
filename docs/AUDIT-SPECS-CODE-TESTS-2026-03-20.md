@@ -42,7 +42,7 @@ Historique notable sur `2026-03-20`:
 ### 2.2 Runtime feature flags / policy
 
 - `GET /app/policy` est désormais câblé via la gateway OpenAPI jobs/policy et consommé dans la boucle daemon.
-- La boucle daemon recharge maintenant la policy toutes les `30s`, mais ce cadencement n'est pas encore couvert par un test dédié.
+- La boucle daemon recharge maintenant la policy toutes les `30s`, et un test dédié du binaire daemon couvre désormais ce cadencement.
 - Aucun respect du plancher 15s pour refresh anticipé n'est implémenté.
 - Le runtime bloque désormais `can_process_jobs()` tant que `features.core.jobs.runtime` n'est pas activé dans la policy Core.
 - `resolve_effective_features` prend désormais en compte `feature_flags` et `core_v1_global_features`, et traite correctement `feature_flags` absent comme `false`.
@@ -123,7 +123,6 @@ Historique notable sur `2026-03-20`:
 
 ### 3.4 Les tests ne couvrent pas des pans normatifs majeurs
 
-- Aucun test d'intégration de refresh périodique des flags/policy à `30s` dans la boucle daemon.
 - Aucun test de floor 15s sur refresh anticipé.
 - Un test e2e `agentctl` couvre désormais `POST /auth/clients/device/start` puis `POST /auth/clients/device/poll` jusqu'à approval et persistance locale des credentials techniques.
 - Un test e2e `agentctl` couvre désormais `POST /auth/clients/device/cancel` lors d'une interruption utilisateur du bootstrap.

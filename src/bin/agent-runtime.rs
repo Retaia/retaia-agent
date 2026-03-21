@@ -95,7 +95,6 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     const COMPACTION_INTERVAL_TICKS: u64 = 600;
     const KEEP_LAST_CYCLES: usize = 250_000;
     const KEEP_LAST_COMPLETED_JOBS: usize = 150_000;
-    const POLICY_REFRESH_INTERVAL_MS: u64 = 30_000;
 
     let lang = detect_language();
     #[cfg(feature = "core-api-client")]
@@ -139,11 +138,11 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                     session.apply_server_policy(policy);
                     let plan = session.on_poll_success(
                         retaia_agent::PollEndpoint::Policy,
-                        POLICY_REFRESH_INTERVAL_MS,
+                        policy_refresh_interval_ms(),
                         false,
                     );
                     next_policy_poll_at =
-                        now + Duration::from_millis(scheduled_wait_ms_from_plan(&plan));
+                        now + Duration::from_millis(policy_poll_wait_ms_from_plan(&plan));
                 }
                 Err(retaia_agent::CoreApiGatewayError::Throttled { retry_after_ms }) => {
                     let signal = retry_after_ms
@@ -155,17 +154,17 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                         tick,
                     );
                     next_policy_poll_at =
-                        now + Duration::from_millis(scheduled_wait_ms_from_plan(&plan));
+                        now + Duration::from_millis(policy_poll_wait_ms_from_plan(&plan));
                     warn!(tick, "runtime policy poll throttled");
                 }
                 Err(error) => {
                     let plan = session.on_poll_success(
                         retaia_agent::PollEndpoint::Policy,
-                        POLICY_REFRESH_INTERVAL_MS,
+                        policy_refresh_interval_ms(),
                         false,
                     );
                     next_policy_poll_at =
-                        now + Duration::from_millis(scheduled_wait_ms_from_plan(&plan));
+                        now + Duration::from_millis(policy_poll_wait_ms_from_plan(&plan));
                     warn!(tick, error = %error, "runtime policy poll failed");
                 }
             }
@@ -464,6 +463,14 @@ fn scheduled_wait_ms_from_plan(plan: &retaia_agent::RuntimeSyncPlan) -> u64 {
     }
 }
 
+fn policy_refresh_interval_ms() -> u64 {
+    30_000
+}
+
+fn policy_poll_wait_ms_from_plan(plan: &retaia_agent::RuntimeSyncPlan) -> u64 {
+    scheduled_wait_ms_from_plan(plan)
+}
+
 fn init_logging(level: LogLevel) {
     let level = match level {
         LogLevel::Error => "error",
@@ -625,5 +632,50 @@ fn main() {
             eprintln!("{}", t(lang, "runtime.feature_required"));
         }
         exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{policy_poll_wait_ms_from_plan, policy_refresh_interval_ms};
+    use retaia_agent::{
+        AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, LogLevel, PollEndpoint, RuntimeSession,
+        RuntimeSyncPlan,
+    };
+
+    fn settings() -> AgentRuntimeConfig {
+        AgentRuntimeConfig {
+            core_api_url: "https://core.retaia.local".to_string(),
+            ollama_url: "http://127.0.0.1:11434".to_string(),
+            auth_mode: AuthMode::Interactive,
+            technical_auth: None,
+            storage_mounts: std::collections::BTreeMap::new(),
+            max_parallel_jobs: 2,
+            log_level: LogLevel::Info,
+        }
+    }
+
+    #[test]
+    fn tdd_policy_refresh_interval_is_thirty_seconds() {
+        assert_eq!(policy_refresh_interval_ms(), 30_000);
+    }
+
+    #[test]
+    fn tdd_policy_success_plan_reuses_thirty_second_daemon_cadence() {
+        let mut session =
+            RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+        let plan =
+            session.on_poll_success(PollEndpoint::Policy, policy_refresh_interval_ms(), false);
+
+        match plan {
+            RuntimeSyncPlan::SchedulePoll(decision) => {
+                assert_eq!(decision.endpoint, PollEndpoint::Policy);
+                assert_eq!(
+                    policy_poll_wait_ms_from_plan(&RuntimeSyncPlan::SchedulePoll(decision)),
+                    30_000
+                );
+            }
+            other => panic!("unexpected plan: {other:?}"),
+        }
     }
 }
