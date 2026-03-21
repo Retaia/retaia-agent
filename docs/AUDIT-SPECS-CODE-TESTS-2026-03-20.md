@@ -130,7 +130,7 @@ Historique notable sur `2026-03-20`:
 - Aucun test de support `Accept-Language` sur les appels REST du runtime agent.
 - Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
 - Aucun test de refus explicite `LOCK_REQUIRED`, `LOCK_INVALID`, `STALE_LOCK_TOKEN`.
-- Aucun test bout-en-bout de récupération `GET /app/policy` dans le daemon.
+- Un test dédié du binaire daemon couvre désormais le chemin de récupération et d'application de `GET /app/policy`.
 - Aucun test de production réelle de preview/thumb/waveform via les générateurs du repo.
 - Aucun test ne vérifie qu'un `extract_facts` produit un patch utile.
 - Il n'y a toujours pas de test d'approval humain complet côté `UI_WEB`; la couverture actuelle s'arrête à l'ouverture du navigateur depuis `agentctl`.
