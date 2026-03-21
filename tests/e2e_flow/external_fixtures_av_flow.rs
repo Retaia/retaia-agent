@@ -176,3 +176,58 @@ fn e2e_external_fixture_flow_generates_audio_waveform_with_ffmpeg_when_available
         Some(1000)
     );
 }
+
+#[test]
+fn e2e_external_fixture_flow_extracts_audio_facts_with_ffprobe_when_available() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping external AV fixture audio facts test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.kind == "preview_audio" && entry.expected == "supported")
+        .expect("missing supported audio fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "audio fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert!(facts.duration_ms.unwrap_or_default() > 0);
+    assert!(facts.media_format.as_deref().is_some());
+    assert!(facts.audio_codec.as_deref().is_some());
+}
+
+#[test]
+fn e2e_external_fixture_flow_extracts_video_facts_with_ffprobe_when_available() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping external AV fixture video facts test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.kind == "preview_video" && entry.expected == "supported")
+        .expect("missing supported video fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "video fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert!(facts.duration_ms.unwrap_or_default() > 0);
+    assert!(facts.media_format.as_deref().is_some());
+    assert!(facts.video_codec.as_deref().is_some());
+    assert!(facts.width.unwrap_or_default() > 0);
+    assert!(facts.height.unwrap_or_default() > 0);
+    assert!(facts.fps.unwrap_or_default() > 0.0);
+}

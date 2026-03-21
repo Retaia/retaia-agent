@@ -61,3 +61,35 @@ fn bdd_given_supported_raw_external_fixtures_when_generating_photo_proxy_then_ou
         );
     }
 }
+
+#[test]
+fn bdd_given_supported_raw_external_fixtures_when_extracting_facts_then_dimensions_are_present() {
+    let entries: Vec<_> = load_manifest_entries()
+        .into_iter()
+        .filter(|entry| entry.kind == "raw_photo" && entry.expected == "supported")
+        .collect();
+    assert!(
+        !entries.is_empty(),
+        "expected at least one supported raw fixture"
+    );
+
+    let generator = RustPhotoProxyGenerator::default();
+
+    for entry in entries {
+        let facts = generator
+            .extract_media_facts(&entry.absolute_path().display().to_string())
+            .unwrap_or_else(|error| {
+                panic!(
+                    "raw fixture should expose facts: {} ({error:?})",
+                    entry.relative_path
+                )
+            });
+        assert!(
+            facts.duration_ms.is_none(),
+            "raw photo must not expose duration"
+        );
+        assert!(facts.width.unwrap_or_default() > 0);
+        assert!(facts.height.unwrap_or_default() > 0);
+        assert!(facts.media_format.as_deref().is_some());
+    }
+}
