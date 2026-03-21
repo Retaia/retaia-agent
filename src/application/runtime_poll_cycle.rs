@@ -40,7 +40,8 @@ pub fn run_runtime_poll_cycle<G: CoreApiGateway + ?Sized, S: NotificationSink>(
             }
         }
         Err(CoreApiGatewayError::Throttled) => {
-            let plan = session.on_poll_throttled(endpoint, PollSignal::SlowDown429, 1, jitter_seed);
+            let plan =
+                session.on_poll_throttled_tracked(endpoint, PollSignal::SlowDown429, jitter_seed);
             RuntimePollCycleOutcome {
                 status: RuntimePollCycleStatus::Throttled,
                 plan,

@@ -100,6 +100,16 @@ impl RuntimeSession {
             .on_poll_throttled(endpoint, signal, attempt, jitter_seed)
     }
 
+    pub fn on_poll_throttled_tracked(
+        &mut self,
+        endpoint: PollEndpoint,
+        signal: PollSignal,
+        jitter_seed: u64,
+    ) -> RuntimeSyncPlan {
+        self.loop_engine
+            .on_poll_throttled_tracked(endpoint, signal, jitter_seed)
+    }
+
     pub fn update_snapshot(&mut self, snapshot: RuntimeSnapshot) -> Vec<SystemNotification> {
         self.app.update_snapshot(snapshot)
     }

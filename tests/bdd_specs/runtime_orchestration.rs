@@ -20,7 +20,7 @@ fn bdd_given_contract_interval_when_polling_jobs_then_client_waits_exact_interva
 fn bdd_given_429_too_many_attempts_when_polling_policy_then_backoff_jitter_is_applied() {
     let decision = next_poll_decision(PollEndpoint::Policy, PollSignal::TooManyAttempts429, 3, 11);
     assert_eq!(decision.reason, PollDecisionReason::BackoffFrom429);
-    assert!(decision.wait_ms >= 4_000);
+    assert!(decision.wait_ms >= 8_000);
 }
 
 #[test]

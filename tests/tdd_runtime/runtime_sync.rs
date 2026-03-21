@@ -35,16 +35,32 @@ fn tdd_runtime_sync_ignores_mobile_push_for_non_mobile_target() {
 
 #[test]
 fn tdd_runtime_sync_exposes_contract_and_429_poll_decisions() {
-    let sync = RuntimeSyncState::new(ClientRuntimeTarget::UiWeb);
+    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::UiWeb);
 
     let contract = sync.poll_by_contract(PollEndpoint::Policy, 1_500);
     assert_eq!(contract.reason, PollDecisionReason::ContractInterval);
     assert_eq!(contract.wait_ms, 1_500);
 
     let throttled =
-        sync.poll_after_429(PollEndpoint::Policy, PollSignal::TooManyAttempts429, 3, 17);
+        sync.poll_after_429_tracked(PollEndpoint::Policy, PollSignal::TooManyAttempts429, 17);
     assert_eq!(throttled.reason, PollDecisionReason::BackoffFrom429);
-    assert!(throttled.wait_ms >= 4_000);
+    assert!(throttled.wait_ms >= 2_000);
+}
+
+#[test]
+fn tdd_runtime_sync_tracked_429_attempts_increase_and_reset_after_success() {
+    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::Agent);
+
+    let first = sync.poll_after_429_tracked(PollEndpoint::Jobs, PollSignal::SlowDown429, 7);
+    let second = sync.poll_after_429_tracked(PollEndpoint::Jobs, PollSignal::SlowDown429, 7);
+    let reset = sync.poll_by_contract_and_reset(PollEndpoint::Jobs, 5_000);
+    let after_reset = sync.poll_after_429_tracked(PollEndpoint::Jobs, PollSignal::SlowDown429, 7);
+
+    assert!(first.wait_ms >= 2_000);
+    assert!(second.wait_ms >= first.wait_ms);
+    assert_eq!(reset.wait_ms, 5_000);
+    assert!(after_reset.wait_ms >= 2_000);
+    assert!(after_reset.wait_ms <= second.wait_ms);
 }
 
 #[test]
