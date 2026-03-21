@@ -84,4 +84,17 @@ impl RuntimeLoopEngine {
         self.sync_coordinator
             .on_poll_throttled(endpoint, signal, attempt, jitter_seed)
     }
+
+    pub fn on_poll_throttled_tracked(
+        &mut self,
+        endpoint: PollEndpoint,
+        signal: PollSignal,
+        jitter_seed: u64,
+    ) -> RuntimeSyncPlan {
+        if !self.can_sync() {
+            return RuntimeSyncPlan::None;
+        }
+        self.sync_coordinator
+            .on_poll_throttled_tracked(endpoint, signal, jitter_seed)
+    }
 }

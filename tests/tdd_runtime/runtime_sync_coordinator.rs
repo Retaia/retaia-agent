@@ -59,7 +59,7 @@ fn tdd_runtime_sync_coordinator_schedules_contract_poll_and_updates_mutation_gat
 fn tdd_runtime_sync_coordinator_schedules_backoff_on_throttling() {
     let mut coordinator = RuntimeSyncCoordinator::new(ClientRuntimeTarget::Agent);
     let plan =
-        coordinator.on_poll_throttled(PollEndpoint::DeviceFlow, PollSignal::SlowDown429, 2, 9);
+        coordinator.on_poll_throttled_tracked(PollEndpoint::DeviceFlow, PollSignal::SlowDown429, 9);
     match plan {
         RuntimeSyncPlan::SchedulePoll(decision) => {
             assert_eq!(decision.reason, PollDecisionReason::BackoffFrom429);
@@ -67,4 +67,29 @@ fn tdd_runtime_sync_coordinator_schedules_backoff_on_throttling() {
         }
         other => panic!("unexpected plan: {other:?}"),
     }
+}
+
+#[test]
+fn tdd_runtime_sync_coordinator_tracked_429_attempts_reset_after_success() {
+    let mut coordinator = RuntimeSyncCoordinator::new(ClientRuntimeTarget::Agent);
+
+    let first =
+        coordinator.on_poll_throttled_tracked(PollEndpoint::Jobs, PollSignal::SlowDown429, 9);
+    let second =
+        coordinator.on_poll_throttled_tracked(PollEndpoint::Jobs, PollSignal::SlowDown429, 9);
+    let _ = coordinator.on_poll_success(PollEndpoint::Jobs, 5_000, true);
+    let third =
+        coordinator.on_poll_throttled_tracked(PollEndpoint::Jobs, PollSignal::SlowDown429, 9);
+
+    let extract_wait = |plan: RuntimeSyncPlan| match plan {
+        RuntimeSyncPlan::SchedulePoll(decision) => decision.wait_ms,
+        other => panic!("unexpected plan: {other:?}"),
+    };
+
+    let first_wait = extract_wait(first);
+    let second_wait = extract_wait(second);
+    let third_wait = extract_wait(third);
+
+    assert!(second_wait >= first_wait);
+    assert!(third_wait <= second_wait);
 }

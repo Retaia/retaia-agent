@@ -31,7 +31,7 @@ fn tdd_contract_interval_is_used_for_polling_decision() {
 fn tdd_429_signal_uses_backoff_with_jitter() {
     let throttled = next_poll_decision(PollEndpoint::Policy, PollSignal::SlowDown429, 2, 19);
     assert_eq!(throttled.reason, PollDecisionReason::BackoffFrom429);
-    assert!(throttled.wait_ms >= 2_000);
+    assert!(throttled.wait_ms >= 4_000);
 }
 
 #[test]
@@ -41,6 +41,7 @@ fn tdd_backoff_with_jitter_is_bounded_and_monotonic_by_attempt() {
     let third = throttled_backoff_with_jitter(2, 42);
     assert!(first <= second);
     assert!(second <= third);
+    assert!(first >= 2_000);
     assert!(third <= 60_000);
 }
 

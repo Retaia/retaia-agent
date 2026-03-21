@@ -69,7 +69,7 @@ fn e2e_specs_v1_too_many_attempts_429_backoff_and_contract_polling() {
         13,
     );
     assert_eq!(throttled.reason, PollDecisionReason::BackoffFrom429);
-    assert!(throttled.wait_ms >= 4_000);
+    assert!(throttled.wait_ms >= 8_000);
 
     let periodic = next_poll_decision(
         PollEndpoint::Policy,

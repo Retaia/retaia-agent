@@ -62,9 +62,8 @@ Historique notable sur `2026-03-20`:
 
 ### 2.5 Polling et backoff
 
-- `src/domain/runtime_orchestration.rs` fixe `BASE_BACKOFF_MS = 500`, alors que la spec impose une base de `2s`.
-- Le plafond `60s` est respecté, mais le profil complet canonique n'est pas respecté à cause de la base.
-- `src/application/runtime_poll_cycle.rs` appelle toujours `session.on_poll_throttled(..., attempt = 1, ...)`; le nombre de tentatives n'est pas suivi au fil des 429.
+- `src/domain/runtime_orchestration.rs` applique maintenant une base canonique `2s` et garde bien le plafond `60s`.
+- Le runtime suit désormais un compteur de tentatives 429 par endpoint dans le moteur de sync, avec reset après succès.
 - Aucun support de `Retry-After` n'est implémenté.
 - `src/bin/agent-runtime.rs` respecte désormais `max(5s, server_policy.min_poll_interval_seconds)` pour le polling `/jobs`.
 - `PollEndpoint::Policy` est désormais câblé au daemon; `PollEndpoint::DeviceFlow` reste non implémenté.

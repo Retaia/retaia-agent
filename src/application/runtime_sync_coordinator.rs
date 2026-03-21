@@ -51,7 +51,10 @@ impl RuntimeSyncCoordinator {
         compatible_for_mutation: bool,
     ) -> RuntimeSyncPlan {
         self.sync.observe_polled_state(compatible_for_mutation);
-        RuntimeSyncPlan::SchedulePoll(self.sync.poll_by_contract(endpoint, contract_interval_ms))
+        RuntimeSyncPlan::SchedulePoll(
+            self.sync
+                .poll_by_contract_and_reset(endpoint, contract_interval_ms),
+        )
     }
 
     pub fn on_poll_throttled(
@@ -65,6 +68,19 @@ impl RuntimeSyncCoordinator {
             endpoint,
             signal,
             attempt,
+            jitter_seed,
+        ))
+    }
+
+    pub fn on_poll_throttled_tracked(
+        &mut self,
+        endpoint: PollEndpoint,
+        signal: PollSignal,
+        jitter_seed: u64,
+    ) -> RuntimeSyncPlan {
+        RuntimeSyncPlan::SchedulePoll(self.sync.poll_after_429_tracked(
+            endpoint,
+            signal,
             jitter_seed,
         ))
     }

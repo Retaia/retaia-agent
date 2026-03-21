@@ -20,8 +20,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - tests CLI/daemon pour ces flows
 
 - Corriger le backoff/polling:
-  - base 429 à `2s`
-  - suivi réel du nombre de tentatives
   - prise en compte de `Retry-After`
   - brancher aussi `PollEndpoint::DeviceFlow`
 
@@ -68,7 +66,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 - Lot 3: sécurité locale et polling
   - migration config
-  - backoff 429
   - Retry-After
   - min poll interval
 

@@ -1,8 +1,8 @@
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, CoreApiGateway, CoreApiGatewayError,
     CoreJobState, CoreJobView, LogLevel, NotificationBridgeError, NotificationMessage,
-    NotificationSink, PollEndpoint, RuntimePollCycleStatus, RuntimeSession, SystemNotification,
-    run_runtime_poll_cycle,
+    NotificationSink, PollEndpoint, RuntimePollCycleStatus, RuntimeSession, RuntimeSyncPlan,
+    SystemNotification, run_runtime_poll_cycle,
 };
 use std::cell::RefCell;
 
@@ -120,6 +120,68 @@ fn tdd_runtime_poll_cycle_maps_throttled_to_backoff_plan_without_notifications()
     assert_eq!(outcome.status, RuntimePollCycleStatus::Throttled);
     assert!(outcome.report.is_none());
     assert!(format!("{:?}", outcome.plan).contains("SchedulePoll"));
+}
+
+#[test]
+fn tdd_runtime_poll_cycle_repeated_429_increases_backoff_then_resets_after_success() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    let gateway = SequenceGateway::new(vec![
+        Err(CoreApiGatewayError::Throttled),
+        Err(CoreApiGatewayError::Throttled),
+        Ok(vec![]),
+        Err(CoreApiGatewayError::Throttled),
+    ]);
+
+    let first = run_runtime_poll_cycle(
+        &mut session,
+        &gateway,
+        &NopSink,
+        PollEndpoint::Jobs,
+        5_000,
+        42,
+    );
+    let second = run_runtime_poll_cycle(
+        &mut session,
+        &gateway,
+        &NopSink,
+        PollEndpoint::Jobs,
+        5_000,
+        42,
+    );
+    let third = run_runtime_poll_cycle(
+        &mut session,
+        &gateway,
+        &NopSink,
+        PollEndpoint::Jobs,
+        5_000,
+        42,
+    );
+    let fourth = run_runtime_poll_cycle(
+        &mut session,
+        &gateway,
+        &NopSink,
+        PollEndpoint::Jobs,
+        5_000,
+        42,
+    );
+
+    let extract_wait = |plan: RuntimeSyncPlan| match plan {
+        RuntimeSyncPlan::SchedulePoll(decision) => decision.wait_ms,
+        other => panic!("unexpected plan: {other:?}"),
+    };
+
+    let first_wait = extract_wait(first.plan);
+    let second_wait = extract_wait(second.plan);
+    let fourth_wait = extract_wait(fourth.plan);
+
+    assert_eq!(first.status, RuntimePollCycleStatus::Throttled);
+    assert_eq!(second.status, RuntimePollCycleStatus::Throttled);
+    assert_eq!(third.status, RuntimePollCycleStatus::Success);
+    assert_eq!(fourth.status, RuntimePollCycleStatus::Throttled);
+    assert!(first_wait >= 2_000);
+    assert!(second_wait >= first_wait);
+    assert!(fourth_wait >= 2_000);
+    assert!(fourth_wait <= second_wait);
 }
 
 #[test]

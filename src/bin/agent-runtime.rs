@@ -144,10 +144,9 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                     );
                 }
                 Err(retaia_agent::CoreApiGatewayError::Throttled) => {
-                    let _ = session.on_poll_throttled(
+                    let _ = session.on_poll_throttled_tracked(
                         retaia_agent::PollEndpoint::Policy,
                         retaia_agent::PollSignal::SlowDown429,
-                        1,
                         tick,
                     );
                     warn!(tick, "runtime policy poll throttled");

@@ -36,7 +36,7 @@ pub enum PushHintDecision {
     TriggerPoll,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PollEndpoint {
     Jobs,
     Policy,
@@ -64,7 +64,7 @@ pub struct PollDecision {
 }
 
 const MIN_INTERVAL_MS: u64 = 100;
-const BASE_BACKOFF_MS: u64 = 500;
+const BASE_BACKOFF_MS: u64 = 2_000;
 const MAX_BACKOFF_MS: u64 = 60_000;
 
 pub fn runtime_orchestration_mode() -> RuntimeOrchestrationMode {

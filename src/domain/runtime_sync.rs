@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::domain::runtime_orchestration::{
     ClientRuntimeTarget, PollDecision, PollEndpoint, PollSignal, PushChannel, PushHint,
@@ -17,6 +17,7 @@ pub struct RuntimeSyncState {
     target: ClientRuntimeTarget,
     seen_hint_ids: BTreeSet<String>,
     last_compatible_state_read: bool,
+    throttle_attempts_by_endpoint: BTreeMap<PollEndpoint, u32>,
 }
 
 impl RuntimeSyncState {
@@ -25,6 +26,7 @@ impl RuntimeSyncState {
             target,
             seen_hint_ids: BTreeSet::new(),
             last_compatible_state_read: false,
+            throttle_attempts_by_endpoint: BTreeMap::new(),
         }
     }
 
@@ -60,6 +62,15 @@ impl RuntimeSyncState {
         next_poll_decision(endpoint, PollSignal::ContractInterval { interval_ms }, 0, 0)
     }
 
+    pub fn poll_by_contract_and_reset(
+        &mut self,
+        endpoint: PollEndpoint,
+        interval_ms: u64,
+    ) -> PollDecision {
+        self.throttle_attempts_by_endpoint.remove(&endpoint);
+        self.poll_by_contract(endpoint, interval_ms)
+    }
+
     pub fn poll_after_429(
         &self,
         endpoint: PollEndpoint,
@@ -68,6 +79,20 @@ impl RuntimeSyncState {
         jitter_seed: u64,
     ) -> PollDecision {
         next_poll_decision(endpoint, signal, attempt, jitter_seed)
+    }
+
+    pub fn poll_after_429_tracked(
+        &mut self,
+        endpoint: PollEndpoint,
+        signal: PollSignal,
+        jitter_seed: u64,
+    ) -> PollDecision {
+        let attempt = self
+            .throttle_attempts_by_endpoint
+            .entry(endpoint)
+            .and_modify(|value| *value = value.saturating_add(1))
+            .or_insert(1);
+        next_poll_decision(endpoint, signal, *attempt, jitter_seed)
     }
 
     pub fn observe_polled_state(&mut self, compatible_for_mutation: bool) {
