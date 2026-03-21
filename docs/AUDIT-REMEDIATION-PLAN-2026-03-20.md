@@ -11,10 +11,10 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 ## Priorité P1
 
 - Implémenter le bootstrap agent conforme:
-  - brancher aussi `PollEndpoint::DeviceFlow` dans le daemon
+  - bootstrap daemon désormais câblé
 
 - Corriger le backoff/polling:
-  - rien de bloquant restant ici hors device flow daemon
+  - rien de bloquant restant sur ce bloc
 
 ## Priorité P2
 
@@ -51,7 +51,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - tests associés
 
 - Lot 2: policy et bootstrap
-  - device flow daemon
+  - couvert
 
 - Lot 3: sécurité locale et polling
   - migration config

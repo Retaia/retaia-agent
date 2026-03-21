@@ -53,7 +53,7 @@ Historique notable sur `2026-03-20`:
 - `src/bin/agentctl.rs` et `src/infrastructure/technical_auth.rs` implémentent désormais le bootstrap device flow CLI via `POST /auth/clients/device/start`, `POST /auth/clients/device/poll` et `POST /auth/clients/device/cancel`, avec persistance du `client_id` en config et du `secret_key` dans le secret store local après approval.
 - `src/bin/agentctl.rs` contient désormais un ouvreur de browser natif pour lancer l'approval humain vers `UI_WEB` via `verification_uri_complete`.
 - `src/bin/agentctl.rs` et `src/infrastructure/technical_auth.rs` implémentent désormais la rotation CLI `POST /auth/clients/{client_id}/rotate-secret`, avec mise à jour du secret store local.
-- `PollEndpoint::DeviceFlow` reste non implémenté dans le daemon runtime; le flow actuellement présent est un bootstrap CLI synchrone.
+- `src/bin/agent-runtime.rs` câble désormais aussi `PollEndpoint::DeviceFlow` dans le daemon: démarrage du bootstrap browser-assisted en mode interactif, polling du `device_code`, persistance du `technical_auth` à l'approval, puis reprise du cycle runtime normal avec gateways reconstruits.
 
 ### 2.4 MCP et acteurs autorisés
 
@@ -66,7 +66,7 @@ Historique notable sur `2026-03-20`:
 - Le runtime suit désormais un compteur de tentatives 429 par endpoint dans le moteur de sync, avec reset après succès.
 - La gateway HTTP jobs/policy lit désormais `Retry-After` sur `429` et le daemon réutilise ce `wait_ms` pour recalculer les prochains polls.
 - `src/bin/agent-runtime.rs` respecte désormais `max(5s, server_policy.min_poll_interval_seconds)` pour le polling `/jobs`.
-- `PollEndpoint::Policy` est désormais câblé au daemon; `PollEndpoint::DeviceFlow` reste non implémenté.
+- `PollEndpoint::Policy` et `PollEndpoint::DeviceFlow` sont désormais câblés au daemon.
 
 ### 2.6 Processing réel vs processing annoncé
 
@@ -147,14 +147,13 @@ Historique notable sur `2026-03-20`:
 - Le README annonce "Derived-processing v1 runtime support"; la génération effective des previews est désormais branchée, mais les thumbnails, la waveform, les facts et les références Core stables restent incomplètes.
 - Le README annonce "Strict contract alignment with specs/", mais le policy polling, la waveform obligatoire et la génération effective des previews/facts divergent encore au niveau du code et des tests.
 - Le README annonce le même contrat de configuration GUI/CLI; en pratique le build par défaut ne livre pas la GUI.
-- Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, et le device flow normatif n'est encore branché que côté CLI, pas dans la boucle daemon.
+- Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, mais le device flow normatif est désormais branché aussi dans la boucle daemon.
 - Les tests passent en mode par défaut, mais ce succès reflète surtout le contrat local actuel, pas la conformité aux specs normatives lues.
 
 ## 5. Synthèse courte
 
 Le repo est partiellement structuré pour la spec v1, mais il n'est pas aligné sur plusieurs axes contractuels centraux:
 
-- device flow daemon non implémenté
 - couverture incomplète sur certains invariants policy/device flow
 - runtime de processing encore partiellement incomplet sur storyboard et sélection temporelle fine
 - tests qui valident plusieurs comportements contraires à la spec
