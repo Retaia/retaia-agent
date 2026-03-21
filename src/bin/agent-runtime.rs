@@ -95,6 +95,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     const COMPACTION_INTERVAL_TICKS: u64 = 600;
     const KEEP_LAST_CYCLES: usize = 250_000;
     const KEEP_LAST_COMPLETED_JOBS: usize = 150_000;
+    const POLICY_REFRESH_INTERVAL_MS: u64 = 30_000;
 
     let lang = detect_language();
     #[cfg(feature = "core-api-client")]
@@ -104,6 +105,8 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     let planner = RuntimeDerivedPlanner::default();
     let sink = select_notification_sink(notification_sink_profile_for_target(session.target()));
     let sleep_duration = Duration::from_millis(tick_ms.max(100));
+    let mut next_policy_poll_at = Instant::now();
+    let mut next_jobs_poll_at = Instant::now();
     let mut history_store = match RuntimeHistoryStore::open_default() {
         Ok(store) => Some(store),
         Err(error) => {
@@ -118,6 +121,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     let mut last_job: Option<DaemonLastJobStats> = None;
     let mut last_cycle_fingerprint: Option<String> = None;
     let mut last_persisted_cycle_tick: u64 = 0;
+    let mut last_outcome_status = RuntimePollCycleStatus::Success;
     let shutdown_requested = install_shutdown_signal()?;
     let mut shutdown_log_emitted = false;
     info!(
@@ -128,19 +132,62 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
     );
     loop {
         tick += 1;
-        let outcome = run_runtime_poll_cycle(
-            session,
-            gateway.as_ref(),
-            &sink,
-            retaia_agent::PollEndpoint::Jobs,
-            tick_ms.max(100),
-            tick,
-        );
+        let now = Instant::now();
+        if now >= next_policy_poll_at {
+            match gateway.fetch_server_policy() {
+                Ok(policy) => {
+                    session.apply_server_policy(policy);
+                    let _ = session.on_poll_success(
+                        retaia_agent::PollEndpoint::Policy,
+                        POLICY_REFRESH_INTERVAL_MS,
+                        false,
+                    );
+                }
+                Err(retaia_agent::CoreApiGatewayError::Throttled) => {
+                    let _ = session.on_poll_throttled(
+                        retaia_agent::PollEndpoint::Policy,
+                        retaia_agent::PollSignal::SlowDown429,
+                        1,
+                        tick,
+                    );
+                    warn!(tick, "runtime policy poll throttled");
+                }
+                Err(error) => {
+                    let _ = session.on_poll_success(
+                        retaia_agent::PollEndpoint::Policy,
+                        POLICY_REFRESH_INTERVAL_MS,
+                        false,
+                    );
+                    warn!(tick, error = %error, "runtime policy poll failed");
+                }
+            }
+            next_policy_poll_at = now + Duration::from_millis(POLICY_REFRESH_INTERVAL_MS);
+        }
+
+        let jobs_interval_ms = session.jobs_poll_interval_ms();
+        let outcome = if now >= next_jobs_poll_at && session.can_process_jobs() {
+            let outcome = run_runtime_poll_cycle(
+                session,
+                gateway.as_ref(),
+                &sink,
+                retaia_agent::PollEndpoint::Jobs,
+                jobs_interval_ms,
+                tick,
+            );
+            last_outcome_status = outcome.status;
+            next_jobs_poll_at = now + Duration::from_millis(jobs_interval_ms.max(100));
+            Some(outcome)
+        } else {
+            if now >= next_jobs_poll_at {
+                next_jobs_poll_at = now + Duration::from_millis(jobs_interval_ms.max(100));
+            }
+            None
+        };
         let status = session.status_view();
         if let Some(job) = status.current_job {
             info!(
                 tick,
-                outcome = ?outcome.status,
+                outcome = ?last_outcome_status,
                 run_state = ?status.run_state,
                 job_id = %job.job_id,
                 asset_uuid = %job.asset_uuid,
@@ -153,33 +200,35 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
         } else {
             info!(
                 tick,
-                outcome = ?outcome.status,
+                outcome = ?last_outcome_status,
                 run_state = ?status.run_state,
                 "{}",
                 t(lang, "runtime.cycle")
             );
         }
-        if outcome.status == RuntimePollCycleStatus::Throttled {
+        if outcome.as_ref().map(|cycle| cycle.status) == Some(RuntimePollCycleStatus::Throttled) {
             warn!(tick, "{}", t(lang, "runtime.throttled"));
         }
-        match process_next_pending_job(
-            session,
-            gateway.as_ref(),
-            derived_gateway.as_ref(),
-            &planner,
-        ) {
-            Ok(Some(report)) => {
-                info!(
-                    tick,
-                    job_id = %report.job_id,
-                    asset_uuid = %report.asset_uuid,
-                    uploads = report.upload_count,
-                    "runtime processed one pending job"
-                );
-            }
-            Ok(None) => {}
-            Err(error) => {
-                warn!(tick, error = %error, "runtime processing pass failed");
+        if outcome.is_some() {
+            match process_next_pending_job(
+                session,
+                gateway.as_ref(),
+                derived_gateway.as_ref(),
+                &planner,
+            ) {
+                Ok(Some(report)) => {
+                    info!(
+                        tick,
+                        job_id = %report.job_id,
+                        asset_uuid = %report.asset_uuid,
+                        uploads = report.upload_count,
+                        "runtime processed one pending job"
+                    );
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    warn!(tick, error = %error, "runtime processing pass failed");
+                }
             }
         }
         let status = session.status_view();
@@ -271,7 +320,7 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
         }
         if let Some(store) = history_store.as_mut() {
             let fingerprint = cycle_fingerprint(
-                outcome.status,
+                last_outcome_status,
                 status.run_state,
                 stats.current_job.as_ref().map(|job| {
                     (
@@ -286,13 +335,13 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
                 .map(|previous| previous != &fingerprint)
                 .unwrap_or(true);
             let should_persist = changed
-                || !matches!(outcome.status, RuntimePollCycleStatus::Success)
+                || !matches!(last_outcome_status, RuntimePollCycleStatus::Success)
                 || tick.saturating_sub(last_persisted_cycle_tick) >= 60;
             if should_persist {
                 let entry = DaemonCycleEntry {
                     ts_unix_ms: stats.updated_at_unix_ms,
                     tick,
-                    outcome: outcome_label(outcome.status).to_string(),
+                    outcome: outcome_label(last_outcome_status).to_string(),
                     run_state: run_state_label(status.run_state).to_string(),
                     job_id: stats.current_job.as_ref().map(|job| job.job_id.clone()),
                     asset_uuid: stats.current_job.as_ref().map(|job| job.asset_uuid.clone()),

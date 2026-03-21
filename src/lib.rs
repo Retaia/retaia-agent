@@ -12,7 +12,7 @@ pub use application::agent_runtime_app::{
 };
 pub use application::config_repository::{ConfigRepository, ConfigRepositoryError};
 pub use application::core_api_gateway::{
-    CoreApiGateway, CoreApiGatewayError, CoreJobState, CoreJobView,
+    CoreApiGateway, CoreApiGatewayError, CoreJobState, CoreJobView, CoreServerPolicy,
     filter_jobs_for_declared_capabilities, poll_runtime_snapshot,
     runtime_snapshot_from_polled_jobs,
 };
@@ -75,7 +75,10 @@ pub use domain::configuration::{
     supported_config_fields, validate_config,
 };
 pub use domain::feature_flags::{
-    ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,
+    CORE_ASSETS_LIFECYCLE_FEATURE, CORE_AUTH_FEATURE, CORE_CLIENTS_BOOTSTRAP_FEATURE,
+    CORE_DERIVED_ACCESS_FEATURE, CORE_JOBS_RUNTIME_FEATURE, CORE_POLICY_RUNTIME_FEATURE,
+    CORE_SEARCH_QUERY_FEATURE, ClientKind, can_issue_client_token, can_process_jobs,
+    core_v1_global_features, resolve_effective_features,
 };
 pub use domain::runtime_control::{
     RuntimeControlAvailability, RuntimeControlCommand, apply_runtime_control,

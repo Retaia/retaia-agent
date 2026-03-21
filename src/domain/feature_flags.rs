@@ -7,13 +7,38 @@ pub enum ClientKind {
     UiMobile,
 }
 
+pub const CORE_POLICY_RUNTIME_FEATURE: &str = "features.core.policy.runtime";
+pub const CORE_JOBS_RUNTIME_FEATURE: &str = "features.core.jobs.runtime";
+pub const CORE_DERIVED_ACCESS_FEATURE: &str = "features.core.derived.access";
+pub const CORE_CLIENTS_BOOTSTRAP_FEATURE: &str = "features.core.clients.bootstrap";
+pub const CORE_AUTH_FEATURE: &str = "features.core.auth";
+pub const CORE_ASSETS_LIFECYCLE_FEATURE: &str = "features.core.assets.lifecycle";
+pub const CORE_SEARCH_QUERY_FEATURE: &str = "features.core.search.query";
+
+pub fn core_v1_global_features() -> BTreeSet<String> {
+    [
+        CORE_AUTH_FEATURE,
+        CORE_ASSETS_LIFECYCLE_FEATURE,
+        CORE_JOBS_RUNTIME_FEATURE,
+        CORE_SEARCH_QUERY_FEATURE,
+        CORE_POLICY_RUNTIME_FEATURE,
+        CORE_DERIVED_ACCESS_FEATURE,
+        CORE_CLIENTS_BOOTSTRAP_FEATURE,
+    ]
+    .into_iter()
+    .map(ToString::to_string)
+    .collect()
+}
+
 pub fn resolve_effective_features(
+    feature_flags: &BTreeMap<String, bool>,
     app_feature_enabled: &BTreeMap<String, bool>,
     user_feature_enabled: &BTreeMap<String, bool>,
     dependencies: &BTreeMap<String, Vec<String>>,
     disable_escalation: &BTreeMap<String, Vec<String>>,
 ) -> BTreeMap<String, bool> {
     let mut keys: BTreeSet<String> = BTreeSet::new();
+    keys.extend(feature_flags.keys().cloned());
     keys.extend(app_feature_enabled.keys().cloned());
     keys.extend(user_feature_enabled.keys().cloned());
     keys.extend(dependencies.keys().cloned());
@@ -24,13 +49,15 @@ pub fn resolve_effective_features(
             .values()
             .flat_map(|children| children.iter().cloned()),
     );
+    keys.extend(core_v1_global_features());
 
     let mut effective: BTreeMap<String, bool> = BTreeMap::new();
     for key in keys {
+        let runtime_flag = feature_flags.get(&key).copied().unwrap_or(false);
         let app_value = app_feature_enabled.get(&key).copied().unwrap_or(true);
         // Spec invariant: if a key is absent in user preferences, it is treated as true.
         let user_value = user_feature_enabled.get(&key).copied().unwrap_or(true);
-        effective.insert(key, app_value && user_value);
+        effective.insert(key, runtime_flag && app_value && user_value);
     }
 
     loop {
@@ -60,6 +87,10 @@ pub fn resolve_effective_features(
         if !changed {
             break;
         }
+    }
+
+    for key in core_v1_global_features() {
+        effective.insert(key, true);
     }
 
     effective

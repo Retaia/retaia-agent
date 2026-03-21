@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use image::{Rgb, RgbImage};
 use retaia_agent::{
-    AgentRuntimeConfig, AuthMode, ClaimedDerivedJob, CoreApiGateway, CoreApiGatewayError,
-    CoreJobState, CoreJobView, DerivedJobType, DerivedProcessingError, DerivedProcessingGateway,
-    DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart, HeartbeatReceipt, LogLevel,
-    RuntimeDerivedPlanner, RuntimeSession, SubmitDerivedPayload, UploadedDerivedPart,
-    process_next_pending_job,
+    AgentRuntimeConfig, AuthMode, CORE_JOBS_RUNTIME_FEATURE, ClaimedDerivedJob, CoreApiGateway,
+    CoreApiGatewayError, CoreJobState, CoreJobView, CoreServerPolicy, DerivedJobType,
+    DerivedProcessingError, DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit,
+    DerivedUploadPart, HeartbeatReceipt, LogLevel, RuntimeDerivedPlanner, RuntimeSession,
+    SubmitDerivedPayload, UploadedDerivedPart, process_next_pending_job,
 };
 
 fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
@@ -148,6 +148,13 @@ fn tdd_runtime_job_worker_processes_first_pending_job_with_source_staging() {
     };
     let mut session =
         RuntimeSession::new(retaia_agent::ClientRuntimeTarget::Agent, settings).expect("session");
+    session.apply_server_policy(CoreServerPolicy {
+        min_poll_interval_seconds: Some(5),
+        feature_flags: std::collections::BTreeMap::from([(
+            CORE_JOBS_RUNTIME_FEATURE.to_string(),
+            true,
+        )]),
+    });
     let _ = session.on_poll_success(retaia_agent::PollEndpoint::Jobs, 5_000, true);
 
     let core = SinglePendingGateway;
@@ -208,6 +215,13 @@ fn tdd_runtime_job_worker_refuses_processing_for_non_agent_targets() {
     };
     let mut session =
         RuntimeSession::new(retaia_agent::ClientRuntimeTarget::UiWeb, settings).expect("session");
+    session.apply_server_policy(CoreServerPolicy {
+        min_poll_interval_seconds: Some(5),
+        feature_flags: std::collections::BTreeMap::from([(
+            CORE_JOBS_RUNTIME_FEATURE.to_string(),
+            true,
+        )]),
+    });
     let _ = session.on_poll_success(retaia_agent::PollEndpoint::Jobs, 5_000, true);
 
     let core = SinglePendingGateway;
