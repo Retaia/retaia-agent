@@ -144,6 +144,12 @@ pub enum DerivedProcessingError {
     MissingLockToken,
     #[error("claimed job missing fencing token")]
     MissingFencingToken,
+    #[error("core API lock required")]
+    LockRequired,
+    #[error("core API lock invalid")]
+    LockInvalid,
+    #[error("core API stale lock token")]
+    StaleLockToken,
     #[error("numeric conversion overflow: {0}")]
     NumericOverflow(String),
 }

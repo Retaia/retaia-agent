@@ -427,17 +427,28 @@ fn map_facts_patch(
 #[cfg(feature = "core-api-client")]
 fn require_success(
     response: reqwest::blocking::Response,
-    map_status: fn(StatusCode) -> DerivedProcessingError,
+    map_status: fn(StatusCode, &str) -> DerivedProcessingError,
 ) -> Result<reqwest::blocking::Response, DerivedProcessingError> {
     let status = response.status();
     if status.is_success() {
         return Ok(response);
     }
-    Err(map_status(status))
+    let body = response.text().unwrap_or_default();
+    Err(map_status(status, &body))
 }
 
 #[cfg(feature = "core-api-client")]
-fn map_claim_status(status: StatusCode) -> DerivedProcessingError {
+fn map_claim_status(status: StatusCode, body: &str) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        429 => DerivedProcessingError::Throttled,
+        409 | 412 => map_lock_error(status, body),
+        code => DerivedProcessingError::UnexpectedStatus(code),
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_asset_get_status(status: StatusCode, _body: &str) -> DerivedProcessingError {
     match status.as_u16() {
         401 => DerivedProcessingError::Unauthorized,
         429 => DerivedProcessingError::Throttled,
@@ -446,52 +457,64 @@ fn map_claim_status(status: StatusCode) -> DerivedProcessingError {
 }
 
 #[cfg(feature = "core-api-client")]
-fn map_asset_get_status(status: StatusCode) -> DerivedProcessingError {
+fn map_heartbeat_status(status: StatusCode, body: &str) -> DerivedProcessingError {
+    match status.as_u16() {
+        401 => DerivedProcessingError::Unauthorized,
+        409 | 412 => map_lock_error(status, body),
+        code => DerivedProcessingError::UnexpectedStatus(code),
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_submit_status(status: StatusCode, body: &str) -> DerivedProcessingError {
     match status.as_u16() {
         401 => DerivedProcessingError::Unauthorized,
         429 => DerivedProcessingError::Throttled,
+        409 | 412 => map_lock_error(status, body),
         code => DerivedProcessingError::UnexpectedStatus(code),
     }
 }
 
 #[cfg(feature = "core-api-client")]
-fn map_heartbeat_status(status: StatusCode) -> DerivedProcessingError {
+fn map_upload_init_status(status: StatusCode, body: &str) -> DerivedProcessingError {
     match status.as_u16() {
         401 => DerivedProcessingError::Unauthorized,
+        409 | 412 => map_lock_error(status, body),
         code => DerivedProcessingError::UnexpectedStatus(code),
     }
 }
 
 #[cfg(feature = "core-api-client")]
-fn map_submit_status(status: StatusCode) -> DerivedProcessingError {
-    match status.as_u16() {
-        401 => DerivedProcessingError::Unauthorized,
-        429 => DerivedProcessingError::Throttled,
-        code => DerivedProcessingError::UnexpectedStatus(code),
-    }
-}
-
-#[cfg(feature = "core-api-client")]
-fn map_upload_init_status(status: StatusCode) -> DerivedProcessingError {
-    match status.as_u16() {
-        401 => DerivedProcessingError::Unauthorized,
-        code => DerivedProcessingError::UnexpectedStatus(code),
-    }
-}
-
-#[cfg(feature = "core-api-client")]
-fn map_upload_part_status(status: StatusCode) -> DerivedProcessingError {
+fn map_upload_part_status(status: StatusCode, body: &str) -> DerivedProcessingError {
     match status.as_u16() {
         401 => DerivedProcessingError::Unauthorized,
         429 => DerivedProcessingError::Throttled,
+        409 | 412 => map_lock_error(status, body),
         code => DerivedProcessingError::UnexpectedStatus(code),
     }
 }
 
 #[cfg(feature = "core-api-client")]
-fn map_upload_complete_status(status: StatusCode) -> DerivedProcessingError {
+fn map_upload_complete_status(status: StatusCode, body: &str) -> DerivedProcessingError {
     match status.as_u16() {
         401 => DerivedProcessingError::Unauthorized,
+        409 | 412 => map_lock_error(status, body),
         code => DerivedProcessingError::UnexpectedStatus(code),
     }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_lock_error(status: StatusCode, body: &str) -> DerivedProcessingError {
+    match parse_error_code(body).as_deref() {
+        Some("LOCK_REQUIRED") => DerivedProcessingError::LockRequired,
+        Some("LOCK_INVALID") => DerivedProcessingError::LockInvalid,
+        Some("STALE_LOCK_TOKEN") => DerivedProcessingError::StaleLockToken,
+        _ => DerivedProcessingError::UnexpectedStatus(status.as_u16()),
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn parse_error_code(body: &str) -> Option<String> {
+    let parsed = serde_json::from_str::<serde_json::Value>(body).ok()?;
+    parsed.get("code")?.as_str().map(ToString::to_string)
 }
