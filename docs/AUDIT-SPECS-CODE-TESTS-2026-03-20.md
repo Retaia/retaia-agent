@@ -127,7 +127,7 @@ Historique notable sur `2026-03-20`:
 - Un test e2e `agentctl` couvre désormais `POST /auth/clients/device/cancel` lors d'une interruption utilisateur du bootstrap.
 - Un test e2e `agentctl` couvre désormais `POST /auth/clients/{client_id}/rotate-secret` et la mise à jour locale du secret technique.
 - Un test e2e `agentctl` couvre désormais le chemin d'ouverture browser via une commande override injectée, avec vérification de `verification_uri_complete`.
-- Aucun test de support `Accept-Language` sur les appels REST du runtime agent.
+- La gateway runtime `jobs/policy` envoie désormais `Accept-Language`, et un test HTTP dédié le couvre sur les appels REST agent.
 - Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
 - Aucun test de refus explicite `LOCK_REQUIRED`, `LOCK_INVALID`, `STALE_LOCK_TOKEN`.
 - Un test dédié du binaire daemon couvre désormais le chemin de récupération et d'application de `GET /app/policy`.

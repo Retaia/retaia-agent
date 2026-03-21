@@ -1,14 +1,20 @@
 #[cfg(feature = "core-api-client")]
 use chrono::{DateTime, Utc};
 #[cfg(feature = "core-api-client")]
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, RETRY_AFTER, USER_AGENT};
+use reqwest::header::{
+    ACCEPT_LANGUAGE, AUTHORIZATION, CONTENT_TYPE, HeaderMap, RETRY_AFTER, USER_AGENT,
+};
 #[cfg(feature = "core-api-client")]
 use serde::de::DeserializeOwned;
 
 #[cfg(feature = "core-api-client")]
+use crate::Language;
+#[cfg(feature = "core-api-client")]
 use crate::application::core_api_gateway::{
     CoreApiGateway, CoreApiGatewayError, CoreJobState, CoreJobView, CoreServerPolicy,
 };
+#[cfg(feature = "core-api-client")]
+use crate::detect_language;
 
 #[cfg(all(test, feature = "core-api-client"))]
 use retaia_core_client::apis::Error as OpenApiError;
@@ -80,6 +86,7 @@ impl OpenApiJobsGateway {
             if let Some(user_agent) = self.configuration.user_agent.as_deref() {
                 request = request.header(USER_AGENT, user_agent);
             }
+            request = request.header(ACCEPT_LANGUAGE, accept_language_header_value());
             if let Some(token) = self.configuration.oauth_access_token.as_deref() {
                 request = request.header(AUTHORIZATION, format!("Bearer {token}"));
             } else if let Some(token) = self.configuration.bearer_access_token.as_deref() {
@@ -138,6 +145,14 @@ fn parse_retry_after_ms(headers: &HeaderMap) -> Option<u64> {
         .num_milliseconds()
         .max(0) as u64;
     Some(millis)
+}
+
+#[cfg(feature = "core-api-client")]
+fn accept_language_header_value() -> &'static str {
+    match detect_language() {
+        Language::Fr => "fr",
+        Language::En => "en",
+    }
 }
 
 #[cfg(feature = "core-api-client")]

@@ -3,6 +3,7 @@
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::Once;
 use std::thread;
 
@@ -163,6 +164,8 @@ fn assert_request_contains_header(request: &str, header_line: &str) {
     );
 }
 
+static LANG_ENV_GUARD: Mutex<()> = Mutex::new(());
+
 #[test]
 fn e2e_openapi_jobs_gateway_maps_422_from_real_http_response() {
     let (server, base_url) = spawn_mock_server(vec![MockExchange {
@@ -293,6 +296,50 @@ fn e2e_openapi_jobs_gateway_maps_text_success_payload_to_transport_error() {
     match error {
         CoreApiGatewayError::Transport(message) => assert!(message.contains("text/plain")),
         other => panic!("unexpected error variant: {other:?}"),
+    }
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_jobs_gateway_sends_accept_language_header() {
+    let _guard = LANG_ENV_GUARD.lock().expect("lang env guard");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock server");
+    let port = listener.local_addr().expect("local addr").port();
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut buffer = [0_u8; 4096];
+        let size = stream.read(&mut buffer).expect("read request");
+        let request = String::from_utf8_lossy(&buffer[..size]).to_string();
+        let first_line = request.lines().next().unwrap_or_default().to_string();
+        assert!(
+            first_line.starts_with("GET /api/v1/jobs"),
+            "unexpected request line: {first_line}"
+        );
+        assert_request_contains_header(&request, "Accept-Language: fr");
+
+        let body = "[]";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+
+    unsafe {
+        std::env::set_var("RETAIA_AGENT_LANG", "fr_BE");
+    }
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiJobsGateway::new(client);
+    let jobs = gateway.poll_jobs().expect("jobs should succeed");
+    assert!(jobs.is_empty());
+    unsafe {
+        std::env::remove_var("RETAIA_AGENT_LANG");
     }
 
     server.join().expect("server thread");

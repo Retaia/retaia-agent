@@ -34,7 +34,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 - Requalifier la suite de tests:
   - renommer ou recadrer les suites `spec_compatible_*` si elles ne prouvent pas la compatibilité normative
-  - compléter la couverture sur authz matrix, policy runtime, Accept-Language, anti-rejeu, lock errors
+  - compléter la couverture sur authz matrix, policy runtime, anti-rejeu, lock errors
 
 ## Ordre d'exécution recommandé
 
