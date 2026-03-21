@@ -1,10 +1,14 @@
 use std::sync::Mutex;
+use std::sync::Arc;
 
 use retaia_agent::{
-    ClaimedDerivedJob, DerivedExecutionPlan, DerivedExecutionPlanner, DerivedJobExecutorError,
-    DerivedJobType, DerivedKind, DerivedManifestItem, DerivedProcessingError,
-    DerivedProcessingGateway, DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart,
-    HeartbeatReceipt, SubmitDerivedPayload, UploadedDerivedPart, execute_derived_job_once,
+    AgentRuntimeConfig, AudioProxyRequest, AuthMode, ClaimedDerivedJob, DerivedExecutionPlan,
+    DerivedExecutionPlanner, DerivedJobExecutorError, DerivedJobType, DerivedKind,
+    DerivedManifestItem, DerivedProcessingError, DerivedProcessingGateway,
+    DerivedUploadComplete, DerivedUploadInit, DerivedUploadPart, FactsPatchPayload,
+    HeartbeatReceipt, LogLevel, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator,
+    RuntimeDerivedPlanner, SubmitDerivedPayload, UploadedDerivedPart, VideoProxyRequest,
+    execute_derived_job_once, execute_derived_job_once_with_source_staging,
 };
 
 #[derive(Default)]
@@ -113,6 +117,142 @@ impl DerivedProcessingGateway for RecordingGateway {
     }
 }
 
+#[derive(Debug, Default)]
+struct WritingPreviewGenerator;
+
+impl ProxyGenerator for WritingPreviewGenerator {
+    fn generate_video_proxy(
+        &self,
+        request: &VideoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-video")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_proxy(
+        &self,
+        request: &AudioProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-audio")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_photo_proxy(
+        &self,
+        request: &PhotoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-photo")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn extract_media_facts(
+        &self,
+        _input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        Ok(FactsPatchPayload {
+            duration_ms: Some(1_000),
+            media_format: Some("mp4".to_string()),
+            video_codec: Some("h264".to_string()),
+            audio_codec: Some("aac".to_string()),
+            width: Some(1280),
+            height: Some(720),
+            fps: Some(25.0),
+        })
+    }
+}
+
+#[derive(Default)]
+struct ExtractFactsRecordingGateway {
+    calls: Mutex<Vec<String>>,
+    submitted_payload: Mutex<Option<SubmitDerivedPayload>>,
+}
+
+impl ExtractFactsRecordingGateway {
+    fn calls(&self) -> Vec<String> {
+        self.calls.lock().expect("calls").clone()
+    }
+
+    fn submitted_payload(&self) -> Option<SubmitDerivedPayload> {
+        self.submitted_payload.lock().expect("payload").clone()
+    }
+}
+
+impl DerivedProcessingGateway for ExtractFactsRecordingGateway {
+    fn claim_job(&self, job_id: &str) -> Result<ClaimedDerivedJob, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("claim:{job_id}"));
+        Ok(ClaimedDerivedJob {
+            job_id: job_id.to_string(),
+            asset_uuid: "asset-facts-e2e".to_string(),
+            lock_token: "lock-facts-e2e".to_string(),
+            fencing_token: 1,
+            job_type: DerivedJobType::ExtractFacts,
+            source_storage_id: "nas-main".to_string(),
+            source_original_relative: "INBOX/sample-source.bin".to_string(),
+            source_sidecars_relative: vec!["INBOX/sidecars/sample-source.xmp".to_string()],
+        })
+    }
+
+    fn fetch_asset_revision_etag(
+        &self,
+        _asset_uuid: &str,
+    ) -> Result<String, DerivedProcessingError> {
+        unreachable!("extract_facts does not upload derived files")
+    }
+
+    fn heartbeat(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+        _fencing_token: i32,
+    ) -> Result<HeartbeatReceipt, DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("heartbeat:{job_id}"));
+        Ok(HeartbeatReceipt {
+            locked_until: None,
+            fencing_token: 1,
+        })
+    }
+
+    fn submit_derived(
+        &self,
+        job_id: &str,
+        _lock_token: &str,
+        _fencing_token: i32,
+        _idempotency_key: &str,
+        payload: &SubmitDerivedPayload,
+    ) -> Result<(), DerivedProcessingError> {
+        self.calls
+            .lock()
+            .expect("calls")
+            .push(format!("submit:{job_id}"));
+        *self.submitted_payload.lock().expect("payload") = Some(payload.clone());
+        Ok(())
+    }
+
+    fn upload_init(&self, _request: &DerivedUploadInit) -> Result<(), DerivedProcessingError> {
+        unreachable!("extract_facts does not upload derived files")
+    }
+
+    fn upload_part(
+        &self,
+        _request: &DerivedUploadPart,
+    ) -> Result<UploadedDerivedPart, DerivedProcessingError> {
+        unreachable!("extract_facts does not upload derived files")
+    }
+
+    fn upload_complete(
+        &self,
+        _request: &DerivedUploadComplete,
+    ) -> Result<(), DerivedProcessingError> {
+        unreachable!("extract_facts does not upload derived files")
+    }
+}
+
 struct ThumbnailPlanner;
 
 impl DerivedExecutionPlanner for ThumbnailPlanner {
@@ -189,6 +329,73 @@ fn e2e_derived_job_executor_flow_claims_uploads_and_submits_for_v1_derived_job()
             "heartbeat:job-22".to_string(),
             "submit:job-22".to_string(),
         ]
+    );
+}
+
+fn write_storage_marker(root: &std::path::Path, storage_id: &str) {
+    let marker = format!(
+        r#"{{"version":1,"storage_id":"{storage_id}","paths":{{"inbox":"INBOX","archive":"ARCHIVE","rejects":"REJECTS"}}}}"#
+    );
+    std::fs::write(root.join(".retaia"), marker).expect("write marker");
+}
+
+#[test]
+fn e2e_derived_job_executor_flow_extract_facts_submits_useful_patch_without_uploads() {
+    let source_root = tempfile::tempdir().expect("source root");
+    write_storage_marker(source_root.path(), "nas-main");
+    let source_path = source_root.path().join("INBOX/sample-source.bin");
+    let sidecar_path = source_root.path().join("INBOX/sidecars/sample-source.xmp");
+    std::fs::create_dir_all(source_path.parent().expect("parent")).expect("mkdir");
+    std::fs::create_dir_all(sidecar_path.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&source_path, b"source-bytes").expect("write source");
+    std::fs::write(&sidecar_path, b"xmp-bytes").expect("write sidecar");
+
+    let mut storage_mounts = std::collections::BTreeMap::new();
+    storage_mounts.insert(
+        "nas-main".to_string(),
+        source_root.path().display().to_string(),
+    );
+    let settings = AgentRuntimeConfig {
+        core_api_url: "https://core.retaia.local".to_string(),
+        ollama_url: "http://127.0.0.1:11434".to_string(),
+        auth_mode: AuthMode::Interactive,
+        technical_auth: None,
+        storage_mounts,
+        max_parallel_jobs: 1,
+        log_level: LogLevel::Info,
+    };
+
+    let gateway = ExtractFactsRecordingGateway::default();
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+
+    let report = execute_derived_job_once_with_source_staging(
+        &gateway,
+        &planner,
+        "job-facts-e2e",
+        &settings,
+    )
+    .expect("extract_facts e2e flow");
+
+    assert_eq!(report.upload_count, 0);
+    let calls = gateway.calls();
+    assert!(calls.contains(&"submit:job-facts-e2e".to_string()));
+    assert!(!calls.iter().any(|call| call.starts_with("upload_")));
+
+    let payload = gateway.submitted_payload().expect("submitted payload");
+    let facts = payload.facts_patch.expect("facts patch");
+    assert_eq!(facts.duration_ms, Some(1_000));
+    assert_eq!(facts.media_format.as_deref(), Some("mp4"));
+    assert_eq!(facts.video_codec.as_deref(), Some("h264"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("aac"));
+    assert_eq!(facts.width, Some(1280));
+    assert_eq!(facts.height, Some(720));
+    let metrics = payload.metrics.expect("metrics");
+    assert_eq!(
+        metrics.get("staged_sidecars_count"),
+        Some(&serde_json::json!(1))
     );
 }
 

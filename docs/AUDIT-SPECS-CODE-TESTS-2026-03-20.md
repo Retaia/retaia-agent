@@ -133,7 +133,6 @@ Historique notable sur `2026-03-20`:
 - La gateway OpenAPI dérivés mappe désormais explicitement `LOCK_REQUIRED`, `LOCK_INVALID` et `STALE_LOCK_TOKEN`, avec tests HTTP dédiés.
 - Un test dédié du binaire daemon couvre désormais le chemin de récupération et d'application de `GET /app/policy`.
 - Aucun test de production réelle de preview/thumb/waveform via les générateurs du repo.
-- Aucun test ne vérifie qu'un `extract_facts` produit un patch utile.
 - Il n'y a toujours pas de test d'approval humain complet côté `UI_WEB`; la couverture actuelle s'arrête à l'ouverture du navigateur depuis `agentctl`.
 
 ### 3.5 Les anciennes suites "spec_compatible" étaient sur-vendues
