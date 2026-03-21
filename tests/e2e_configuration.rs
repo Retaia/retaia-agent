@@ -1,5 +1,7 @@
 #[path = "e2e_flow/agentctl_config_flow.rs"]
 mod agentctl_config_flow;
+#[path = "e2e_flow/agentctl_device_bootstrap_flow.rs"]
+mod agentctl_device_bootstrap_flow;
 #[path = "e2e_flow/config_channel_parity.rs"]
 mod config_channel_parity;
 #[path = "e2e_flow/config_persistence.rs"]
