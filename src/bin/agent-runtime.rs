@@ -133,41 +133,8 @@ fn run_daemon_loop(session: &mut RuntimeSession, tick_ms: u64) -> Result<(), Str
         tick += 1;
         let now = Instant::now();
         if now >= next_policy_poll_at {
-            match gateway.fetch_server_policy() {
-                Ok(policy) => {
-                    session.apply_server_policy(policy);
-                    let plan = session.on_poll_success(
-                        retaia_agent::PollEndpoint::Policy,
-                        policy_refresh_interval_ms(),
-                        false,
-                    );
-                    next_policy_poll_at =
-                        now + Duration::from_millis(policy_poll_wait_ms_from_plan(&plan));
-                }
-                Err(retaia_agent::CoreApiGatewayError::Throttled { retry_after_ms }) => {
-                    let signal = retry_after_ms
-                        .map(|wait_ms| retaia_agent::PollSignal::RetryAfter429 { wait_ms })
-                        .unwrap_or(retaia_agent::PollSignal::SlowDown429);
-                    let plan = session.on_poll_throttled_tracked(
-                        retaia_agent::PollEndpoint::Policy,
-                        signal,
-                        tick,
-                    );
-                    next_policy_poll_at =
-                        now + Duration::from_millis(policy_poll_wait_ms_from_plan(&plan));
-                    warn!(tick, "runtime policy poll throttled");
-                }
-                Err(error) => {
-                    let plan = session.on_poll_success(
-                        retaia_agent::PollEndpoint::Policy,
-                        policy_refresh_interval_ms(),
-                        false,
-                    );
-                    next_policy_poll_at =
-                        now + Duration::from_millis(policy_poll_wait_ms_from_plan(&plan));
-                    warn!(tick, error = %error, "runtime policy poll failed");
-                }
-            }
+            let wait_ms = poll_server_policy_once(session, gateway.as_ref(), tick);
+            next_policy_poll_at = now + Duration::from_millis(wait_ms);
         }
 
         let jobs_interval_ms = session.jobs_poll_interval_ms();
@@ -483,6 +450,45 @@ fn policy_poll_wait_ms_from_plan(plan: &retaia_agent::RuntimeSyncPlan) -> u64 {
     }
 }
 
+fn poll_server_policy_once<G: CoreApiGateway + ?Sized>(
+    session: &mut RuntimeSession,
+    gateway: &G,
+    jitter_seed: u64,
+) -> u64 {
+    match gateway.fetch_server_policy() {
+        Ok(policy) => {
+            session.apply_server_policy(policy);
+            let plan = session.on_poll_success(
+                retaia_agent::PollEndpoint::Policy,
+                policy_refresh_interval_ms(),
+                false,
+            );
+            policy_poll_wait_ms_from_plan(&plan)
+        }
+        Err(retaia_agent::CoreApiGatewayError::Throttled { retry_after_ms }) => {
+            let signal = retry_after_ms
+                .map(|wait_ms| retaia_agent::PollSignal::RetryAfter429 { wait_ms })
+                .unwrap_or(retaia_agent::PollSignal::SlowDown429);
+            let plan = session.on_poll_throttled_tracked(
+                retaia_agent::PollEndpoint::Policy,
+                signal,
+                jitter_seed,
+            );
+            warn!(tick = jitter_seed, "runtime policy poll throttled");
+            policy_poll_wait_ms_from_plan(&plan)
+        }
+        Err(error) => {
+            let plan = session.on_poll_success(
+                retaia_agent::PollEndpoint::Policy,
+                policy_refresh_interval_ms(),
+                false,
+            );
+            warn!(tick = jitter_seed, error = %error, "runtime policy poll failed");
+            policy_poll_wait_ms_from_plan(&plan)
+        }
+    }
+}
+
 fn init_logging(level: LogLevel) {
     let level = match level {
         LogLevel::Error => "error",
@@ -649,11 +655,15 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{policy_poll_wait_ms_from_plan, policy_refresh_interval_ms};
-    use retaia_agent::{
-        AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, LogLevel, PollEndpoint, RuntimeSession,
-        RuntimeSyncPlan,
+    use super::{
+        policy_poll_wait_ms_from_plan, policy_refresh_interval_ms, poll_server_policy_once,
     };
+    use retaia_agent::{
+        AgentRuntimeConfig, AuthMode, CORE_JOBS_RUNTIME_FEATURE, ClientRuntimeTarget,
+        CoreApiGateway, CoreApiGatewayError, CoreServerPolicy, LogLevel, PollEndpoint,
+        RuntimeSession, RuntimeSyncPlan,
+    };
+    use std::collections::BTreeMap;
 
     fn settings() -> AgentRuntimeConfig {
         AgentRuntimeConfig {
@@ -664,6 +674,20 @@ mod tests {
             storage_mounts: std::collections::BTreeMap::new(),
             max_parallel_jobs: 2,
             log_level: LogLevel::Info,
+        }
+    }
+
+    struct PolicyGateway {
+        result: Result<CoreServerPolicy, CoreApiGatewayError>,
+    }
+
+    impl CoreApiGateway for PolicyGateway {
+        fn poll_jobs(&self) -> Result<Vec<retaia_agent::CoreJobView>, CoreApiGatewayError> {
+            Ok(Vec::new())
+        }
+
+        fn fetch_server_policy(&self) -> Result<CoreServerPolicy, CoreApiGatewayError> {
+            self.result.clone()
         }
     }
 
@@ -711,5 +735,24 @@ mod tests {
         });
 
         assert_eq!(policy_poll_wait_ms_from_plan(&plan), 22_000);
+    }
+
+    #[test]
+    fn tdd_daemon_policy_poll_applies_server_policy_and_enables_jobs_runtime() {
+        let mut session =
+            RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+        let gateway = PolicyGateway {
+            result: Ok(CoreServerPolicy {
+                min_poll_interval_seconds: Some(9),
+                feature_flags: BTreeMap::from([(CORE_JOBS_RUNTIME_FEATURE.to_string(), true)]),
+            }),
+        };
+
+        let wait_ms = poll_server_policy_once(&mut session, &gateway, 42);
+
+        assert_eq!(wait_ms, 30_000);
+        assert_eq!(session.server_policy().min_poll_interval_seconds, Some(9));
+        assert!(session.effective_feature_enabled(CORE_JOBS_RUNTIME_FEATURE));
+        assert!(session.can_process_jobs());
     }
 }
