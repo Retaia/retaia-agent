@@ -136,11 +136,11 @@ Historique notable sur `2026-03-20`:
 - Aucun test ne vérifie qu'un `extract_facts` produit un patch utile.
 - Il n'y a toujours pas de test d'approval humain complet côté `UI_WEB`; la couverture actuelle s'arrête à l'ouverture du navigateur depuis `agentctl`.
 
-### 3.5 Les tests "spec_compatible" ne prouvent pas la compatibilité spec
+### 3.5 Les anciennes suites "spec_compatible" étaient sur-vendues
 
-- Les suites `spec_compatible_*` vérifient surtout des contrats locaux de session/menu/config/notifications.
-- Elles ne valident pas les exigences normatives les plus structurantes: policy runtime, auth bootstrap, device flow, flags, authz matrice, URLs Core stables des dérivés, waveform obligatoire, MCP asymétrique.
-- Le nom "spec_compatible" est donc plus large que ce que les assertions couvrent réellement.
+- Les suites concernées ont été recadrées sous des noms plus précis orientés "runtime contract/config contract".
+- Le fond reste inchangé: elles vérifient surtout des contrats locaux de session/menu/config/notifications.
+- Elles ne valident toujours pas les exigences normatives les plus structurantes: policy runtime, auth bootstrap, device flow bout-en-bout, flags, authz matrice, URLs Core stables des dérivés, storyboard, anti-rejeu bout-en-bout.
 
 ## 4. Ecarts docs/test/code sur le runtime réel
 
