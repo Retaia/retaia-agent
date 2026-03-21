@@ -144,6 +144,7 @@ pub use infrastructure::signed_core_http::{SignedCoreHttpError, signature_payloa
 pub use infrastructure::tauri_notification_sink::TauriNotificationSink;
 #[cfg(feature = "core-api-client")]
 pub use infrastructure::technical_auth::{
-    DeviceBootstrapError, DeviceBootstrapPollStatus, DeviceBootstrapStart, TechnicalAuthError,
-    cancel_device_bootstrap, mint_technical_bearer, poll_device_bootstrap, start_device_bootstrap,
+    DeviceBootstrapError, DeviceBootstrapPollStatus, DeviceBootstrapStart, RotateSecretError,
+    RotateSecretResult, TechnicalAuthError, cancel_device_bootstrap, mint_technical_bearer,
+    poll_device_bootstrap, rotate_client_secret, start_device_bootstrap,
 };

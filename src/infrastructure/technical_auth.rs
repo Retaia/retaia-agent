@@ -8,7 +8,8 @@ use crate::TechnicalAuthConfig;
 use retaia_core_client::apis::Error as OpenApiError;
 #[cfg(feature = "core-api-client")]
 use retaia_core_client::apis::auth_api::{
-    AuthApi, AuthApiClient, AuthClientsDeviceCancelPostError, AuthClientsDevicePollPostError,
+    AuthApi, AuthApiClient, AuthClientsClientIdRotateSecretPostError,
+    AuthClientsDeviceCancelPostError, AuthClientsDevicePollPostError,
     AuthClientsDeviceStartPostError, AuthClientsTokenPostError,
 };
 #[cfg(feature = "core-api-client")]
@@ -61,6 +62,23 @@ pub enum DeviceBootstrapError {
     #[error("device bootstrap unexpected status {0}")]
     UnexpectedStatus(u16),
     #[error("device bootstrap transport error: {0}")]
+    Transport(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RotateSecretResult {
+    pub client_id: String,
+    pub secret_key: String,
+    pub rotated_at: Option<String>,
+}
+
+#[derive(Debug, Error)]
+pub enum RotateSecretError {
+    #[error("rotate secret unauthorized")]
+    Unauthorized,
+    #[error("rotate secret unexpected status {0}")]
+    UnexpectedStatus(u16),
+    #[error("rotate secret transport error: {0}")]
     Transport(String),
 }
 
@@ -165,6 +183,26 @@ pub fn cancel_device_bootstrap(
 }
 
 #[cfg(feature = "core-api-client")]
+pub fn rotate_client_secret(
+    configuration: &Configuration,
+    client_id: &str,
+) -> Result<RotateSecretResult, RotateSecretError> {
+    let api = AuthApiClient::new(Arc::new(configuration.clone()));
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|error| RotateSecretError::Transport(error.to_string()))?;
+    let response = runtime
+        .block_on(api.auth_clients_client_id_rotate_secret_post(client_id, None))
+        .map_err(map_openapi_rotate_secret_error)?;
+    Ok(RotateSecretResult {
+        client_id: response.client_id,
+        secret_key: response.secret_key,
+        rotated_at: response.rotated_at,
+    })
+}
+
+#[cfg(feature = "core-api-client")]
 fn map_openapi_auth_error(error: OpenApiError<AuthClientsTokenPostError>) -> TechnicalAuthError {
     match error {
         OpenApiError::ResponseError(response) => match response.status.as_u16() {
@@ -219,5 +257,20 @@ fn map_openapi_device_cancel_error(
         OpenApiError::Reqwest(err) => DeviceBootstrapError::Transport(err.to_string()),
         OpenApiError::Serde(err) => DeviceBootstrapError::Transport(err.to_string()),
         OpenApiError::Io(err) => DeviceBootstrapError::Transport(err.to_string()),
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_openapi_rotate_secret_error(
+    error: OpenApiError<AuthClientsClientIdRotateSecretPostError>,
+) -> RotateSecretError {
+    match error {
+        OpenApiError::ResponseError(response) => match response.status.as_u16() {
+            401 => RotateSecretError::Unauthorized,
+            code => RotateSecretError::UnexpectedStatus(code),
+        },
+        OpenApiError::Reqwest(err) => RotateSecretError::Transport(err.to_string()),
+        OpenApiError::Serde(err) => RotateSecretError::Transport(err.to_string()),
+        OpenApiError::Io(err) => RotateSecretError::Transport(err.to_string()),
     }
 }
