@@ -29,8 +29,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - compléter la doc auth interactive/browser/device flow quand l'implémentation existera
 
 - Renforcer i18n:
-  - ajouter une vraie validation CI de parité des clés `locales/en.json` vs `locales/fr.json`
-  - transformer les dérives en échec CI explicite
+  - couvert
 
 - Requalifier la suite de tests:
   - renommer ou recadrer les suites `spec_compatible_*` si elles ne prouvent pas la compatibilité normative
@@ -67,5 +66,4 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 - Lot 5: hardening final
   - ETag/If-Match dérivés
   - docs locales
-  - CI i18n
   - renommage/recadrage des suites "spec_compatible"

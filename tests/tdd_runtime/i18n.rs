@@ -18,10 +18,9 @@ fn tdd_i18n_translation_switches_by_language() {
     assert_eq!(t(Language::Fr, "daemon.started"), "Daemon démarré.");
 }
 
-#[cfg(debug_assertions)]
 #[test]
 #[should_panic(expected = "missing i18n key")]
-fn tdd_i18n_missing_key_panics_in_debug_to_guard_ci() {
+fn tdd_i18n_missing_key_panics_to_guard_all_builds() {
     let _ = t(Language::En, "missing.key");
 }
 
