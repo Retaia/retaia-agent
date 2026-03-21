@@ -235,10 +235,17 @@ impl RuntimeDerivedPlanner {
         source_path: &Path,
     ) -> Result<PathBuf, DerivedJobExecutorError> {
         let output_path = generated_preview_output_path(source_path, DerivedKind::Thumb);
+        let duration_ms = self
+            .av_generator
+            .extract_media_facts(&source_path.to_string_lossy())
+            .ok()
+            .and_then(|facts| facts.duration_ms)
+            .and_then(|value| u64::try_from(value).ok());
         self.av_generator
             .generate_video_thumbnail(&canonical_thumbnail_request(
                 source_path.to_string_lossy().to_string(),
                 output_path.to_string_lossy().to_string(),
+                representative_thumbnail_seek_ms(duration_ms),
             ))
             .map_err(map_preview_generation_error)?;
         Ok(output_path)
@@ -323,14 +330,36 @@ fn canonical_photo_preview_request(input_path: String, output_path: String) -> P
     }
 }
 
-fn canonical_thumbnail_request(input_path: String, output_path: String) -> VideoThumbnailRequest {
+fn canonical_thumbnail_request(
+    input_path: String,
+    output_path: String,
+    seek_ms: u64,
+) -> VideoThumbnailRequest {
     VideoThumbnailRequest {
         input_path,
         output_path,
         format: ThumbnailFormat::Webp,
         max_width: 480,
-        seek_ms: 1_000,
+        seek_ms,
     }
+}
+
+fn representative_thumbnail_seek_ms(duration_ms: Option<u64>) -> u64 {
+    const SHORT_VIDEO_THRESHOLD_MS: u64 = 120_000;
+    const MIN_REPRESENTATIVE_SEEK_MS: u64 = 1_000;
+    const LONG_VIDEO_MAX_SEEK_MS: u64 = 20_000;
+
+    let Some(duration_ms) = duration_ms else {
+        return MIN_REPRESENTATIVE_SEEK_MS;
+    };
+
+    if duration_ms < SHORT_VIDEO_THRESHOLD_MS {
+        return (duration_ms / 10).max(MIN_REPRESENTATIVE_SEEK_MS);
+    }
+
+    ((duration_ms * 5) / 100)
+        .min(LONG_VIDEO_MAX_SEEK_MS)
+        .max(MIN_REPRESENTATIVE_SEEK_MS)
 }
 
 fn canonical_waveform_request(input_path: String, output_path: String) -> AudioWaveformRequest {
