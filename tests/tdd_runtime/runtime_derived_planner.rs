@@ -75,6 +75,69 @@ struct ThumbnailFactsGenerator {
     thumbnail_requests: Mutex<Vec<VideoThumbnailRequest>>,
 }
 
+#[derive(Debug, Default)]
+struct UnknownDurationThumbnailGenerator;
+
+impl ProxyGenerator for UnknownDurationThumbnailGenerator {
+    fn generate_video_proxy(
+        &self,
+        request: &VideoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-video")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_proxy(
+        &self,
+        request: &AudioProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-audio")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_photo_proxy(
+        &self,
+        request: &PhotoProxyRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-photo")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_video_thumbnail(
+        &self,
+        request: &VideoThumbnailRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(&request.output_path, b"generated-thumbnail")
+            .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn generate_audio_waveform(
+        &self,
+        request: &AudioWaveformRequest,
+    ) -> Result<(), ProxyGenerationError> {
+        std::fs::write(
+            &request.output_path,
+            br#"{"duration_ms":1000,"bucket_count":1000,"samples":[0.1,0.5]}"#,
+        )
+        .map_err(|error| ProxyGenerationError::Process(error.to_string()))
+    }
+
+    fn extract_media_facts(
+        &self,
+        _input_path: &str,
+    ) -> Result<FactsPatchPayload, ProxyGenerationError> {
+        Ok(FactsPatchPayload {
+            duration_ms: None,
+            media_format: Some("mp4".to_string()),
+            video_codec: Some("h264".to_string()),
+            audio_codec: Some("aac".to_string()),
+            width: Some(1920),
+            height: Some(1080),
+            fps: Some(25.0),
+        })
+    }
+}
+
 impl ThumbnailFactsGenerator {
     fn new(duration_ms: i32) -> Self {
         Self {
@@ -83,13 +146,11 @@ impl ThumbnailFactsGenerator {
         }
     }
 
-    fn last_thumbnail_request(&self) -> VideoThumbnailRequest {
+    fn thumbnail_requests(&self) -> Vec<VideoThumbnailRequest> {
         self.thumbnail_requests
             .lock()
             .expect("thumbnail requests lock")
-            .last()
-            .cloned()
-            .expect("thumbnail request")
+            .clone()
     }
 }
 
@@ -287,10 +348,8 @@ fn tdd_runtime_derived_planner_builds_photo_preview_upload_as_webp() {
 
 #[test]
 fn tdd_runtime_derived_planner_builds_thumbnail_upload_as_webp() {
-    let planner = RuntimeDerivedPlanner::new(
-        Arc::new(WritingPreviewGenerator),
-        Arc::new(WritingPreviewGenerator),
-    );
+    let generator = Arc::new(ThumbnailFactsGenerator::new(180_000));
+    let planner = RuntimeDerivedPlanner::new(generator, Arc::new(WritingPreviewGenerator));
     let claimed = ClaimedDerivedJob {
         job_id: "job-thumb-1".to_string(),
         asset_uuid: "asset-thumb-1".to_string(),
@@ -309,24 +368,24 @@ fn tdd_runtime_derived_planner_builds_thumbnail_upload_as_webp() {
         .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
         .expect("plan");
 
-    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.uploads.len(), 9);
     assert_eq!(plan.uploads[0].init.kind, DerivedKind::Thumb);
     assert_eq!(plan.uploads[0].init.content_type, "image/webp");
     assert!(
         plan.uploads[0].parts[0]
             .chunk_path
-            .ends_with("clip.thumb.webp")
+            .ends_with("clip.thumb.1.webp")
     );
     assert_eq!(
         plan.submit.manifest[0].reference,
-        "/api/v1/assets/asset-thumb-1/derived/thumb"
+        "/api/v1/assets/asset-thumb-1/derived/thumbs/1"
     );
     let metrics = plan.submit.metrics.expect("thumbnail metrics");
     assert_eq!(
         metrics.get("thumbnail_profile"),
-        Some(&serde_json::json!("video_representative_v1"))
+        Some(&serde_json::json!("video_storyboard_v1"))
     );
-    assert_eq!(metrics.get("thumbnail_count"), Some(&serde_json::json!(1)));
+    assert_eq!(metrics.get("thumbnail_count"), Some(&serde_json::json!(9)));
 }
 
 #[test]
@@ -351,11 +410,14 @@ fn tdd_runtime_derived_planner_uses_short_video_representative_seek() {
         .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
         .expect("plan");
 
-    assert_eq!(generator.last_thumbnail_request().seek_ms, 9_000);
+    let requests = generator.thumbnail_requests();
+    assert_eq!(requests.len(), 9);
+    assert_eq!(requests.first().expect("first").seek_ms, 9_000);
+    assert_eq!(requests.last().expect("last").seek_ms, 81_000);
 }
 
 #[test]
-fn tdd_runtime_derived_planner_uses_long_video_representative_seek_with_twenty_second_cap() {
+fn tdd_runtime_derived_planner_uses_long_video_storyboard_distribution() {
     let generator = Arc::new(ThumbnailFactsGenerator::new(600_000));
     let planner = RuntimeDerivedPlanner::new(generator.clone(), Arc::new(WritingPreviewGenerator));
     let claimed = ClaimedDerivedJob {
@@ -376,7 +438,49 @@ fn tdd_runtime_derived_planner_uses_long_video_representative_seek_with_twenty_s
         .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
         .expect("plan");
 
-    assert_eq!(generator.last_thumbnail_request().seek_ms, 20_000);
+    let requests = generator.thumbnail_requests();
+    assert_eq!(requests.len(), 9);
+    assert_eq!(requests.first().expect("first").seek_ms, 60_000);
+    assert_eq!(requests.last().expect("last").seek_ms, 540_000);
+}
+
+#[test]
+fn tdd_runtime_derived_planner_falls_back_to_single_representative_thumb_when_duration_is_unknown()
+{
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(UnknownDurationThumbnailGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-thumb-unknown".to_string(),
+        asset_uuid: "asset-thumb-unknown".to_string(),
+        lock_token: "lock-thumb-unknown".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::GenerateThumbnails,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/unknown.mov".to_string(),
+        source_sidecars_relative: Vec::new(),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("unknown.mov");
+    std::fs::write(&staged, b"generated-video").expect("write");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[])
+        .expect("plan");
+
+    assert_eq!(plan.uploads.len(), 1);
+    assert_eq!(plan.submit.manifest.len(), 1);
+    assert_eq!(
+        plan.submit.manifest[0].reference,
+        "/api/v1/assets/asset-thumb-unknown/derived/thumb"
+    );
+    let metrics = plan.submit.metrics.expect("thumbnail metrics");
+    assert_eq!(
+        metrics.get("thumbnail_profile"),
+        Some(&serde_json::json!("video_representative_v1"))
+    );
+    assert_eq!(metrics.get("thumbnail_count"), Some(&serde_json::json!(1)));
 }
 
 #[test]

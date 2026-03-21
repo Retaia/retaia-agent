@@ -88,6 +88,20 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
             plan.submit.facts_patch = Some(self.extract_facts(source_path, claimed)?);
             return Ok(plan);
         }
+        if claimed.job_type == DerivedJobType::GenerateThumbnails {
+            let thumbnail_artifacts = self.generate_thumbnail_artifacts(source_path)?;
+            plan.uploads = thumbnail_uploads_for_claimed_job(claimed, &thumbnail_artifacts)?;
+            plan.submit.manifest =
+                thumbnail_manifest_for_claimed_job(claimed, &thumbnail_artifacts);
+            merge_metrics(
+                &mut plan.submit.metrics,
+                Some(thumbnail_metrics(
+                    thumbnail_artifacts.profile,
+                    thumbnail_artifacts.files.len(),
+                )),
+            );
+            return Ok(plan);
+        }
 
         let upload_kind = plan
             .submit
@@ -99,7 +113,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
             DerivedJobType::GeneratePreview => {
                 self.generate_preview_artifact(source_path, upload_kind)?
             }
-            DerivedJobType::GenerateThumbnails => self.generate_thumbnail_artifact(source_path)?,
+            DerivedJobType::GenerateThumbnails => unreachable!("handled above"),
             DerivedJobType::GenerateAudioWaveform => {
                 self.generate_waveform_artifact(source_path)?
             }
@@ -230,25 +244,32 @@ impl RuntimeDerivedPlanner {
         Ok(output_path)
     }
 
-    fn generate_thumbnail_artifact(
+    fn generate_thumbnail_artifacts(
         &self,
         source_path: &Path,
-    ) -> Result<PathBuf, DerivedJobExecutorError> {
-        let output_path = generated_preview_output_path(source_path, DerivedKind::Thumb);
+    ) -> Result<GeneratedThumbnailArtifacts, DerivedJobExecutorError> {
         let duration_ms = self
             .av_generator
             .extract_media_facts(&source_path.to_string_lossy())
             .ok()
             .and_then(|facts| facts.duration_ms)
             .and_then(|value| u64::try_from(value).ok());
-        self.av_generator
-            .generate_video_thumbnail(&canonical_thumbnail_request(
-                source_path.to_string_lossy().to_string(),
-                output_path.to_string_lossy().to_string(),
-                representative_thumbnail_seek_ms(duration_ms),
-            ))
-            .map_err(map_preview_generation_error)?;
-        Ok(output_path)
+
+        let (profile, seek_points) = storyboard_plan_for_duration(duration_ms);
+        let mut files = Vec::with_capacity(seek_points.len());
+        for (index, seek_ms) in seek_points.iter().enumerate() {
+            let output_path = generated_thumb_output_path(source_path, index);
+            self.av_generator
+                .generate_video_thumbnail(&canonical_thumbnail_request(
+                    source_path.to_string_lossy().to_string(),
+                    output_path.to_string_lossy().to_string(),
+                    *seek_ms,
+                ))
+                .map_err(map_preview_generation_error)?;
+            files.push(output_path);
+        }
+
+        Ok(GeneratedThumbnailArtifacts { profile, files })
     }
 
     fn generate_waveform_artifact(
@@ -297,6 +318,16 @@ fn generated_preview_output_path(source_path: &Path, kind: DerivedKind) -> PathB
         DerivedKind::Waveform => "json",
     };
     parent.join(format!("{stem}.{}.{}", kind.as_str(), extension))
+}
+
+fn generated_thumb_output_path(source_path: &Path, index: usize) -> PathBuf {
+    let parent = source_path.parent().unwrap_or_else(|| Path::new("."));
+    let stem = source_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty())
+        .unwrap_or("derived");
+    parent.join(format!("{stem}.thumb.{}.webp", index + 1))
 }
 
 fn canonical_video_preview_request(input_path: String, output_path: String) -> VideoProxyRequest {
@@ -362,6 +393,28 @@ fn representative_thumbnail_seek_ms(duration_ms: Option<u64>) -> u64 {
         .max(MIN_REPRESENTATIVE_SEEK_MS)
 }
 
+fn storyboard_seek_points_ms(duration_ms: u64, frame_count: usize) -> Vec<u64> {
+    (0..frame_count)
+        .map(|index| (((index + 1) as u64) * duration_ms) / ((frame_count + 1) as u64))
+        .map(|seek_ms| seek_ms.max(1_000))
+        .collect()
+}
+
+fn storyboard_plan_for_duration(duration_ms: Option<u64>) -> (&'static str, Vec<u64>) {
+    const STORYBOARD_FRAME_COUNT: usize = 9;
+
+    match duration_ms {
+        Some(duration_ms) if duration_ms > 0 => (
+            "video_storyboard_v1",
+            storyboard_seek_points_ms(duration_ms, STORYBOARD_FRAME_COUNT),
+        ),
+        _ => (
+            "video_representative_v1",
+            vec![representative_thumbnail_seek_ms(duration_ms)],
+        ),
+    }
+}
+
 fn canonical_waveform_request(input_path: String, output_path: String) -> AudioWaveformRequest {
     AudioWaveformRequest {
         input_path,
@@ -404,11 +457,7 @@ fn base_metrics_for_job(claimed: &ClaimedDerivedJob) -> Option<HashMap<String, V
             Value::from(canonical_preview_profile_for_kind(kind)),
         );
     } else if claimed.job_type == DerivedJobType::GenerateThumbnails {
-        metrics.insert(
-            "thumbnail_profile".to_string(),
-            Value::from("video_representative_v1"),
-        );
-        metrics.insert("thumbnail_count".to_string(), Value::from(1_u64));
+        metrics.extend(thumbnail_metrics("video_representative_v1", 1));
     } else if claimed.job_type == DerivedJobType::GenerateAudioWaveform {
         metrics.insert("waveform_bucket_count".to_string(), Value::from(1_000_u64));
         metrics.insert("waveform_format".to_string(), Value::from("json"));
@@ -419,6 +468,87 @@ fn base_metrics_for_job(claimed: &ClaimedDerivedJob) -> Option<HashMap<String, V
     } else {
         Some(metrics)
     }
+}
+
+fn thumbnail_metrics(profile: &str, count: usize) -> HashMap<String, Value> {
+    let mut metrics = HashMap::new();
+    metrics.insert("thumbnail_profile".to_string(), Value::from(profile));
+    metrics.insert(
+        "thumbnail_count".to_string(),
+        Value::from(u64::try_from(count).unwrap_or(u64::MAX)),
+    );
+    metrics
+}
+
+fn thumbnail_reference(asset_uuid: &str, index: usize, count: usize) -> String {
+    if count <= 1 {
+        format!("/api/v1/assets/{asset_uuid}/derived/thumb")
+    } else {
+        format!("/api/v1/assets/{asset_uuid}/derived/thumbs/{}", index + 1)
+    }
+}
+
+fn thumbnail_manifest_for_claimed_job(
+    claimed: &ClaimedDerivedJob,
+    artifacts: &GeneratedThumbnailArtifacts,
+) -> Vec<DerivedManifestItem> {
+    artifacts
+        .files
+        .iter()
+        .enumerate()
+        .map(|(index, path)| DerivedManifestItem {
+            kind: DerivedKind::Thumb,
+            reference: thumbnail_reference(&claimed.asset_uuid, index, artifacts.files.len()),
+            size_bytes: std::fs::metadata(path).ok().map(|meta| meta.len()),
+            sha256: None,
+        })
+        .collect()
+}
+
+fn thumbnail_uploads_for_claimed_job(
+    claimed: &ClaimedDerivedJob,
+    artifacts: &GeneratedThumbnailArtifacts,
+) -> Result<Vec<DerivedUploadPlan>, DerivedJobExecutorError> {
+    let mut uploads = Vec::with_capacity(artifacts.files.len());
+
+    for (index, path) in artifacts.files.iter().enumerate() {
+        let size_bytes = std::fs::metadata(path)
+            .map_err(|error| DerivedJobExecutorError::Planner(error.to_string()))?
+            .len();
+        let upload_id = format!("upload-{}-thumb-{}", claimed.asset_uuid, index + 1);
+        uploads.push(DerivedUploadPlan {
+            init: DerivedUploadInit {
+                asset_uuid: claimed.asset_uuid.clone(),
+                revision_etag: String::new(),
+                kind: DerivedKind::Thumb,
+                content_type: content_type_for_kind(DerivedKind::Thumb).to_string(),
+                size_bytes,
+                sha256: None,
+                idempotency_key: format!("init-{}-thumb-{}", claimed.job_id, index + 1),
+            },
+            parts: vec![DerivedUploadPart {
+                asset_uuid: claimed.asset_uuid.clone(),
+                revision_etag: String::new(),
+                upload_id: upload_id.clone(),
+                part_number: 1,
+                chunk_path: path.clone(),
+            }],
+            complete: DerivedUploadComplete {
+                asset_uuid: claimed.asset_uuid.clone(),
+                revision_etag: String::new(),
+                upload_id,
+                idempotency_key: format!("complete-{}-thumb-{}", claimed.job_id, index + 1),
+                parts: None,
+            },
+        });
+    }
+
+    Ok(uploads)
+}
+
+struct GeneratedThumbnailArtifacts {
+    profile: &'static str,
+    files: Vec<PathBuf>,
 }
 
 fn canonical_preview_profile_for_kind(kind: DerivedKind) -> &'static str {
