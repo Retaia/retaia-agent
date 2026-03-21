@@ -157,7 +157,7 @@ Bug report workflow:
 - desktop control center also exposes `Copy Diagnostics (JSON)` (same diagnostics model as `agentctl daemon inspect --json`),
 - no automatic issue creation is performed by the agent CLI.
 
-With `core-api-client` enabled, daemon runtime mints its technical bearer from configured `client_id + secret_key`, registers the persisted agent identity, then polls `GET /jobs`.
+With `core-api-client` enabled, daemon runtime mints its technical bearer from configured `client_id + secret_key`, registers the persisted agent identity, then polls `GET /jobs`. The technical `secret_key` is no longer written to `config.toml`; it is loaded from the local secret store.
 
 ## Development workflow
 

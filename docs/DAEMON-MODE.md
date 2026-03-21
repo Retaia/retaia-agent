@@ -99,6 +99,7 @@ Bug report:
 Auth bearer pour polling API (build avec feature `core-api-client`):
 
 - auth technique attendue: `technical_auth.client_id` + `technical_auth.secret_key`.
+- `secret_key` n'est plus persistée dans `config.toml`; elle est relue depuis le secret store local.
 - le daemon génère/persiste une identité agent locale (`agent_id` + clé OpenPGP) et s’enregistre avant de traiter des jobs.
 
 Le mode interactif local est desactive: seul `agent-runtime -- daemon` execute le runtime.

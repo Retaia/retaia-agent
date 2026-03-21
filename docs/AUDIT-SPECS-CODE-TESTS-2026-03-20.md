@@ -84,10 +84,9 @@ Historique notable sur `2026-03-20`:
 
 ### 2.7 Stockage des secrets et sécurité locale
 
-- `src/infrastructure/config_store.rs` persiste `technical_auth.secret_key` en clair dans `StoredTechnicalAuthConfig` (`src/infrastructure/config_store.rs:68-72`, `src/infrastructure/config_store.rs:137-142`).
-- La conversion `AgentRuntimeConfig <-> StoredAgentRuntimeConfig` recopie ce secret tel quel dans le TOML de configuration (`src/infrastructure/config_store.rs:146-171`).
-- Cela contredit la contrainte locale explicitement rappelée dans `docs/RUNTIME-CONSTRAINTS.md:27-29` et dans les specs de configuration, qui demandent un secret storage OS-native.
-- Aucun test ne protège un comportement de stockage sécurisé des secrets; au contraire, le modèle de config actuel normalise le stockage en clair.
+- `technical_auth.secret_key` n'est plus persistée dans `config.toml`; `src/infrastructure/config_store.rs` sérialise seulement `client_id` et relit le secret depuis le secret store local.
+- Le loader migre automatiquement les anciens fichiers TOML contenant encore `secret_key` inline vers le secret store, puis réécrit une version assainie du fichier.
+- Le point restant côté conformité n'est plus le stockage en clair local, mais l'absence des flows normatifs de bootstrap/rotation décrits par la spec.
 
 ### 2.8 GUI/CLI parity et packaging
 
@@ -139,7 +138,6 @@ Historique notable sur `2026-03-20`:
 - Aucun test de refus explicite `LOCK_REQUIRED`, `LOCK_INVALID`, `STALE_LOCK_TOKEN`.
 - Aucun test de `server_policy.min_poll_interval_seconds`.
 - Aucun test de `effective_feature_enabled` bloquant réellement l'exécution.
-- Aucun test de stockage OS-native de `secret_key` ou d'absence de secret en clair dans la config persistée.
 - Aucun test de production réelle de preview/thumb/waveform via les générateurs du repo.
 - Aucun test ne vérifie qu'un `extract_facts` produit un patch utile.
 - Aucun test de flux browser/approval `UI_WEB`.
@@ -156,7 +154,6 @@ Historique notable sur `2026-03-20`:
 - Le README annonce "Derived-processing v1 runtime support"; la génération effective des previews est désormais branchée, mais les thumbnails, la waveform, les facts et les références Core stables restent incomplètes.
 - Le README annonce "Strict contract alignment with specs/", mais le policy polling, la waveform obligatoire et la génération effective des previews/facts divergent encore au niveau du code et des tests.
 - Le README annonce le même contrat de configuration GUI/CLI; en pratique le build par défaut ne livre pas la GUI.
-- Les docs locales de contraintes runtime annoncent un stockage OS-native des secrets, mais la config persistée garde toujours `secret_key` en clair.
 - Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, alors que les flows normatifs complets attendus côté agent ne sont pas encore implémentés.
 - Les tests passent en mode par défaut, mais ce succès reflète surtout le contrat local actuel, pas la conformité aux specs normatives lues.
 
@@ -165,7 +162,6 @@ Historique notable sur `2026-03-20`:
 Le repo est partiellement structuré pour la spec v1, mais il n'est pas aligné sur plusieurs axes contractuels centraux:
 
 - absence de policy runtime et de device flow
-- secret technique persisté en clair
 - backoff 429 non conforme
 - runtime de processing surtout "transport/protocole", pas "processing" réel
 - tests qui valident plusieurs comportements contraires à la spec
