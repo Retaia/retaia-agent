@@ -1,6 +1,6 @@
 use retaia_agent::{
-    AudioProxyFormat, AudioProxyRequest, FfmpegProxyGenerator, ProxyGenerator, VideoProxyRequest,
-    ffmpeg_available,
+    AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, FfmpegProxyGenerator,
+    ProxyGenerator, ThumbnailFormat, VideoProxyRequest, VideoThumbnailRequest, ffmpeg_available,
 };
 
 use crate::external_fixtures::load_manifest_entries;
@@ -90,4 +90,89 @@ fn e2e_external_fixture_flow_generates_audio_video_proxies_with_ffmpeg_when_avai
             entry.relative_path
         );
     }
+}
+
+#[test]
+fn e2e_external_fixture_flow_generates_video_thumbnail_with_ffmpeg_when_available() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping external AV fixture thumbnail test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.kind == "preview_video" && entry.expected == "supported")
+        .expect("missing supported video fixture");
+
+    let temp = tempfile::tempdir().expect("tempdir");
+    let output = temp.path().join("video-thumb.jpg");
+    let generator = FfmpegProxyGenerator::default();
+
+    generator
+        .generate_video_thumbnail(&VideoThumbnailRequest {
+            input_path: entry.absolute_path().display().to_string(),
+            output_path: output.display().to_string(),
+            format: ThumbnailFormat::Jpeg,
+            max_width: 480,
+            seek_ms: 1_000,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "video fixture should generate thumbnail: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    let metadata = std::fs::metadata(&output).expect("thumbnail output metadata");
+    assert!(metadata.len() > 0, "thumbnail output should be non-empty");
+}
+
+#[test]
+fn e2e_external_fixture_flow_generates_audio_waveform_with_ffmpeg_when_available() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping external AV fixture waveform test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.kind == "preview_audio" && entry.expected == "supported")
+        .expect("missing supported audio fixture");
+
+    let temp = tempfile::tempdir().expect("tempdir");
+    let output = temp.path().join("audio-waveform.json");
+    let generator = FfmpegProxyGenerator::default();
+
+    generator
+        .generate_audio_waveform(&AudioWaveformRequest {
+            input_path: entry.absolute_path().display().to_string(),
+            output_path: output.display().to_string(),
+            bucket_count: 1000,
+        })
+        .unwrap_or_else(|error| {
+            panic!(
+                "audio fixture should generate waveform: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    let payload: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&output).expect("read waveform json"))
+            .expect("waveform json payload");
+    assert_eq!(payload.get("bucket_count"), Some(&serde_json::json!(1000)));
+    assert!(
+        payload
+            .get("duration_ms")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or_default()
+            > 0,
+        "waveform duration should be positive"
+    );
+    assert_eq!(
+        payload
+            .get("samples")
+            .and_then(serde_json::Value::as_array)
+            .map(|samples| samples.len()),
+        Some(1000)
+    );
 }
