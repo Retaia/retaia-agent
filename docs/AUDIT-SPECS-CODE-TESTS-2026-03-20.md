@@ -41,12 +41,12 @@ Historique notable sur `2026-03-20`:
 
 ### 2.2 Runtime feature flags / policy
 
-- Aucune implémentation applicative de `GET /app/policy` n'est présente dans `src/`.
-- Aucune boucle de refresh périodique des `feature_flags` toutes les 30s n'est implémentée.
+- `GET /app/policy` est désormais câblé via la gateway OpenAPI jobs/policy et consommé dans la boucle daemon.
+- La boucle daemon recharge maintenant la policy toutes les `30s`, mais ce cadencement n'est pas encore couvert par un test dédié.
 - Aucun respect du plancher 15s pour refresh anticipé n'est implémenté.
-- Aucune consommation de `effective_feature_enabled` n'est implémentée côté agent runtime.
-- `resolve_effective_features` ne prend en compte ni `feature_flags`, ni `core_v1_global_features`, ni `feature_governance`, ni `reason_code`, ni `tier`, ni `user_can_disable`.
-- `resolve_effective_features` traite implicitement l'absence de clé applicative comme `true`, alors que la spec impose `flag absent = false` pour les `feature_flags`.
+- Le runtime bloque désormais `can_process_jobs()` tant que `features.core.jobs.runtime` n'est pas activé dans la policy Core.
+- `resolve_effective_features` prend désormais en compte `feature_flags` et `core_v1_global_features`, et traite correctement `feature_flags` absent comme `false`.
+- `resolve_effective_features` ne modélise toujours pas `feature_governance`, `reason_code`, `tier` ni `user_can_disable`.
 
 ### 2.3 Auth technique, device flow et approval UI
 
@@ -66,8 +66,8 @@ Historique notable sur `2026-03-20`:
 - Le plafond `60s` est respecté, mais le profil complet canonique n'est pas respecté à cause de la base.
 - `src/application/runtime_poll_cycle.rs` appelle toujours `session.on_poll_throttled(..., attempt = 1, ...)`; le nombre de tentatives n'est pas suivi au fil des 429.
 - Aucun support de `Retry-After` n'est implémenté.
-- `src/bin/agent-runtime.rs` repasse `tick_ms.max(100)` comme intervalle contractuel pour `/jobs`; cela ne modélise ni la cadence canonique `5s`, ni `max(5, server_policy.min_poll_interval_seconds)`.
-- Le runtime ne poll que `PollEndpoint::Jobs`; `PollEndpoint::Policy` et `PollEndpoint::DeviceFlow` existent dans les enums mais ne sont pas câblés au daemon.
+- `src/bin/agent-runtime.rs` respecte désormais `max(5s, server_policy.min_poll_interval_seconds)` pour le polling `/jobs`.
+- `PollEndpoint::Policy` est désormais câblé au daemon; `PollEndpoint::DeviceFlow` reste non implémenté.
 
 ### 2.6 Processing réel vs processing annoncé
 
@@ -124,8 +124,7 @@ Historique notable sur `2026-03-20`:
 
 ### 3.4 Les tests ne couvrent pas des pans normatifs majeurs
 
-- Aucun test de `GET /app/policy` côté runtime agent.
-- Aucun test de refresh périodique des flags/policy à 30s.
+- Aucun test d'intégration de refresh périodique des flags/policy à `30s` dans la boucle daemon.
 - Aucun test de floor 15s sur refresh anticipé.
 - Aucun test de `POST /auth/clients/device/start`.
 - Aucun test de `POST /auth/clients/device/poll`.
@@ -136,8 +135,7 @@ Historique notable sur `2026-03-20`:
 - Aucun test de prise en compte `Retry-After` sur 429.
 - Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
 - Aucun test de refus explicite `LOCK_REQUIRED`, `LOCK_INVALID`, `STALE_LOCK_TOKEN`.
-- Aucun test de `server_policy.min_poll_interval_seconds`.
-- Aucun test de `effective_feature_enabled` bloquant réellement l'exécution.
+- Aucun test bout-en-bout de récupération `GET /app/policy` dans le daemon.
 - Aucun test de production réelle de preview/thumb/waveform via les générateurs du repo.
 - Aucun test ne vérifie qu'un `extract_facts` produit un patch utile.
 - Aucun test de flux browser/approval `UI_WEB`.

@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use thiserror::Error;
 
@@ -23,6 +23,12 @@ pub struct CoreJobView {
     pub required_capabilities: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CoreServerPolicy {
+    pub min_poll_interval_seconds: Option<u64>,
+    pub feature_flags: BTreeMap<String, bool>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CoreApiGatewayError {
     #[error("core API unauthorized")]
@@ -37,6 +43,10 @@ pub enum CoreApiGatewayError {
 
 pub trait CoreApiGateway {
     fn poll_jobs(&self) -> Result<Vec<CoreJobView>, CoreApiGatewayError>;
+
+    fn fetch_server_policy(&self) -> Result<CoreServerPolicy, CoreApiGatewayError> {
+        Err(CoreApiGatewayError::UnexpectedStatus(501))
+    }
 }
 
 pub fn runtime_snapshot_from_polled_jobs(jobs: &[CoreJobView]) -> RuntimeSnapshot {

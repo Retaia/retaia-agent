@@ -1,17 +1,22 @@
 use std::collections::BTreeMap;
 
 use retaia_agent::{
-    ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,
+    CORE_JOBS_RUNTIME_FEATURE, ClientKind, can_issue_client_token, can_process_jobs,
+    resolve_effective_features,
 };
 
 #[test]
 fn e2e_agent_service_mode_keeps_processing_authorized() {
+    let flags = BTreeMap::from([
+        (String::from("features.ai"), true),
+        (CORE_JOBS_RUNTIME_FEATURE.to_string(), true),
+    ]);
     let app = BTreeMap::from([(String::from("features.ai"), true)]);
     let user = BTreeMap::new();
     let deps = BTreeMap::new();
     let escalation = BTreeMap::new();
 
-    let effective = resolve_effective_features(&app, &user, &deps, &escalation);
+    let effective = resolve_effective_features(&flags, &app, &user, &deps, &escalation);
     let ai_enabled = *effective.get("features.ai").unwrap_or(&false);
 
     assert!(can_issue_client_token(ClientKind::Agent, ai_enabled));

@@ -1,10 +1,12 @@
 use crate::application::agent_runtime_app::{AgentRuntimeApp, RuntimeStatusView, TrayMenuModel};
+use crate::application::core_api_gateway::CoreServerPolicy;
 use crate::application::notification_bridge::{
     NotificationDispatchReport, NotificationSink, dispatch_notifications,
 };
 use crate::application::runtime_loop_engine::RuntimeLoopEngine;
 use crate::application::runtime_sync_coordinator::RuntimeSyncPlan;
 use crate::domain::configuration::{AgentRuntimeConfig, ConfigValidationError};
+use crate::domain::feature_flags::CORE_JOBS_RUNTIME_FEATURE;
 use crate::domain::runtime_control::RuntimeControlCommand;
 use crate::domain::runtime_orchestration::{
     ClientRuntimeTarget, PollEndpoint, PollSignal, PushChannel, PushHint,
@@ -15,6 +17,7 @@ use crate::domain::runtime_ui::{AgentRunState, MenuAction, RuntimeSnapshot, Syst
 pub struct RuntimeSession {
     app: AgentRuntimeApp,
     loop_engine: RuntimeLoopEngine,
+    server_policy: CoreServerPolicy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,6 +34,7 @@ impl RuntimeSession {
         Ok(Self {
             app: AgentRuntimeApp::new(settings)?,
             loop_engine: RuntimeLoopEngine::new(target),
+            server_policy: CoreServerPolicy::default(),
         })
     }
 
@@ -117,8 +121,33 @@ impl RuntimeSession {
         self.loop_engine.can_issue_mutation()
     }
 
+    pub fn apply_server_policy(&mut self, policy: CoreServerPolicy) {
+        self.server_policy = policy;
+    }
+
+    pub fn server_policy(&self) -> &CoreServerPolicy {
+        &self.server_policy
+    }
+
+    pub fn effective_feature_enabled(&self, feature_key: &str) -> bool {
+        self.server_policy
+            .feature_flags
+            .get(feature_key)
+            .copied()
+            .unwrap_or(false)
+    }
+
+    pub fn jobs_poll_interval_ms(&self) -> u64 {
+        self.server_policy
+            .min_poll_interval_seconds
+            .unwrap_or(5)
+            .max(5)
+            .saturating_mul(1_000)
+    }
+
     pub fn can_process_jobs(&self) -> bool {
         matches!(self.target(), ClientRuntimeTarget::Agent)
+            && self.effective_feature_enabled(CORE_JOBS_RUNTIME_FEATURE)
     }
 }
 

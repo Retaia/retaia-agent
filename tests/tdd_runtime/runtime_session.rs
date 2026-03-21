@@ -1,8 +1,8 @@
 use retaia_agent::{
-    AgentRunState, AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, LogLevel, MenuAction,
-    NotificationBridgeError, NotificationMessage, NotificationSink, PollDecisionReason,
-    PollEndpoint, PollSignal, PushChannel, PushHint, RuntimeSession, RuntimeSnapshot,
-    RuntimeSyncPlan, SystemNotification,
+    AgentRunState, AgentRuntimeConfig, AuthMode, CORE_JOBS_RUNTIME_FEATURE, ClientRuntimeTarget,
+    CoreServerPolicy, LogLevel, MenuAction, NotificationBridgeError, NotificationMessage,
+    NotificationSink, PollDecisionReason, PollEndpoint, PollSignal, PushChannel, PushHint,
+    RuntimeSession, RuntimeSnapshot, RuntimeSyncPlan, SystemNotification,
 };
 use std::cell::RefCell;
 
@@ -70,6 +70,37 @@ fn tdd_runtime_session_mutation_gate_depends_on_poll_compatibility() {
 
     let _ = session.on_menu_action(MenuAction::Pause);
     assert!(!session.can_issue_mutation());
+}
+
+#[test]
+fn tdd_runtime_session_blocks_job_processing_until_policy_enables_runtime_jobs() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    assert!(!session.can_process_jobs());
+
+    session.apply_server_policy(CoreServerPolicy {
+        min_poll_interval_seconds: Some(9),
+        feature_flags: std::collections::BTreeMap::from([(
+            CORE_JOBS_RUNTIME_FEATURE.to_string(),
+            true,
+        )]),
+    });
+
+    assert!(session.can_process_jobs());
+    assert_eq!(session.jobs_poll_interval_ms(), 9_000);
+}
+
+#[test]
+fn tdd_runtime_session_enforces_jobs_poll_floor_of_five_seconds() {
+    let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
+    session.apply_server_policy(CoreServerPolicy {
+        min_poll_interval_seconds: Some(1),
+        feature_flags: std::collections::BTreeMap::from([(
+            CORE_JOBS_RUNTIME_FEATURE.to_string(),
+            true,
+        )]),
+    });
+
+    assert_eq!(session.jobs_poll_interval_ms(), 5_000);
 }
 
 #[derive(Default)]

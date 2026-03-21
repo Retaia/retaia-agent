@@ -6,11 +6,10 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 ## Priorité P0
 
-- Implémenter le respect réel de `effective_feature_enabled`:
-  - intégrer `GET /app/policy`
-  - consommer la policy dans la boucle runtime
-  - bloquer l'exécution des capacités/jobs désactivés par policy
-  - ajouter les tests de refresh périodique et de floor 15s
+- Compléter la couverture policy runtime:
+  - ajouter les tests de refresh périodique `30s`
+  - ajouter les tests de floor `15s` sur refresh anticipé
+  - ajouter un test d'intégration daemon pour `GET /app/policy`
 
 ## Priorité P1
 
@@ -24,8 +23,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - base 429 à `2s`
   - suivi réel du nombre de tentatives
   - prise en compte de `Retry-After`
-  - support de `server_policy.min_poll_interval_seconds`
-  - brancher aussi `PollEndpoint::Policy` et `PollEndpoint::DeviceFlow`
+  - brancher aussi `PollEndpoint::DeviceFlow`
 
 ## Priorité P2
 
@@ -62,11 +60,11 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - tests associés
 
 - Lot 2: policy et bootstrap
-  - `/app/policy`
-  - `effective_feature_enabled`
   - device flow
   - browser approval
   - rotation secret
+  - tests daemon `/app/policy`
+  - tests refresh `30s` et floor `15s`
 
 - Lot 3: sécurité locale et polling
   - migration config
