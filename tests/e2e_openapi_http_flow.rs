@@ -681,6 +681,26 @@ fn e2e_openapi_derived_gateway_heartbeat_maps_invalid_success_payload_to_transpo
 }
 
 #[test]
+fn e2e_openapi_derived_gateway_heartbeat_maps_lock_required_error() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-lock-required/heartbeat",
+        status: 409,
+        content_type: "application/json",
+        body: r#"{"code":"LOCK_REQUIRED"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let error = gateway
+        .heartbeat("job-lock-required", "lock-required", 1)
+        .expect_err("must fail on LOCK_REQUIRED");
+    assert_eq!(error, DerivedProcessingError::LockRequired);
+
+    server.join().expect("server thread");
+}
+
+#[test]
 fn e2e_openapi_derived_gateway_submit_maps_401_from_http_response() {
     let (server, base_url) = spawn_mock_server(vec![MockExchange {
         method: "POST",
@@ -708,6 +728,44 @@ fn e2e_openapi_derived_gateway_submit_maps_401_from_http_response() {
         .submit_derived("job-3", "lock-3", 1, "idem-3", &payload)
         .expect_err("must fail on 401");
     assert_eq!(error, DerivedProcessingError::Unauthorized);
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_submit_maps_lock_invalid_error() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/jobs/job-lock-invalid/submit",
+        status: 409,
+        content_type: "application/json",
+        body: r#"{"code":"LOCK_INVALID"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let payload = SubmitDerivedPayload {
+        job_type: DerivedJobType::GeneratePreview,
+        manifest: vec![DerivedManifestItem {
+            kind: DerivedKind::PreviewPhoto,
+            reference: "s3://bucket/proxy.webp".to_string(),
+            size_bytes: Some(12),
+            sha256: None,
+        }],
+        facts_patch: None,
+        warnings: None,
+        metrics: None,
+    };
+    let error = gateway
+        .submit_derived(
+            "job-lock-invalid",
+            "lock-invalid",
+            1,
+            "idem-lock-invalid",
+            &payload,
+        )
+        .expect_err("must fail on LOCK_INVALID");
+    assert_eq!(error, DerivedProcessingError::LockInvalid);
 
     server.join().expect("server thread");
 }
@@ -806,6 +864,33 @@ fn e2e_openapi_derived_gateway_upload_complete_maps_500_from_http_response() {
         .upload_complete(&request)
         .expect_err("must fail on 500");
     assert_eq!(error, DerivedProcessingError::UnexpectedStatus(500));
+
+    server.join().expect("server thread");
+}
+
+#[test]
+fn e2e_openapi_derived_gateway_upload_complete_maps_stale_lock_token_error() {
+    let (server, base_url) = spawn_mock_server(vec![MockExchange {
+        method: "POST",
+        path: "/api/v1/assets/asset-stale/derived/upload/complete",
+        status: 412,
+        content_type: "application/json",
+        body: r#"{"code":"STALE_LOCK_TOKEN"}"#,
+    }]);
+
+    let client = build_core_api_client(&runtime_config(&base_url));
+    let gateway = OpenApiDerivedProcessingGateway::new(client);
+    let request = DerivedUploadComplete {
+        asset_uuid: "asset-stale".to_string(),
+        revision_etag: "\"asset-rev-stale\"".to_string(),
+        upload_id: "upload-stale".to_string(),
+        idempotency_key: "idem-stale".to_string(),
+        parts: None,
+    };
+    let error = gateway
+        .upload_complete(&request)
+        .expect_err("must fail on STALE_LOCK_TOKEN");
+    assert_eq!(error, DerivedProcessingError::StaleLockToken);
 
     server.join().expect("server thread");
 }

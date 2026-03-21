@@ -129,7 +129,7 @@ Historique notable sur `2026-03-20`:
 - Un test e2e `agentctl` couvre désormais le chemin d'ouverture browser via une commande override injectée, avec vérification de `verification_uri_complete`.
 - La gateway runtime `jobs/policy` envoie désormais `Accept-Language`, et un test HTTP dédié le couvre sur les appels REST agent.
 - Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
-- Aucun test de refus explicite `LOCK_REQUIRED`, `LOCK_INVALID`, `STALE_LOCK_TOKEN`.
+- La gateway OpenAPI dérivés mappe désormais explicitement `LOCK_REQUIRED`, `LOCK_INVALID` et `STALE_LOCK_TOKEN`, avec tests HTTP dédiés.
 - Un test dédié du binaire daemon couvre désormais le chemin de récupération et d'application de `GET /app/policy`.
 - Aucun test de production réelle de preview/thumb/waveform via les générateurs du repo.
 - Aucun test ne vérifie qu'un `extract_facts` produit un patch utile.
