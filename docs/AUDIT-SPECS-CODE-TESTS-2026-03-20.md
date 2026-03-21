@@ -73,12 +73,11 @@ Historique notable sur `2026-03-20`:
 - `src/domain/capabilities.rs` déclare `media.facts@1`, `media.thumbnails@1` et `audio.waveform@1` comme capacités disponibles par défaut.
 - `src/application/runtime_job_worker.rs` n'utilise aucun générateur réel; il se contente d'appeler le planner puis le gateway.
 - Les implémentations `FfmpegProxyGenerator` et `RustPhotoProxyGenerator` sont désormais branchées pour `generate_preview`, ce qui permet au planner de produire un vrai artefact preview local avant upload.
-- Ce branchement reste partiel: `generate_thumbnails` produit désormais un thumb représentatif réel en `WEBP`, mais le mode `video_storyboard_v1` n'est pas implémenté.
 - `src/application/runtime_derived_planner.rs` écrit désormais des références Core stables same-origin de la forme `/api/v1/assets/{uuid}/derived/{kind}` pour les dérivés runtime.
 - Pour `extract_facts`, le planner produit désormais un `facts_patch` réel à partir du média source, sans upload, et le gateway OpenAPI soumet ce patch à `SubmitExtractFacts`.
 - Pour `generate_audio_waveform`, le planner génère désormais un payload JSON réel (`duration_ms`, `bucket_count`, `samples[]`) avec `bucket_count=1000`, puis l'uploade comme dérivé `waveform`.
 - Pour `generate_preview`, le moteur génère maintenant un fichier preview local à partir du média source avec un mapping explicite vers les profils canoniques v1 (`video_review_default_v1`, `audio_review_default_v1`, `photo_review_default_v1`) et une référence Core stable same-origin.
-- Pour `generate_thumbnails`, le moteur produit maintenant un thumb principal réel avec le profil canonique local `video_representative_v1` et une sélection temporelle basée sur la durée (`<120s => max(1s, 10%)`, `>=120s => min(5%, 20s)`), mais il n'implémente pas encore `video_storyboard_v1`.
+- Pour `generate_thumbnails`, le moteur produit désormais un storyboard vidéo réel par défaut avec plusieurs `thumb` same-origin distincts (`/derived/thumbs/{n}`) et le profil local `video_storyboard_v1`; il retombe sur un thumb représentatif unique `video_representative_v1` quand la durée n'est pas disponible.
 - La spec dit explicitement qu'une waveform requise doit être produite et qu'un asset audio ne doit pas dépasser `READY` sans `waveform_url`; l'executor local n'accepte plus une waveform vide et les références runtime sont désormais same-origin, mais la publication finale dépend encore du Core et du contrat `If-Match`/`ETag`.
 
 ### 2.7 Stockage des secrets et sécurité locale
@@ -139,11 +138,11 @@ Historique notable sur `2026-03-20`:
 
 - Les suites concernées ont été recadrées sous des noms plus précis orientés "runtime contract/config contract".
 - Le fond reste inchangé: elles vérifient surtout des contrats locaux de session/menu/config/notifications.
-- Elles ne valident toujours pas les exigences normatives les plus structurantes: policy runtime, auth bootstrap, device flow bout-en-bout, flags, authz matrice, URLs Core stables des dérivés, storyboard.
+- Elles ne valident toujours pas les exigences normatives les plus structurantes: policy runtime, auth bootstrap, device flow bout-en-bout, flags, authz matrice, URLs Core stables des dérivés.
 
 ## 4. Ecarts docs/test/code sur le runtime réel
 
-- Le README annonce "Derived-processing v1 runtime support"; la génération effective des previews est désormais branchée, mais les thumbnails, la waveform, les facts et les références Core stables restent incomplètes.
+- Le README annonce "Derived-processing v1 runtime support"; la génération effective des previews, thumbnails, waveform, facts et références Core stables est désormais bien plus proche du contrat, mais le flow d'approbation humain complet reste hors de portée de ce repo.
 - Le README annonce "Strict contract alignment with specs/", mais le policy polling, la waveform obligatoire et la génération effective des previews/facts divergent encore au niveau du code et des tests.
 - Le README annonce le même contrat de configuration GUI/CLI; en pratique le build par défaut ne livre pas la GUI.
 - Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, mais le device flow normatif est désormais branché aussi dans la boucle daemon.
@@ -154,7 +153,7 @@ Historique notable sur `2026-03-20`:
 Le repo est partiellement structuré pour la spec v1, mais il n'est pas aligné sur plusieurs axes contractuels centraux:
 
 - couverture incomplète sur certains invariants policy/device flow
-- runtime de processing encore partiellement incomplet sur storyboard
+- flow d'approbation humain complet côté `UI_WEB` non vérifiable dans ce repo
 - tests qui valident plusieurs comportements contraires à la spec
 - couverture de tests absente sur plusieurs invariants normatifs
 - voie OpenAPI recompilable, mais encore avec hypothèses de concurrence et de sémantique locales discutables
