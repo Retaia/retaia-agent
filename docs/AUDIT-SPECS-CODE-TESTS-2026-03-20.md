@@ -128,7 +128,8 @@ Historique notable sur `2026-03-20`:
 - Un test e2e `agentctl` couvre désormais `POST /auth/clients/{client_id}/rotate-secret` et la mise à jour locale du secret technique.
 - Un test e2e `agentctl` couvre désormais le chemin d'ouverture browser via une commande override injectée, avec vérification de `verification_uri_complete`.
 - La gateway runtime `jobs/policy` envoie désormais `Accept-Language`, et un test HTTP dédié le couvre sur les appels REST agent.
-- Aucun test d'anti-rejeu, de fenêtre de fraîcheur `<= 60s` ou de gestion de nonce côté signatures.
+- Les tests de `signed_core_http` couvrent désormais l'émission d'un nonce distinct par requête et une fenêtre de fraîcheur locale `<= 60s` sur le timestamp signé.
+- Le point restant est l'absence de validation bout-en-bout anti-rejeu côté Core depuis l'agent de test.
 - La gateway OpenAPI dérivés mappe désormais explicitement `LOCK_REQUIRED`, `LOCK_INVALID` et `STALE_LOCK_TOKEN`, avec tests HTTP dédiés.
 - Un test dédié du binaire daemon couvre désormais le chemin de récupération et d'application de `GET /app/policy`.
 - Aucun test de production réelle de preview/thumb/waveform via les générateurs du repo.
