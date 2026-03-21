@@ -39,9 +39,19 @@ pub fn run_runtime_poll_cycle<G: CoreApiGateway + ?Sized, S: NotificationSink>(
                 report: Some(report),
             }
         }
-        Err(CoreApiGatewayError::Throttled) => {
-            let plan =
-                session.on_poll_throttled_tracked(endpoint, PollSignal::SlowDown429, jitter_seed);
+        Err(CoreApiGatewayError::Throttled { retry_after_ms }) => {
+            let plan = match retry_after_ms {
+                Some(wait_ms) => session.on_poll_throttled_tracked(
+                    endpoint,
+                    PollSignal::RetryAfter429 { wait_ms },
+                    jitter_seed,
+                ),
+                None => session.on_poll_throttled_tracked(
+                    endpoint,
+                    PollSignal::SlowDown429,
+                    jitter_seed,
+                ),
+            };
             RuntimePollCycleOutcome {
                 status: RuntimePollCycleStatus::Throttled,
                 plan,
@@ -73,6 +83,6 @@ fn degraded_snapshot_from_error(error: CoreApiGatewayError) -> RuntimeSnapshot {
                 ..RuntimeSnapshot::default()
             }
         }
-        CoreApiGatewayError::Throttled => RuntimeSnapshot::default(),
+        CoreApiGatewayError::Throttled { .. } => RuntimeSnapshot::default(),
     }
 }

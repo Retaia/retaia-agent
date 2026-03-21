@@ -20,7 +20,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
   - tests CLI/daemon pour ces flows
 
 - Corriger le backoff/polling:
-  - prise en compte de `Retry-After`
   - brancher aussi `PollEndpoint::DeviceFlow`
 
 ## Priorité P2
@@ -66,7 +65,6 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 - Lot 3: sécurité locale et polling
   - migration config
-  - Retry-After
   - min poll interval
 
 - Lot 4: processing réel
