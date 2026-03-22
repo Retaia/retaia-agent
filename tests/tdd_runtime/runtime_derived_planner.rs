@@ -624,3 +624,97 @@ fn tdd_runtime_derived_planner_includes_sidecar_metrics_when_sidecars_are_staged
         Some(&serde_json::json!(2))
     );
 }
+
+#[test]
+fn tdd_runtime_derived_planner_extract_facts_merges_dji_srt_sidecar_fields() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-facts-srt-1".to_string(),
+        asset_uuid: "asset-facts-srt-1".to_string(),
+        lock_token: "lock-facts-srt-1".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::ExtractFacts,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/drone.mp4".to_string(),
+        source_sidecars_relative: vec!["INBOX/drone.srt".to_string()],
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("INBOX/drone.mp4");
+    let staged_srt = dir.path().join("INBOX/drone.srt");
+    std::fs::create_dir_all(staged.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&staged, b"facts-source").expect("write source");
+    std::fs::write(
+        &staged_srt,
+        br#"1
+00:00:00,000 --> 00:00:00,040
+[iso: 100] [shutter: 1/2500.0] [fnum: 1.7] [ev: 0] [focal_len: 24.00] [ct: 5200] [color_md: dlog_m]
+[latitude: 50.1234] [longitude: 4.5678] [rel_alt: 12.3 m] [abs_alt: 123.4 m]
+"#,
+    )
+    .expect("write srt");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[staged_srt])
+        .expect("plan");
+    let facts = plan.submit.facts_patch.expect("facts patch");
+
+    assert_eq!(facts.iso, Some(100));
+    assert_eq!(facts.exposure_time_s, Some(1.0 / 2500.0));
+    assert_eq!(facts.aperture_f_number, Some(1.7));
+    assert_eq!(facts.focal_length_mm, Some(24.0));
+    assert_eq!(facts.exposure_compensation_ev, Some(0.0));
+    assert_eq!(facts.color_mode.as_deref(), Some("dlog_m"));
+    assert_eq!(facts.color_temperature_k, Some(5200));
+    assert_eq!(facts.gps_latitude, Some(50.1234));
+    assert_eq!(facts.gps_longitude, Some(4.5678));
+    assert_eq!(facts.gps_altitude_relative_m, Some(12.3));
+    assert_eq!(facts.gps_altitude_absolute_m, Some(123.4));
+}
+
+#[test]
+fn tdd_runtime_derived_planner_extract_facts_uses_first_dji_srt_values() {
+    let planner = RuntimeDerivedPlanner::new(
+        Arc::new(WritingPreviewGenerator),
+        Arc::new(WritingPreviewGenerator),
+    );
+    let claimed = ClaimedDerivedJob {
+        job_id: "job-facts-srt-2".to_string(),
+        asset_uuid: "asset-facts-srt-2".to_string(),
+        lock_token: "lock-facts-srt-2".to_string(),
+        fencing_token: 1,
+        job_type: DerivedJobType::ExtractFacts,
+        source_storage_id: "nas-main".to_string(),
+        source_original_relative: "INBOX/drone.mp4".to_string(),
+        source_sidecars_relative: vec!["INBOX/drone.srt".to_string()],
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let staged = dir.path().join("INBOX/drone.mp4");
+    let staged_srt = dir.path().join("INBOX/drone.srt");
+    std::fs::create_dir_all(staged.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&staged, b"facts-source").expect("write source");
+    std::fs::write(
+        &staged_srt,
+        br#"1
+00:00:00,000 --> 00:00:00,040
+[iso: 100] [shutter: 1/2500.0] [latitude: 50.1000] [longitude: 4.1000]
+
+2
+00:00:00,040 --> 00:00:00,080
+[iso: 200] [shutter: 1/1000.0] [latitude: 51.2000] [longitude: 5.2000]
+"#,
+    )
+    .expect("write srt");
+
+    let plan = planner
+        .plan_for_claimed_job_with_source(&claimed, Some(staged.as_path()), &[staged_srt])
+        .expect("plan");
+    let facts = plan.submit.facts_patch.expect("facts patch");
+
+    assert_eq!(facts.iso, Some(100));
+    assert_eq!(facts.exposure_time_s, Some(1.0 / 2500.0));
+    assert_eq!(facts.gps_latitude, Some(50.1));
+    assert_eq!(facts.gps_longitude, Some(4.1));
+}
