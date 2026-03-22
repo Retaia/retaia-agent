@@ -103,6 +103,23 @@ Autres champs photo probablement utiles à prévoir dans le même lot:
   - unité: mètres
   - sensible: oui
 
+Exemple réel observé sur un `CR2` Canon EOS 5D Mark IV:
+
+- `camera_make = Canon`
+- `camera_model = Canon EOS 5D Mark IV`
+- `captured_at_original = 2025-12-01T15:28:02`
+- `exposure_time_s = 1/60 = 0.016666...`
+- `aperture_f_number = 5.0`
+- `iso = 100`
+- `focal_length_mm = 24`
+- `lens_model = EF24-70mm f/2.8L II USM`
+- `orientation = 1`
+- `width = 6720`
+- `height = 4480`
+- pas de GPS détecté dans cet exemple précis
+
+Ce fichier confirme donc qu'un lot photo utile et réaliste peut être extrait localement sans heuristique exotique.
+
 ## Vidéo: média principal + XMP éventuel
 
 Champs utiles au-delà du minimum déjà présent:
@@ -232,6 +249,7 @@ Ce lot couvre:
 
 - le besoin photo demandé immédiatement
 - une base de géolocalisation commune photo/vidéo drone
+- des champs photo réellement observés dans un `CR2` Canon
 - les champs réellement observés dans un `SRT` DJI Air 3
 - un minimum de valeur métier sans élargir trop vite le contrat
 
