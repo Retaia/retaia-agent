@@ -372,3 +372,95 @@ fn e2e_external_fixture_flow_extracts_video_facts_with_ffprobe_when_available() 
     assert!(facts.height.unwrap_or_default() > 0);
     assert!(facts.fps.unwrap_or_default() > 0.0);
 }
+
+#[test]
+fn e2e_external_fixture_flow_extracts_expected_h264_video_metadata() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping h264 video metadata fixture test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "video/h264/sample-h264.mp4")
+        .expect("missing h264 fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "h264 fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("mov"));
+    assert_eq!(facts.video_codec.as_deref(), Some("h264"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("aac"));
+    assert_eq!(facts.width, Some(1920));
+    assert_eq!(facts.height, Some(1080));
+    assert_eq!(facts.fps, Some(25.0));
+    assert_eq!(
+        facts.captured_at.as_deref(),
+        Some("2026-02-24T15:25:36.000000Z")
+    );
+    assert_eq!(facts.timecode_start.as_deref(), Some("01:00:00:00"));
+    assert_eq!(facts.sample_rate_hz, Some(48_000));
+    assert_eq!(facts.channel_count, Some(2));
+    assert_eq!(facts.pixel_format.as_deref(), Some("yuv420p"));
+    assert_eq!(facts.color_range.as_deref(), Some("tv"));
+    assert_eq!(facts.color_space.as_deref(), Some("bt709"));
+    assert_eq!(facts.color_transfer.as_deref(), Some("bt709"));
+    assert_eq!(facts.color_primaries.as_deref(), Some("bt709"));
+    assert_eq!(facts.has_dji_metadata_track, Some(true));
+    assert_eq!(
+        facts.dji_metadata_track_types,
+        Some(vec!["tmcd".to_string()])
+    );
+}
+
+#[test]
+fn e2e_external_fixture_flow_extracts_expected_h265_video_metadata() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping h265 video metadata fixture test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "video/h265/sample-h265.mp4")
+        .expect("missing h265 fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "h265 fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("mov"));
+    assert_eq!(facts.video_codec.as_deref(), Some("hevc"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("aac"));
+    assert_eq!(facts.width, Some(1920));
+    assert_eq!(facts.height, Some(1080));
+    assert_eq!(facts.fps, Some(25.0));
+    assert_eq!(
+        facts.captured_at.as_deref(),
+        Some("2026-02-24T15:25:38.000000Z")
+    );
+    assert_eq!(facts.timecode_start.as_deref(), Some("01:00:00:00"));
+    assert_eq!(facts.sample_rate_hz, Some(48_000));
+    assert_eq!(facts.channel_count, Some(2));
+    assert_eq!(facts.pixel_format.as_deref(), Some("yuv420p10le"));
+    assert_eq!(facts.color_range.as_deref(), Some("tv"));
+    assert_eq!(facts.color_space.as_deref(), Some("bt709"));
+    assert_eq!(facts.color_transfer.as_deref(), Some("bt709"));
+    assert_eq!(facts.color_primaries.as_deref(), Some("bt709"));
+    assert_eq!(facts.has_dji_metadata_track, Some(true));
+    assert_eq!(
+        facts.dji_metadata_track_types,
+        Some(vec!["tmcd".to_string()])
+    );
+}
