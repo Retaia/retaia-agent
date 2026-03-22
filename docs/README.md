@@ -13,6 +13,7 @@ Hub documentaire local, organisé par sujet.
 - Persistance configuration système (lib + chemins OS): `CONFIG-STORAGE.md`
 - Contrat des fixtures externes (RAW/AV + checksums): `FIXTURE-CONTRACT.md`
 - Qualité/CI/Hooks: `CI-QUALITY-GATES.md`
+- Proposition de nouveaux champs `facts` pour l'API Core: `FACTS-FIELDS-PROPOSAL-FOR-API-TEAM.md`
 
 ## Cadrage fonctionnel migre vers `retaia-docs`
 
