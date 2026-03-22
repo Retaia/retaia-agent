@@ -75,10 +75,7 @@ pub use domain::configuration::{
     supported_config_fields, validate_config,
 };
 pub use domain::feature_flags::{
-    CORE_ASSETS_LIFECYCLE_FEATURE, CORE_AUTH_FEATURE, CORE_CLIENTS_BOOTSTRAP_FEATURE,
-    CORE_DERIVED_ACCESS_FEATURE, CORE_JOBS_RUNTIME_FEATURE, CORE_POLICY_RUNTIME_FEATURE,
-    CORE_SEARCH_QUERY_FEATURE, ClientKind, can_issue_client_token, can_process_jobs,
-    core_v1_global_features, resolve_effective_features,
+    ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,
 };
 pub use domain::runtime_control::{
     RuntimeControlAvailability, RuntimeControlCommand, apply_runtime_control,

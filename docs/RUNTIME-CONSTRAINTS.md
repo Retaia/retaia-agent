@@ -33,6 +33,10 @@
 - Actions destructives (move/purge) hors périmètre agent.
 - MCP ne peut pas `claim/heartbeat/submit`.
 - Les actions mutatrices ne partent qu'après lecture d'un état compatible par polling.
+- `transcribe_audio`:
+  - contrat de transport et types OpenAPI acceptés avant `v1.0`
+  - pas d'implémentation métier agent avant la release `v1.0`
+  - tant que cette release n'est pas passée, un job `transcribe_audio` peut être reconnu côté transport mais reste explicitement non implémenté dans le runtime agent
 
 ## Polling Rules
 

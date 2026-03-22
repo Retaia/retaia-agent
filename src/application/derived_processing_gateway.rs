@@ -10,6 +10,7 @@ pub enum DerivedJobType {
     GeneratePreview,
     GenerateThumbnails,
     GenerateAudioWaveform,
+    TranscribeAudio,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,6 +85,46 @@ pub struct FactsPatchPayload {
     pub width: Option<i32>,
     pub height: Option<i32>,
     pub fps: Option<f64>,
+    pub captured_at: Option<String>,
+    pub exposure_time_s: Option<f64>,
+    pub aperture_f_number: Option<f64>,
+    pub iso: Option<i32>,
+    pub focal_length_mm: Option<f64>,
+    pub camera_make: Option<String>,
+    pub camera_model: Option<String>,
+    pub lens_model: Option<String>,
+    pub orientation: Option<i32>,
+    pub bitrate_kbps: Option<i32>,
+    pub sample_rate_hz: Option<i32>,
+    pub channel_count: Option<i32>,
+    pub bits_per_sample: Option<i32>,
+    pub rotation_deg: Option<i32>,
+    pub timecode_start: Option<String>,
+    pub pixel_format: Option<String>,
+    pub color_range: Option<String>,
+    pub color_space: Option<String>,
+    pub color_transfer: Option<String>,
+    pub color_primaries: Option<String>,
+    pub recorder_model: Option<String>,
+    pub gps_latitude: Option<f64>,
+    pub gps_longitude: Option<f64>,
+    pub gps_altitude_m: Option<f64>,
+    pub gps_altitude_relative_m: Option<f64>,
+    pub gps_altitude_absolute_m: Option<f64>,
+    pub exposure_compensation_ev: Option<f64>,
+    pub color_mode: Option<String>,
+    pub color_temperature_k: Option<i32>,
+    pub has_dji_metadata_track: Option<bool>,
+    pub dji_metadata_track_types: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TranscriptPatchPayload {
+    pub status: Option<String>,
+    pub text: Option<String>,
+    pub text_preview: Option<String>,
+    pub language: Option<String>,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -91,6 +132,7 @@ pub struct SubmitDerivedPayload {
     pub job_type: DerivedJobType,
     pub manifest: Vec<DerivedManifestItem>,
     pub facts_patch: Option<FactsPatchPayload>,
+    pub transcript_patch: Option<TranscriptPatchPayload>,
     pub warnings: Option<Vec<String>>,
     pub metrics: Option<HashMap<String, Value>>,
 }

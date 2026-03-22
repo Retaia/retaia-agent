@@ -50,6 +50,8 @@ pub enum DerivedJobExecutorError {
     MissingSubmitManifestForJobType(crate::application::derived_processing_gateway::DerivedJobType),
     #[error("execution plan invalid: facts patch is required for extract_facts")]
     MissingFactsPatchForExtractFacts,
+    #[error("execution plan invalid: transcript patch is required for transcribe_audio")]
+    MissingTranscriptPatchForTranscribeAudio,
     #[error(
         "execution plan invalid: derived kind {kind:?} is incompatible with job type {job_type:?}"
     )]
@@ -271,6 +273,11 @@ fn validate_submit_payload_for_claimed_job(
                         kind: item.kind,
                     });
                 }
+            }
+        }
+        DerivedJobType::TranscribeAudio => {
+            if submit.transcript_patch.is_none() {
+                return Err(DerivedJobExecutorError::MissingTranscriptPatchForTranscribeAudio);
             }
         }
     }

@@ -65,6 +65,7 @@ impl ProxyGenerator for WritingPreviewGenerator {
             width: Some(1920),
             height: Some(1080),
             fps: Some(25.0),
+            ..FactsPatchPayload::default()
         })
     }
 }
@@ -134,6 +135,7 @@ impl ProxyGenerator for UnknownDurationThumbnailGenerator {
             width: Some(1920),
             height: Some(1080),
             fps: Some(25.0),
+            ..FactsPatchPayload::default()
         })
     }
 }
@@ -214,6 +216,7 @@ impl ProxyGenerator for ThumbnailFactsGenerator {
             width: Some(1920),
             height: Some(1080),
             fps: Some(25.0),
+            ..FactsPatchPayload::default()
         })
     }
 }

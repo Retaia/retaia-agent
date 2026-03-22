@@ -11,9 +11,9 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-/// AssetTranscript : Transcript enrichment payload. Outside v1 conformance scope; reserved for pre-release feature-flagged exposure before validated v1.1+ rollout.
+/// TranscriptPatch : Pre-release transcript merge patch. Accepted only when `features.ai.transcribe_audio` is effectively enabled; outside v1 conformance scope until validated v1.1+ rollout.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AssetTranscript {
+pub struct TranscriptPatch {
     #[serde(rename = "status", skip_serializing_if = "Option::is_none")]
     pub status: Option<Status>,
     #[serde(rename = "text", skip_serializing_if = "Option::is_none")]
@@ -22,15 +22,14 @@ pub struct AssetTranscript {
     pub text_preview: Option<String>,
     #[serde(rename = "language", skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
-    /// Timestamp of the last accepted business mutation on this asset. Informational only; not a write precondition.
     #[serde(rename = "updated_at", skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
 }
 
-impl AssetTranscript {
-    /// Transcript enrichment payload. Outside v1 conformance scope; reserved for pre-release feature-flagged exposure before validated v1.1+ rollout.
-    pub fn new() -> AssetTranscript {
-        AssetTranscript {
+impl TranscriptPatch {
+    /// Pre-release transcript merge patch. Accepted only when `features.ai.transcribe_audio` is effectively enabled; outside v1 conformance scope until validated v1.1+ rollout.
+    pub fn new() -> TranscriptPatch {
+        TranscriptPatch {
             status: None,
             text: None,
             text_preview: None,

@@ -6,7 +6,6 @@ use crate::application::notification_bridge::{
 use crate::application::runtime_loop_engine::RuntimeLoopEngine;
 use crate::application::runtime_sync_coordinator::RuntimeSyncPlan;
 use crate::domain::configuration::{AgentRuntimeConfig, ConfigValidationError, validate_config};
-use crate::domain::feature_flags::CORE_JOBS_RUNTIME_FEATURE;
 use crate::domain::runtime_control::RuntimeControlCommand;
 use crate::domain::runtime_orchestration::{
     ClientRuntimeTarget, PollEndpoint, PollSignal, PushChannel, PushHint,
@@ -168,7 +167,6 @@ impl RuntimeSession {
 
     pub fn can_process_jobs(&self) -> bool {
         matches!(self.target(), ClientRuntimeTarget::Agent)
-            && self.effective_feature_enabled(CORE_JOBS_RUNTIME_FEATURE)
     }
 }
 

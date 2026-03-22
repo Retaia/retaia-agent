@@ -121,6 +121,7 @@ impl<D: RawPhotoDecoder> ProxyGenerator for RustPhotoProxyGenerator<D> {
             width: i32::try_from(source.width()).ok(),
             height: i32::try_from(source.height()).ok(),
             fps: None,
+            ..FactsPatchPayload::default()
         })
     }
 }

@@ -522,6 +522,100 @@ fn parse_ffprobe_facts(stdout: &str) -> Result<FactsPatchPayload, ProxyGeneratio
         .and_then(|stream| stream.get("height").and_then(|v| v.as_i64()))
         .and_then(|value| i32::try_from(value).ok());
     let fps = video_stream.and_then(parse_stream_fps);
+    let captured_at = format
+        .and_then(|value| value.get("tags"))
+        .and_then(|value| value.get("creation_time"))
+        .and_then(|value| value.as_str())
+        .map(ToString::to_string);
+    let camera_make = format
+        .and_then(|value| value.get("tags"))
+        .and_then(|value| value.get("com.apple.quicktime.make"))
+        .and_then(|value| value.as_str())
+        .map(ToString::to_string);
+    let camera_model = format
+        .and_then(|value| value.get("tags"))
+        .and_then(|value| value.get("com.apple.quicktime.model"))
+        .and_then(|value| value.as_str())
+        .map(ToString::to_string);
+    let recorder_model = format
+        .and_then(|value| value.get("tags"))
+        .and_then(|value| {
+            value
+                .get("encoded_by")
+                .or_else(|| value.get("encoder"))
+                .and_then(|value| value.as_str())
+        })
+        .map(ToString::to_string);
+    let bitrate_kbps = video_stream
+        .and_then(|stream| stream.get("bit_rate").and_then(|value| value.as_str()))
+        .or_else(|| {
+            audio_stream.and_then(|stream| stream.get("bit_rate").and_then(|value| value.as_str()))
+        })
+        .and_then(|value| value.parse::<u64>().ok())
+        .and_then(|value| i32::try_from(value / 1000).ok());
+    let sample_rate_hz = audio_stream
+        .and_then(|stream| stream.get("sample_rate").and_then(|value| value.as_str()))
+        .and_then(|value| value.parse::<i32>().ok());
+    let channel_count = audio_stream
+        .and_then(|stream| stream.get("channels").and_then(|value| value.as_i64()))
+        .and_then(|value| i32::try_from(value).ok());
+    let bits_per_sample = audio_stream
+        .and_then(|stream| {
+            stream
+                .get("bits_per_sample")
+                .and_then(|value| value.as_i64())
+        })
+        .and_then(|value| i32::try_from(value).ok());
+    let rotation_deg = video_stream
+        .and_then(|stream| stream.get("tags"))
+        .and_then(|value| value.get("rotate"))
+        .and_then(|value| value.as_str())
+        .and_then(|value| value.parse::<i32>().ok());
+    let timecode_start = video_stream
+        .and_then(|stream| stream.get("tags"))
+        .and_then(|value| value.get("timecode"))
+        .and_then(|value| value.as_str())
+        .or_else(|| {
+            audio_stream
+                .and_then(|stream| stream.get("tags"))
+                .and_then(|value| value.get("timecode"))
+                .and_then(|value| value.as_str())
+        })
+        .map(ToString::to_string);
+    let pixel_format = video_stream
+        .and_then(|stream| stream.get("pix_fmt").and_then(|value| value.as_str()))
+        .map(ToString::to_string);
+    let color_range = video_stream
+        .and_then(|stream| stream.get("color_range").and_then(|value| value.as_str()))
+        .map(ToString::to_string);
+    let color_space = video_stream
+        .and_then(|stream| stream.get("color_space").and_then(|value| value.as_str()))
+        .map(ToString::to_string);
+    let color_transfer = video_stream
+        .and_then(|stream| {
+            stream
+                .get("color_transfer")
+                .and_then(|value| value.as_str())
+        })
+        .map(ToString::to_string);
+    let color_primaries = video_stream
+        .and_then(|stream| {
+            stream
+                .get("color_primaries")
+                .and_then(|value| value.as_str())
+        })
+        .map(ToString::to_string);
+    let dji_metadata_track_types: Vec<String> = streams
+        .iter()
+        .filter(|stream| stream.get("codec_type").and_then(|value| value.as_str()) == Some("data"))
+        .filter_map(|stream| {
+            stream
+                .get("codec_tag_string")
+                .and_then(|value| value.as_str())
+        })
+        .filter(|value| !value.is_empty() && *value != "[0][0][0][0]")
+        .map(ToString::to_string)
+        .collect();
 
     Ok(FactsPatchPayload {
         duration_ms,
@@ -531,6 +625,25 @@ fn parse_ffprobe_facts(stdout: &str) -> Result<FactsPatchPayload, ProxyGeneratio
         width,
         height,
         fps,
+        captured_at,
+        camera_make,
+        camera_model,
+        bitrate_kbps,
+        sample_rate_hz,
+        channel_count,
+        bits_per_sample,
+        rotation_deg,
+        timecode_start,
+        pixel_format,
+        color_range,
+        color_space,
+        color_transfer,
+        color_primaries,
+        recorder_model,
+        has_dji_metadata_track: (!dji_metadata_track_types.is_empty()).then_some(true),
+        dji_metadata_track_types: (!dji_metadata_track_types.is_empty())
+            .then_some(dji_metadata_track_types),
+        ..FactsPatchPayload::default()
     })
 }
 

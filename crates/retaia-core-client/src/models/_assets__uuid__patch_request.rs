@@ -20,6 +20,30 @@ pub struct AssetsUuidPatchRequest {
     /// Shared complementary metadata map. Values stay JSON-simple; domains requiring dedicated semantics, storage or security rules must not be hidden implicitly here.
     #[serde(rename = "fields", skip_serializing_if = "Option::is_none")]
     pub fields: Option<std::collections::HashMap<String, models::AssetFieldValue>>,
+    #[serde(rename = "captured_at", skip_serializing_if = "Option::is_none")]
+    pub captured_at: Option<String>,
+    #[serde(rename = "gps_latitude", skip_serializing_if = "Option::is_none")]
+    pub gps_latitude: Option<f64>,
+    #[serde(rename = "gps_longitude", skip_serializing_if = "Option::is_none")]
+    pub gps_longitude: Option<f64>,
+    #[serde(rename = "gps_altitude_m", skip_serializing_if = "Option::is_none")]
+    pub gps_altitude_m: Option<f64>,
+    #[serde(
+        rename = "gps_altitude_relative_m",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub gps_altitude_relative_m: Option<f64>,
+    #[serde(
+        rename = "gps_altitude_absolute_m",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub gps_altitude_absolute_m: Option<f64>,
+    #[serde(rename = "location_country", skip_serializing_if = "Option::is_none")]
+    pub location_country: Option<String>,
+    #[serde(rename = "location_city", skip_serializing_if = "Option::is_none")]
+    pub location_city: Option<String>,
+    #[serde(rename = "location_label", skip_serializing_if = "Option::is_none")]
+    pub location_label: Option<String>,
     #[serde(rename = "processing_profile", skip_serializing_if = "Option::is_none")]
     pub processing_profile: Option<ProcessingProfile>,
     #[serde(rename = "state", skip_serializing_if = "Option::is_none")]
@@ -32,6 +56,15 @@ impl AssetsUuidPatchRequest {
             tags: None,
             notes: None,
             fields: None,
+            captured_at: None,
+            gps_latitude: None,
+            gps_longitude: None,
+            gps_altitude_m: None,
+            gps_altitude_relative_m: None,
+            gps_altitude_absolute_m: None,
+            location_country: None,
+            location_city: None,
+            location_label: None,
             processing_profile: None,
             state: None,
         }

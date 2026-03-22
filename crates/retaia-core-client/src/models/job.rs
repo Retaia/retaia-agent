@@ -74,6 +74,8 @@ pub enum JobType {
     GenerateThumbnails,
     #[serde(rename = "generate_audio_waveform")]
     GenerateAudioWaveform,
+    #[serde(rename = "transcribe_audio")]
+    TranscribeAudio,
 }
 
 impl Default for JobType {

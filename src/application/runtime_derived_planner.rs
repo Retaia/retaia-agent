@@ -63,6 +63,7 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
                 job_type: claimed.job_type,
                 manifest,
                 facts_patch: None,
+                transcript_patch: None,
                 warnings: None,
                 metrics: base_metrics_for_job(claimed),
             },
@@ -118,6 +119,11 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
                 self.generate_waveform_artifact(source_path)?
             }
             DerivedJobType::ExtractFacts => source_path.to_path_buf(),
+            DerivedJobType::TranscribeAudio => {
+                return Err(DerivedJobExecutorError::Planner(
+                    "transcribe_audio is not implemented yet".to_string(),
+                ));
+            }
         };
 
         let metadata = std::fs::metadata(&generated_path)
@@ -174,6 +180,7 @@ fn default_manifest_for_job(claimed: &ClaimedDerivedJob) -> Vec<DerivedManifestI
         DerivedJobType::GenerateAudioWaveform => {
             vec![manifest_item_for_kind(claimed, DerivedKind::Waveform)]
         }
+        DerivedJobType::TranscribeAudio => Vec::new(),
     }
 }
 

@@ -12,25 +12,19 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ProcessingResultPatch {
-    #[serde(rename = "facts_patch", skip_serializing_if = "Option::is_none")]
-    pub facts_patch: Option<Box<models::FactsPatch>>,
-    #[serde(rename = "derived_patch", skip_serializing_if = "Option::is_none")]
-    pub derived_patch: Option<Box<models::DerivedPatch>>,
-    #[serde(rename = "transcript_patch", skip_serializing_if = "Option::is_none")]
-    pub transcript_patch: Option<Box<models::TranscriptPatch>>,
+pub struct SubmitTranscriptResult {
+    #[serde(rename = "transcript_patch")]
+    pub transcript_patch: Box<models::TranscriptPatch>,
     #[serde(rename = "warnings", skip_serializing_if = "Option::is_none")]
     pub warnings: Option<Vec<String>>,
     #[serde(rename = "metrics", skip_serializing_if = "Option::is_none")]
     pub metrics: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
-impl ProcessingResultPatch {
-    pub fn new() -> ProcessingResultPatch {
-        ProcessingResultPatch {
-            facts_patch: None,
-            derived_patch: None,
-            transcript_patch: None,
+impl SubmitTranscriptResult {
+    pub fn new(transcript_patch: models::TranscriptPatch) -> SubmitTranscriptResult {
+        SubmitTranscriptResult {
+            transcript_patch: Box::new(transcript_patch),
             warnings: None,
             metrics: None,
         }

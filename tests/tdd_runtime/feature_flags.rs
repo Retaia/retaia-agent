@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 
 use retaia_agent::{
-    CORE_AUTH_FEATURE, CORE_JOBS_RUNTIME_FEATURE, ClientKind, can_issue_client_token,
-    can_process_jobs, resolve_effective_features,
+    ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,
 };
 
 #[test]
@@ -80,17 +79,17 @@ fn tdd_missing_runtime_flag_defaults_to_false() {
 }
 
 #[test]
-fn tdd_core_v1_global_features_are_forced_true() {
+fn tdd_deprecated_core_keys_are_not_forced_true_anymore() {
     let effective = resolve_effective_features(
-        &BTreeMap::from([(CORE_JOBS_RUNTIME_FEATURE.to_string(), false)]),
-        &BTreeMap::from([(CORE_JOBS_RUNTIME_FEATURE.to_string(), false)]),
-        &BTreeMap::from([(CORE_JOBS_RUNTIME_FEATURE.to_string(), false)]),
+        &BTreeMap::from([(String::from("features.core.jobs.runtime"), false)]),
+        &BTreeMap::from([(String::from("features.core.jobs.runtime"), false)]),
+        &BTreeMap::from([(String::from("features.core.jobs.runtime"), false)]),
         &BTreeMap::new(),
         &BTreeMap::new(),
     );
 
-    assert_eq!(effective.get(CORE_JOBS_RUNTIME_FEATURE), Some(&true));
-    assert_eq!(effective.get(CORE_AUTH_FEATURE), Some(&true));
+    assert_eq!(effective.get("features.core.jobs.runtime"), Some(&false));
+    assert_eq!(effective.get("features.core.auth"), None);
 }
 
 #[test]

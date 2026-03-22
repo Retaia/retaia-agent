@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **job_id** | **String** |  | 
-**job_type** | **JobType** |  (enum: extract_facts, generate_preview, generate_thumbnails, generate_audio_waveform) | 
+**job_type** | **JobType** |  (enum: extract_facts, generate_preview, generate_thumbnails, generate_audio_waveform, transcribe_audio) | 
 **status** | **Status** |  (enum: pending, claimed, completed, failed) | 
 **asset_uuid** | **String** |  | 
 **source** | [**models::AssetPaths**](AssetPaths.md) | Source locator (relative paths + storage id) for local media access. | 
