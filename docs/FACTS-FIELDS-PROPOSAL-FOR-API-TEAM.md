@@ -55,6 +55,7 @@ Règle générale:
 
 - `FactsPatch` doit rester un patch asset-level
 - pas de série temporelle détaillée
+- `captured_at_original` est accepté quand la source est fiable, y compris après correction device-spécifique explicitement documentée
 
 Pour les sidecars `SRT` DJI:
 
@@ -193,7 +194,7 @@ Champs audio utiles:
 Note:
 
 - `captured_at_original` n'est pas systématiquement fiable sur les exports audio device
-- il ne faut donc l'ajouter que si la source et le format sont suffisamment robustes
+- en revanche, une règle de correction device-spécifique peut le rendre acceptable si elle est déterministe et documentée
 
 ## Champs enrichis via sidecar `SRT` DJI
 
@@ -334,12 +335,22 @@ Champs observés:
 - métadonnées device additionnelles présentes:
   - `rFWVER = 2.0.8`
   - `rSPEED = 024.000-ND`
-- `date = 0026-03-22` observée dans cet exemple, donc non fiable en l'état pour un `captured_at_original`
+- `bext.origination_date = 0026-03-22`
+- `bext.origination_time = 10:03:39`
+- `iXML.TIMESTAMP_SAMPLES_SINCE_MIDNIGHT = 1738563538`
+- `iXML.TIMESTAMP_SAMPLE_RATE = 48000`
+- date filesystem observée: `2026-03-22`
+- `captured_at_original = 2026-03-22T10:03:39` après correction device-spécifique RODE
 
 Conclusion:
 
 - un lot audio utile existe
-- les timestamps device ne sont pas toujours assez fiables pour être promus en facts sans règle spécifique par format/device
+- dans ce cas précis, `captured_at_original` peut être promu après correction documentée
+- règle proposée pour RODE:
+  - lire `bext.origination_time`
+  - lire `iXML.TIMESTAMP_SAMPLES_SINCE_MIDNIGHT`
+  - vérifier leur cohérence temporelle
+  - remplacer l'année manifestement invalide de `bext.origination_date` par l'année fiable du fichier hôte quand le reste de la date est cohérent
 
 ## Questions à trancher côté API
 
@@ -359,6 +370,7 @@ Conclusion:
    - `color_mode`
 8. Le contrat doit-il prévoir des champs temporels "originaux" séparés des dates d'ingestion côté Core?
 9. Veut-on exposer les signaux de conteneur comme `has_dji_metadata_track`, ou les garder purement internes?
+10. Les corrections device-spécifiques de date, comme le cas RODE `bext/iXML`, sont-elles acceptées pour alimenter directement `captured_at_original`?
 
 ## Recommandation d'implémentation après validation API
 
