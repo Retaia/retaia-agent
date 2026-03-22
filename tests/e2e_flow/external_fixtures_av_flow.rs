@@ -204,6 +204,134 @@ fn e2e_external_fixture_flow_extracts_audio_facts_with_ffprobe_when_available() 
 }
 
 #[test]
+fn e2e_external_fixture_flow_extracts_expected_aac_audio_metadata() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping aac audio metadata fixture test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "audio/aac/sample1.aac")
+        .expect("missing aac fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "aac fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("aac"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("aac"));
+    assert_eq!(facts.sample_rate_hz, Some(44_100));
+    assert_eq!(facts.channel_count, Some(2));
+    assert_eq!(facts.bits_per_sample, Some(0));
+    assert_eq!(facts.bitrate_kbps, Some(127));
+    assert_eq!(facts.duration_ms, Some(128_554));
+    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.recorder_model, None);
+}
+
+#[test]
+fn e2e_external_fixture_flow_extracts_expected_flac_audio_metadata() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping flac audio metadata fixture test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "audio/flac/sample1.flac")
+        .expect("missing flac fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "flac fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("flac"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("flac"));
+    assert_eq!(facts.sample_rate_hz, Some(44_100));
+    assert_eq!(facts.channel_count, Some(2));
+    assert_eq!(facts.bits_per_sample, Some(0));
+    assert_eq!(facts.bitrate_kbps, None);
+    assert_eq!(facts.duration_ms, Some(122_094));
+    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.recorder_model.as_deref(), Some("Lavf57.83.100"));
+}
+
+#[test]
+fn e2e_external_fixture_flow_extracts_expected_mp3_audio_metadata() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping mp3 audio metadata fixture test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "audio/mp3/sample1.mp3")
+        .expect("missing mp3 fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "mp3 fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("mp3"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("mp3"));
+    assert_eq!(facts.sample_rate_hz, Some(44_100));
+    assert_eq!(facts.channel_count, Some(2));
+    assert_eq!(facts.bits_per_sample, Some(0));
+    assert_eq!(facts.bitrate_kbps, Some(128));
+    assert_eq!(facts.duration_ms, Some(122_094));
+    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.recorder_model.as_deref(), Some("Lavf57.83.100"));
+}
+
+#[test]
+fn e2e_external_fixture_flow_extracts_expected_pcm_wav_audio_metadata() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping wav audio metadata fixture test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample1.wav")
+        .expect("missing wav fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "wav fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("wav"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("pcm_s16le"));
+    assert_eq!(facts.sample_rate_hz, Some(44_100));
+    assert_eq!(facts.channel_count, Some(2));
+    assert_eq!(facts.bits_per_sample, Some(16));
+    assert_eq!(facts.bitrate_kbps, Some(1411));
+    assert_eq!(facts.duration_ms, Some(122_094));
+    assert!(facts.captured_at.is_some());
+    assert_eq!(facts.recorder_model.as_deref(), Some("Lavf57.83.100"));
+}
+
+#[test]
 fn e2e_external_fixture_flow_extracts_expected_facts_from_wireless_pro_wav() {
     if !ffmpeg_available() {
         eprintln!("ffmpeg not available, skipping Wireless PRO audio facts test");
