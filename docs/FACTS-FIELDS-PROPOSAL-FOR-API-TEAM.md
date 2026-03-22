@@ -144,6 +144,12 @@ Champs utiles au-delà du minimum déjà présent:
 - `timecode_start`
   - type suggéré: `string`
 
+Pour les sources DJI, la recommandation côté agent est:
+
+- préférer le sidecar `SRT` quand il est disponible pour les facts enrichis
+- ne pas dépendre à ce stade du parsing des pistes data propriétaires embarquées
+- éventuellement exposer la présence de pistes metadata DJI comme signal technique, sans interprétation métier
+
 Exemple réel observé sur un `MOV` Canon EOS 5D Mark IV:
 
 - `captured_at_original = 2026-03-16T15:11:29Z`
@@ -164,6 +170,28 @@ Exemple réel observé sur un `MOV` Canon EOS 5D Mark IV:
 - pas de GPS détecté, ce qui est normal pour ce type de `MOV` boîtier seul
 
 Ce fichier confirme qu'un lot vidéo utile peut être extrait depuis le conteneur QuickTime sans dépendre d'un sidecar.
+
+Exemple réel observé sur un `MP4` DJI Air 3:
+
+- `captured_at_original = 2024-04-12T14:00:17Z`
+- `media_format = mp4`
+- `duration_ms = 118560`
+- `video_codec = hevc`
+- `width = 3840`
+- `height = 2160`
+- `fps = 25`
+- `video_bitrate_kbps = 90002`
+- `pixel_format = yuv420p10le`
+- `color_range = tv`
+- `color_space = bt709`
+- `color_transfer = bt709`
+- `color_primaries = bt709`
+- `encoder = DJI Air3`
+- `has_dji_metadata_track = true`
+  - pistes observées: `djmd`, `dbgi`
+- pas de GPS standard lisible directement via `ffprobe`, ce qui est normal ici
+
+Ce fichier confirme qu'un `MP4` DJI peut signaler la présence de metadata propriétaire embarquée, mais que le `SRT` reste la source la plus simple et la plus lisible pour les facts enrichis.
 
 ## Drone / sidecar `SRT`
 
