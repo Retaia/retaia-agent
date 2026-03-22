@@ -1,10 +1,10 @@
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime};
 
+use chrono::{TimeZone, Utc};
 use retaia_agent::{
     AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, CommandOutput, CommandRunner,
-    FfmpegProxyGenerator, ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
-    VideoThumbnailRequest,
+    FfmpegProxyGenerator, FileTimestampProvider, ProxyGenerationError, ProxyGenerator,
+    ThumbnailFormat, VideoProxyRequest, VideoThumbnailRequest,
 };
 
 #[derive(Debug)]
@@ -65,6 +65,22 @@ struct WaveformRunner {
     calls: Mutex<Vec<RecordedCall>>,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct MockTimestampProvider {
+    created_at: Option<chrono::DateTime<Utc>>,
+    modified_at: Option<chrono::DateTime<Utc>>,
+}
+
+impl FileTimestampProvider for MockTimestampProvider {
+    fn created_at_utc(&self, _path: &std::path::Path) -> Option<chrono::DateTime<Utc>> {
+        self.created_at
+    }
+
+    fn modified_at_utc(&self, _path: &std::path::Path) -> Option<chrono::DateTime<Utc>> {
+        self.modified_at
+    }
+}
+
 impl WaveformRunner {
     fn new() -> Self {
         Self {
@@ -107,7 +123,18 @@ impl CommandRunner for WaveformRunner {
 #[test]
 fn tdd_ffmpeg_video_proxy_uses_h264_aac_cfr_and_faststart() {
     let runner = FakeRunner::success();
-    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let generator = FfmpegProxyGenerator::new_with_timestamp_provider(
+        "ffmpeg".to_string(),
+        runner,
+        MockTimestampProvider {
+            created_at: None,
+            modified_at: Some(
+                Utc.with_ymd_and_hms(2026, 3, 22, 10, 3, 39)
+                    .single()
+                    .expect("datetime"),
+            ),
+        },
+    );
     let request = VideoProxyRequest {
         input_path: "/tmp/in.mov".to_string(),
         output_path: "/tmp/out.mp4".to_string(),
@@ -139,7 +166,18 @@ fn tdd_ffmpeg_video_proxy_uses_h264_aac_cfr_and_faststart() {
 #[test]
 fn tdd_ffmpeg_audio_proxy_mp4_uses_aac_low_profile_and_faststart() {
     let runner = FakeRunner::success();
-    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let generator = FfmpegProxyGenerator::new_with_timestamp_provider(
+        "ffmpeg".to_string(),
+        runner,
+        MockTimestampProvider {
+            created_at: None,
+            modified_at: Some(
+                Utc.with_ymd_and_hms(2026, 3, 22, 10, 3, 39)
+                    .single()
+                    .expect("datetime"),
+            ),
+        },
+    );
     let request = AudioProxyRequest {
         input_path: "/tmp/in.wav".to_string(),
         output_path: "/tmp/out.m4a".to_string(),
@@ -290,10 +328,6 @@ fn tdd_ffmpeg_extract_media_facts_repairs_rode_bext_timestamp_from_file_year() {
             r#"<BWFXML><TIMESTAMP_SAMPLES_SINCE_MIDNIGHT>1738563538</TIMESTAMP_SAMPLES_SINCE_MIDNIGHT><TIMESTAMP_SAMPLE_RATE>48000</TIMESTAMP_SAMPLE_RATE></BWFXML>"#,
         ),
     );
-    let modified_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_774_176_219);
-    filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(modified_at))
-        .expect("set mtime");
-
     let facts = generator
         .extract_media_facts(&path.display().to_string())
         .expect("facts extraction should succeed");
@@ -317,7 +351,18 @@ fn tdd_ffmpeg_extract_media_facts_falls_back_to_file_timestamp_when_bext_date_ca
         .to_string(),
         stderr: String::new(),
     });
-    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let generator = FfmpegProxyGenerator::new_with_timestamp_provider(
+        "ffmpeg".to_string(),
+        runner,
+        MockTimestampProvider {
+            created_at: None,
+            modified_at: Some(
+                Utc.with_ymd_and_hms(2026, 3, 21, 10, 40, 0)
+                    .single()
+                    .expect("datetime"),
+            ),
+        },
+    );
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("rode.wav");
     write_test_wav_with_chunks(
@@ -329,10 +374,6 @@ fn tdd_ffmpeg_extract_media_facts_falls_back_to_file_timestamp_when_bext_date_ca
         }),
         None,
     );
-    let modified_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_774_089_600);
-    filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(modified_at))
-        .expect("set mtime");
-
     let facts = generator
         .extract_media_facts(&path.display().to_string())
         .expect("facts extraction should succeed");
@@ -354,14 +395,25 @@ fn tdd_ffmpeg_extract_media_facts_falls_back_to_file_creation_time_for_plain_wav
         .to_string(),
         stderr: String::new(),
     });
-    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let generator = FfmpegProxyGenerator::new_with_timestamp_provider(
+        "ffmpeg".to_string(),
+        runner,
+        MockTimestampProvider {
+            created_at: Some(
+                Utc.with_ymd_and_hms(2026, 3, 22, 10, 37, 28)
+                    .single()
+                    .expect("datetime"),
+            ),
+            modified_at: Some(
+                Utc.with_ymd_and_hms(2026, 3, 22, 10, 40, 0)
+                    .single()
+                    .expect("datetime"),
+            ),
+        },
+    );
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("plain.wav");
     write_test_wav_with_chunks(&path, None, None);
-    let modified_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_774_175_848);
-    filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(modified_at))
-        .expect("set mtime");
-
     let facts = generator
         .extract_media_facts(&path.display().to_string())
         .expect("facts extraction should succeed");
@@ -434,10 +486,14 @@ fn push_chunk(target: &mut Vec<u8>, id: &[u8; 4], data: &[u8]) {
     }
 }
 
-fn generator_runner_call(generator: &FfmpegProxyGenerator<FakeRunner>) -> RecordedCall {
+fn generator_runner_call<T: FileTimestampProvider>(
+    generator: &FfmpegProxyGenerator<FakeRunner, T>,
+) -> RecordedCall {
     generator.runner().first_call()
 }
 
-fn generator_runner_call_count(generator: &FfmpegProxyGenerator<FakeRunner>) -> usize {
+fn generator_runner_call_count<T: FileTimestampProvider>(
+    generator: &FfmpegProxyGenerator<FakeRunner, T>,
+) -> usize {
     generator.runner().call_count()
 }

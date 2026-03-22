@@ -108,8 +108,8 @@ pub use infrastructure::daemon_diagnostics::{
     render_daemon_inspect_json,
 };
 pub use infrastructure::ffmpeg_proxy_generator::{
-    CommandOutput, CommandRunner, FfmpegProxyGenerator, StdCommandRunner, build_audio_proxy_args,
-    build_video_proxy_args,
+    CommandOutput, CommandRunner, FfmpegProxyGenerator, FileTimestampProvider, StdCommandRunner,
+    StdFileTimestampProvider, build_audio_proxy_args, build_video_proxy_args,
 };
 pub use infrastructure::i18n::{Language, detect_language, parse_language, t};
 pub use infrastructure::notification_sink::{

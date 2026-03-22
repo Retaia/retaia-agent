@@ -41,22 +41,61 @@ impl CommandRunner for StdCommandRunner {
 }
 
 #[derive(Debug, Clone)]
-pub struct FfmpegProxyGenerator<R: CommandRunner = StdCommandRunner> {
+pub struct FfmpegProxyGenerator<
+    R: CommandRunner = StdCommandRunner,
+    T: FileTimestampProvider = StdFileTimestampProvider,
+> {
     ffmpeg_binary: String,
     runner: R,
+    timestamp_provider: T,
 }
 
-impl Default for FfmpegProxyGenerator<StdCommandRunner> {
+impl Default for FfmpegProxyGenerator<StdCommandRunner, StdFileTimestampProvider> {
     fn default() -> Self {
         Self::new("ffmpeg".to_string(), StdCommandRunner)
     }
 }
 
-impl<R: CommandRunner> FfmpegProxyGenerator<R> {
+pub trait FileTimestampProvider {
+    fn created_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>>;
+    fn modified_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>>;
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct StdFileTimestampProvider;
+
+impl FileTimestampProvider for StdFileTimestampProvider {
+    fn created_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>> {
+        fs::metadata(path)
+            .ok()
+            .and_then(|metadata| metadata.created().ok())
+            .map(chrono::DateTime::<Utc>::from)
+    }
+
+    fn modified_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>> {
+        fs::metadata(path)
+            .ok()
+            .and_then(|metadata| metadata.modified().ok())
+            .map(chrono::DateTime::<Utc>::from)
+    }
+}
+
+impl<R: CommandRunner> FfmpegProxyGenerator<R, StdFileTimestampProvider> {
     pub fn new(ffmpeg_binary: String, runner: R) -> Self {
+        Self::new_with_timestamp_provider(ffmpeg_binary, runner, StdFileTimestampProvider)
+    }
+}
+
+impl<R: CommandRunner, T: FileTimestampProvider> FfmpegProxyGenerator<R, T> {
+    pub fn new_with_timestamp_provider(
+        ffmpeg_binary: String,
+        runner: R,
+        timestamp_provider: T,
+    ) -> Self {
         Self {
             ffmpeg_binary,
             runner,
+            timestamp_provider,
         }
     }
 
@@ -65,7 +104,7 @@ impl<R: CommandRunner> FfmpegProxyGenerator<R> {
     }
 }
 
-impl<R: CommandRunner> ProxyGenerator for FfmpegProxyGenerator<R> {
+impl<R: CommandRunner, T: FileTimestampProvider> ProxyGenerator for FfmpegProxyGenerator<R, T> {
     fn generate_video_proxy(
         &self,
         request: &VideoProxyRequest,
@@ -167,7 +206,7 @@ impl<R: CommandRunner> ProxyGenerator for FfmpegProxyGenerator<R> {
             });
         }
         let mut facts = parse_ffprobe_facts(&output.stdout)?;
-        merge_wav_container_facts(input_path, &mut facts)?;
+        merge_wav_container_facts(input_path, &mut facts, &self.timestamp_provider)?;
         Ok(facts)
     }
 }
@@ -665,6 +704,7 @@ fn parse_stream_fps(stream: &serde_json::Value) -> Option<f64> {
 fn merge_wav_container_facts(
     input_path: &str,
     facts: &mut FactsPatchPayload,
+    timestamp_provider: &dyn FileTimestampProvider,
 ) -> Result<(), ProxyGenerationError> {
     let is_wav = facts
         .media_format
@@ -675,7 +715,7 @@ fn merge_wav_container_facts(
         return Ok(());
     }
 
-    let Some(parsed) = parse_wav_container_facts(Path::new(input_path))? else {
+    let Some(parsed) = parse_wav_container_facts(Path::new(input_path), timestamp_provider)? else {
         return Ok(());
     };
     facts.recorder_model = facts.recorder_model.take().or(parsed.recorder_model);
@@ -702,7 +742,10 @@ struct IxmlChunkData {
     timestamp_sample_rate: Option<u32>,
 }
 
-fn parse_wav_container_facts(path: &Path) -> Result<Option<ParsedWavFacts>, ProxyGenerationError> {
+fn parse_wav_container_facts(
+    path: &Path,
+    timestamp_provider: &dyn FileTimestampProvider,
+) -> Result<Option<ParsedWavFacts>, ProxyGenerationError> {
     let bytes = fs::read(path).map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
     if bytes.len() < 12 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WAVE" {
         return Ok(None);
@@ -732,15 +775,8 @@ fn parse_wav_container_facts(path: &Path) -> Result<Option<ParsedWavFacts>, Prox
         offset = data_end + (chunk_size % 2);
     }
 
-    let metadata = fs::metadata(path).ok();
-    let created_at = metadata
-        .as_ref()
-        .and_then(|metadata| metadata.created().ok())
-        .map(chrono::DateTime::<Utc>::from);
-    let modified_at = metadata
-        .as_ref()
-        .and_then(|metadata| metadata.modified().ok())
-        .map(chrono::DateTime::<Utc>::from);
+    let created_at = timestamp_provider.created_at_utc(path);
+    let modified_at = timestamp_provider.modified_at_utc(path);
 
     let recorder_model = bext
         .as_ref()

@@ -47,7 +47,6 @@ uuid = { version = "1.8", features = ["v4"] }
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", default-features = false, features = ["user-hooks"] }
-filetime = "0.2"
 
 [features]
 default = []
