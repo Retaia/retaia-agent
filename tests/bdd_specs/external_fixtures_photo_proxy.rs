@@ -121,3 +121,87 @@ fn bdd_given_real_canon_raw_fixture_when_extracting_facts_then_stable_exif_value
     assert_eq!(facts.gps_latitude, None);
     assert_eq!(facts.gps_longitude, None);
 }
+
+#[test]
+fn bdd_given_real_nikon_nef_fixture_when_extracting_facts_then_vendor_metadata_is_exposed() {
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "raw/nikon/sample1.nef")
+        .expect("expected nikon nef fixture");
+    let generator = RustPhotoProxyGenerator::default();
+
+    let facts = generator
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .expect("raw fixture should expose facts");
+
+    assert_eq!(facts.media_format.as_deref(), Some("nef"));
+    assert_eq!(facts.width, Some(4288));
+    assert_eq!(facts.height, Some(2844));
+    assert_eq!(facts.camera_make.as_deref(), Some("NIKON CORPORATION"));
+    assert_eq!(facts.camera_model.as_deref(), Some("NIKON D3"));
+    assert_eq!(facts.lens_model, None);
+    assert_eq!(facts.orientation, Some(1));
+    assert_eq!(facts.iso, Some(400));
+    assert_eq!(facts.focal_length_mm, Some(17.0));
+    assert_eq!(facts.aperture_f_number, Some(16.0));
+    assert_eq!(facts.exposure_time_s, Some(0.008));
+    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.gps_latitude, None);
+    assert_eq!(facts.gps_longitude, None);
+}
+
+#[test]
+fn bdd_given_real_nikon_nrw_fixture_when_extracting_facts_then_vendor_metadata_is_exposed() {
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "raw/nikon/sample1.nrw")
+        .expect("expected nikon nrw fixture");
+    let generator = RustPhotoProxyGenerator::default();
+
+    let facts = generator
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .expect("raw fixture should expose facts");
+
+    assert_eq!(facts.media_format.as_deref(), Some("nrw"));
+    assert_eq!(facts.width, Some(3664));
+    assert_eq!(facts.height, Some(2744));
+    assert_eq!(facts.camera_make.as_deref(), Some("NIKON"));
+    assert_eq!(facts.camera_model.as_deref(), Some("COOLPIX P7100"));
+    assert_eq!(facts.lens_model, None);
+    assert_eq!(facts.orientation, Some(1));
+    assert_eq!(facts.iso, Some(100));
+    assert_eq!(facts.focal_length_mm, Some(13.0));
+    assert_eq!(facts.aperture_f_number, Some(3.5));
+    assert_eq!(facts.exposure_time_s, Some(0.008));
+    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.gps_latitude, None);
+    assert_eq!(facts.gps_longitude, None);
+}
+
+#[test]
+fn bdd_given_real_sony_arw_fixture_when_extracting_facts_then_vendor_metadata_is_exposed() {
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "raw/sony/sample1.arw")
+        .expect("expected sony arw fixture");
+    let generator = RustPhotoProxyGenerator::default();
+
+    let facts = generator
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .expect("raw fixture should expose facts");
+
+    assert_eq!(facts.media_format.as_deref(), Some("arw"));
+    assert_eq!(facts.width, Some(6048));
+    assert_eq!(facts.height, Some(4024));
+    assert_eq!(facts.camera_make.as_deref(), Some("SONY"));
+    assert_eq!(facts.camera_model.as_deref(), Some("ILCE-7M3"));
+    assert_eq!(facts.lens_model.as_deref(), Some("FE 28-70mm F3.5-5.6 OSS"));
+    assert_eq!(facts.orientation, Some(1));
+    assert_eq!(facts.iso, Some(100));
+    assert_eq!(facts.focal_length_mm, Some(70.0));
+    assert_eq!(facts.aperture_f_number, Some(5.6));
+    assert_eq!(facts.exposure_time_s, Some(0.00125));
+    assert_eq!(facts.captured_at.as_deref(), Some("2018-08-07T07:01:52Z"));
+    assert_eq!(facts.gps_latitude, None);
+    assert_eq!(facts.gps_longitude, None);
+}
