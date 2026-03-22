@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 
+use chrono::{FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
+use exif::{DateTime as ExifDateTime, In, Rational, Reader as ExifReader, SRational, Tag, Value};
 use image::imageops::FilterType;
 use image::{DynamicImage, ImageBuffer, ImageFormat, Rgb};
 
@@ -113,7 +115,7 @@ impl<D: RawPhotoDecoder> ProxyGenerator for RustPhotoProxyGenerator<D> {
                     .and_then(|value| value.to_str())
                     .map(|value| value.to_ascii_lowercase())
             });
-        Ok(FactsPatchPayload {
+        let mut facts = FactsPatchPayload {
             duration_ms: None,
             media_format: format,
             video_codec: None,
@@ -122,8 +124,218 @@ impl<D: RawPhotoDecoder> ProxyGenerator for RustPhotoProxyGenerator<D> {
             height: i32::try_from(source.height()).ok(),
             fps: None,
             ..FactsPatchPayload::default()
-        })
+        };
+        if let Some(exif_facts) = extract_exif_facts(input_path) {
+            merge_photo_facts(&mut facts, exif_facts);
+        }
+        Ok(facts)
     }
+}
+
+fn merge_photo_facts(target: &mut FactsPatchPayload, extra: FactsPatchPayload) {
+    target.captured_at = extra.captured_at.or_else(|| target.captured_at.take());
+    target.exposure_time_s = extra.exposure_time_s.or(target.exposure_time_s);
+    target.aperture_f_number = extra.aperture_f_number.or(target.aperture_f_number);
+    target.iso = extra.iso.or(target.iso);
+    target.focal_length_mm = extra.focal_length_mm.or(target.focal_length_mm);
+    target.camera_make = extra.camera_make.or_else(|| target.camera_make.take());
+    target.camera_model = extra.camera_model.or_else(|| target.camera_model.take());
+    target.lens_model = extra.lens_model.or_else(|| target.lens_model.take());
+    target.orientation = extra.orientation.or(target.orientation);
+    target.gps_latitude = extra.gps_latitude.or(target.gps_latitude);
+    target.gps_longitude = extra.gps_longitude.or(target.gps_longitude);
+    target.gps_altitude_m = extra.gps_altitude_m.or(target.gps_altitude_m);
+}
+
+#[doc(hidden)]
+pub fn extract_exif_facts(input_path: &str) -> Option<FactsPatchPayload> {
+    let file = File::open(input_path).ok()?;
+    let mut reader = std::io::BufReader::new(file);
+    let exif = ExifReader::new().read_from_container(&mut reader).ok()?;
+
+    Some(FactsPatchPayload {
+        captured_at: exif_captured_at(&exif),
+        exposure_time_s: exif_rational_field(&exif, Tag::ExposureTime),
+        aperture_f_number: exif_rational_field(&exif, Tag::FNumber),
+        iso: exif_uint_field(&exif, Tag::PhotographicSensitivity),
+        focal_length_mm: exif_rational_field(&exif, Tag::FocalLength),
+        camera_make: exif_ascii_field(&exif, Tag::Make),
+        camera_model: exif_ascii_field(&exif, Tag::Model),
+        lens_model: exif_ascii_field(&exif, Tag::LensModel),
+        orientation: exif_uint_field(&exif, Tag::Orientation),
+        gps_latitude: exif_gps_coordinate(&exif, Tag::GPSLatitude, Tag::GPSLatitudeRef),
+        gps_longitude: exif_gps_coordinate(&exif, Tag::GPSLongitude, Tag::GPSLongitudeRef),
+        gps_altitude_m: exif_gps_altitude(&exif),
+        ..FactsPatchPayload::default()
+    })
+}
+
+fn exif_captured_at(exif: &exif::Exif) -> Option<String> {
+    parse_exif_datetime_field(
+        exif.get_field(Tag::DateTimeOriginal, In::PRIMARY)?,
+        exif.get_field(Tag::OffsetTimeOriginal, In::PRIMARY),
+    )
+    .or_else(|| exif_gps_timestamp(exif))
+}
+
+fn exif_ascii_field(exif: &exif::Exif, tag: Tag) -> Option<String> {
+    let field = exif.get_field(tag, In::PRIMARY)?;
+    match &field.value {
+        Value::Ascii(values) => values.first().and_then(|value| {
+            let trimmed = String::from_utf8_lossy(value).trim().to_string();
+            (!trimmed.is_empty()).then_some(trimmed)
+        }),
+        _ => None,
+    }
+}
+
+fn exif_uint_field(exif: &exif::Exif, tag: Tag) -> Option<i32> {
+    exif.get_field(tag, In::PRIMARY)?
+        .value
+        .get_uint(0)
+        .and_then(|value| i32::try_from(value).ok())
+}
+
+fn exif_rational_field(exif: &exif::Exif, tag: Tag) -> Option<f64> {
+    let field = exif.get_field(tag, In::PRIMARY)?;
+    rational_value_to_f64(&field.value)
+}
+
+fn exif_gps_coordinate(exif: &exif::Exif, tag: Tag, ref_tag: Tag) -> Option<f64> {
+    let field = exif.get_field(tag, In::PRIMARY)?;
+    let reference = exif_ascii_field(exif, ref_tag)?;
+    gps_coordinate_to_decimal(&field.value, &reference)
+}
+
+fn exif_gps_altitude(exif: &exif::Exif) -> Option<f64> {
+    let altitude = exif
+        .get_field(Tag::GPSAltitude, In::PRIMARY)
+        .and_then(|field| rational_value_to_f64(&field.value))?;
+    let altitude_ref = exif
+        .get_field(Tag::GPSAltitudeRef, In::PRIMARY)
+        .and_then(|field| field.value.get_uint(0))
+        .unwrap_or(0);
+    Some(if altitude_ref == 1 {
+        -altitude
+    } else {
+        altitude
+    })
+}
+
+#[doc(hidden)]
+pub fn parse_exif_datetime_field(
+    datetime_field: &exif::Field,
+    offset_field: Option<&exif::Field>,
+) -> Option<String> {
+    let mut datetime = exif_datetime_from_field(datetime_field)?;
+    if let Some(offset_field) = offset_field {
+        if let Some(offset_ascii) = exif_ascii_bytes(offset_field) {
+            let _ = datetime.parse_offset(offset_ascii);
+        }
+    }
+    exif_datetime_to_utc_rfc3339(&datetime)
+}
+
+fn exif_datetime_from_field(field: &exif::Field) -> Option<ExifDateTime> {
+    ExifDateTime::from_ascii(exif_ascii_bytes(field)?).ok()
+}
+
+fn exif_ascii_bytes<'a>(field: &'a exif::Field) -> Option<&'a [u8]> {
+    match &field.value {
+        Value::Ascii(values) => values.first().map(Vec::as_slice),
+        _ => None,
+    }
+}
+
+#[doc(hidden)]
+pub fn exif_datetime_to_utc_rfc3339(datetime: &ExifDateTime) -> Option<String> {
+    let date = NaiveDate::from_ymd_opt(
+        i32::from(datetime.year),
+        u32::from(datetime.month),
+        u32::from(datetime.day),
+    )?;
+    let time = NaiveTime::from_hms_opt(
+        u32::from(datetime.hour),
+        u32::from(datetime.minute),
+        u32::from(datetime.second),
+    )?;
+    let naive = NaiveDateTime::new(date, time);
+    let offset = FixedOffset::east_opt(i32::from(datetime.offset?) * 60)?;
+    let local = offset.from_local_datetime(&naive).single()?;
+    Some(
+        local
+            .with_timezone(&Utc)
+            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    )
+}
+
+fn exif_gps_timestamp(exif: &exif::Exif) -> Option<String> {
+    let date = exif_ascii_field(exif, Tag::GPSDateStamp)?;
+    let time_field = exif.get_field(Tag::GPSTimeStamp, In::PRIMARY)?;
+    gps_timestamp_to_utc_rfc3339(&date, &time_field.value)
+}
+
+#[doc(hidden)]
+pub fn gps_timestamp_to_utc_rfc3339(date: &str, time_value: &Value) -> Option<String> {
+    let [year, month, day] = parse_gps_date(date)?;
+    let components = match time_value {
+        Value::Rational(values) if values.len() >= 3 => values,
+        _ => return None,
+    };
+    let hour = rational_to_f64(&components[0])?;
+    let minute = rational_to_f64(&components[1])?;
+    let second = rational_to_f64(&components[2])?;
+    let date = NaiveDate::from_ymd_opt(year, month as u32, day as u32)?;
+    let time = NaiveTime::from_hms_opt(
+        hour.trunc() as u32,
+        minute.trunc() as u32,
+        second.trunc() as u32,
+    )?;
+    Some(
+        Utc.from_utc_datetime(&NaiveDateTime::new(date, time))
+            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    )
+}
+
+fn parse_gps_date(date: &str) -> Option<[i32; 3]> {
+    let mut parts = date.split(':');
+    let year = parts.next()?.parse::<i32>().ok()?;
+    let month = parts.next()?.parse::<i32>().ok()?;
+    let day = parts.next()?.parse::<i32>().ok()?;
+    Some([year, month, day])
+}
+
+#[doc(hidden)]
+pub fn gps_coordinate_to_decimal(value: &Value, reference: &str) -> Option<f64> {
+    let values = match value {
+        Value::Rational(values) if values.len() >= 3 => values,
+        _ => return None,
+    };
+    let degrees = rational_to_f64(&values[0])?;
+    let minutes = rational_to_f64(&values[1])?;
+    let seconds = rational_to_f64(&values[2])?;
+    let sign = match reference.trim().to_ascii_uppercase().as_str() {
+        "S" | "W" => -1.0,
+        "N" | "E" => 1.0,
+        _ => return None,
+    };
+    Some(sign * (degrees + minutes / 60.0 + seconds / 3600.0))
+}
+
+fn rational_value_to_f64(value: &Value) -> Option<f64> {
+    match value {
+        Value::Rational(values) => values.first().and_then(rational_to_f64),
+        Value::SRational(values) => values.first().and_then(signed_rational_to_f64),
+        _ => None,
+    }
+}
+
+fn rational_to_f64(value: &Rational) -> Option<f64> {
+    (value.denom != 0).then_some(value.num as f64 / value.denom as f64)
+}
+
+fn signed_rational_to_f64(value: &SRational) -> Option<f64> {
+    (value.denom != 0).then_some(value.num as f64 / value.denom as f64)
 }
 
 #[doc(hidden)]
