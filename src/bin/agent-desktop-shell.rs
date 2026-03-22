@@ -21,9 +21,9 @@ mod desktop_shell {
         RuntimeStatsStoreError, SystemConfigRepository, SystemNotification,
         build_bug_report_markdown, collect_daemon_diagnostics, compact_validation_reason,
         copy_to_clipboard, detect_language, dispatch_notifications, load_runtime_stats,
-        normalize_core_api_url, normalize_storage_mount_path, redacted_runtime_config_from,
-        render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path,
-        select_notification_sink, t, validate_config,
+        normalize_core_api_url, normalize_storage_mount_path, now_unix_ms,
+        redacted_runtime_config_from, render_daemon_inspect, render_daemon_inspect_json,
+        runtime_history_db_path, select_notification_sink, t, validate_config,
     };
     use service_manager::{
         ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx, ServiceStopCtx,
@@ -1020,10 +1020,7 @@ mod desktop_shell {
     }
 
     fn now_ms() -> u64 {
-        match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-            Ok(duration) => duration.as_millis() as u64,
-            Err(_) => 0,
-        }
+        now_unix_ms()
     }
 
     fn default_tray_icon() -> Result<Icon, String> {

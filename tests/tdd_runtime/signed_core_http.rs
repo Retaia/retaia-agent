@@ -2,12 +2,23 @@ use chrono::{DateTime, Utc};
 use reqwest::Method;
 use reqwest::blocking::Client;
 use reqwest::header::{ACCEPT_LANGUAGE, AUTHORIZATION, CONTENT_TYPE, IF_MATCH};
-use retaia_agent::AgentIdentity;
 use retaia_agent::infrastructure::signed_core_http::{
     SignedCoreHttpError, absolute_url, json_bytes, multipart_part_request, signed_empty_request,
-    signed_json_request, signed_request,
+    signed_json_request, signed_request, signed_request_with_clock,
 };
+use retaia_agent::{AgentIdentity, Clock};
 use serde_json::json;
+
+#[derive(Debug, Clone, Copy)]
+struct MockClock {
+    now: DateTime<Utc>,
+}
+
+impl Clock for MockClock {
+    fn now_utc(&self) -> DateTime<Utc> {
+        self.now
+    }
+}
 
 #[test]
 fn tdd_signed_core_http_signed_json_request_sets_contract_headers_and_body() {
@@ -136,26 +147,22 @@ fn tdd_signed_core_http_signed_request_returns_header_safe_signature_and_rfc3339
 #[test]
 fn tdd_signed_core_http_signed_request_timestamp_is_fresh_within_sixty_seconds() {
     let identity = AgentIdentity::generate_ephemeral(None).expect("identity");
-    let before = Utc::now();
-    let signed = signed_request(&identity, Method::POST, "/api/v1/jobs/job-1/claim", b"{}")
-        .expect("signed request");
-    let after = Utc::now();
+    let clock = MockClock {
+        now: DateTime::parse_from_rfc3339("2026-03-22T12:00:00Z")
+            .expect("timestamp")
+            .with_timezone(&Utc),
+    };
+    let signed = signed_request_with_clock(
+        &identity,
+        Method::POST,
+        "/api/v1/jobs/job-1/claim",
+        b"{}",
+        &clock,
+    )
+    .expect("signed request");
     let parsed =
         DateTime::parse_from_rfc3339(&signed.timestamp).expect("timestamp should be rfc3339");
-    let signed_at = parsed.with_timezone(&Utc);
-
-    let skew_before = signed_at.signed_duration_since(before).num_seconds();
-    let skew_after = after.signed_duration_since(signed_at).num_seconds();
-
-    assert!(
-        skew_before >= -60,
-        "timestamp too old before generation window"
-    );
-    assert!(skew_after >= 0, "timestamp should not be in the future");
-    assert!(
-        skew_after <= 60,
-        "timestamp too old after generation window"
-    );
+    assert_eq!(parsed.with_timezone(&Utc), clock.now);
 }
 
 #[test]

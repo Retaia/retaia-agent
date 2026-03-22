@@ -1,13 +1,13 @@
 use std::fs;
 use std::io;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::domain::runtime_ui::AgentRunState;
 use crate::infrastructure::config_store::{ConfigStoreError, system_config_file_path};
+use crate::infrastructure::time::{Clock, StdClock};
 
 pub const DAEMON_STATS_FILE_NAME: &str = "daemon-stats.json";
 
@@ -102,8 +102,9 @@ pub fn run_state_label(state: AgentRunState) -> &'static str {
 }
 
 pub fn now_unix_ms() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(duration) => duration.as_millis() as u64,
-        Err(_) => 0,
-    }
+    now_unix_ms_with_clock(&StdClock)
+}
+
+pub fn now_unix_ms_with_clock(clock: &dyn Clock) -> u64 {
+    clock.now_unix_ms()
 }

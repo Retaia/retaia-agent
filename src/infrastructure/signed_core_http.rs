@@ -1,4 +1,3 @@
-use chrono::Utc;
 use reqwest::blocking::{Body, Client, RequestBuilder};
 use reqwest::header::{ACCEPT_LANGUAGE, AUTHORIZATION, CONTENT_TYPE, HeaderValue, IF_MATCH};
 use reqwest::{Method, Url};
@@ -7,6 +6,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::infrastructure::agent_identity::{AgentIdentity, AgentIdentityError};
+use crate::infrastructure::time::{Clock, StdClock};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedRequest {
@@ -57,7 +57,19 @@ pub fn signed_request(
     path: &str,
     body: &[u8],
 ) -> Result<SignedRequest, SignedCoreHttpError> {
-    let timestamp = Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+    signed_request_with_clock(identity, method, path, body, &StdClock)
+}
+
+pub fn signed_request_with_clock(
+    identity: &AgentIdentity,
+    method: Method,
+    path: &str,
+    body: &[u8],
+    clock: &dyn Clock,
+) -> Result<SignedRequest, SignedCoreHttpError> {
+    let timestamp = clock
+        .now_utc()
+        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let nonce = uuid::Uuid::new_v4().to_string();
     let payload = signature_payload(method, path, &identity.agent_id, &timestamp, &nonce, body);
     let signature = identity.detached_signature_http_header_value(payload.as_bytes())?;

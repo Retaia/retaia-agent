@@ -204,6 +204,147 @@ fn e2e_external_fixture_flow_extracts_audio_facts_with_ffprobe_when_available() 
 }
 
 #[test]
+fn e2e_external_fixture_flow_extracts_expected_facts_from_wireless_pro_wav() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping Wireless PRO audio facts test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample_Wireless_PRO.WAV")
+        .expect("missing Wireless PRO wav fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "Wireless PRO wav fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("wav"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("pcm_f32le"));
+    assert_eq!(facts.sample_rate_hz, Some(48_000));
+    assert_eq!(facts.channel_count, Some(1));
+    assert_eq!(facts.bits_per_sample, Some(32));
+    assert_eq!(facts.bitrate_kbps, Some(1536));
+    assert_eq!(facts.duration_ms, Some(10_401));
+    assert_eq!(facts.recorder_model, None);
+    assert_eq!(facts.captured_at.as_deref(), Some("2026-03-22T18:17:28Z"));
+}
+
+#[test]
+fn e2e_external_fixture_flow_wireless_pro_app_export_matches_standard_audio_facts() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping Wireless PRO app export audio facts test");
+        return;
+    }
+
+    let entries = load_manifest_entries();
+    let raw_entry = entries
+        .iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample_Wireless_PRO.WAV")
+        .expect("missing Wireless PRO wav fixture");
+    let app_entry = entries
+        .iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample_Wireless_PRO_app.wav")
+        .expect("missing Wireless PRO app export fixture");
+
+    let generator = FfmpegProxyGenerator::default();
+    let raw_facts = generator
+        .extract_media_facts(&raw_entry.absolute_path().display().to_string())
+        .expect("raw Wireless PRO facts");
+    let app_facts = generator
+        .extract_media_facts(&app_entry.absolute_path().display().to_string())
+        .expect("app export Wireless PRO facts");
+
+    assert_eq!(app_facts.media_format, raw_facts.media_format);
+    assert_eq!(app_facts.audio_codec, raw_facts.audio_codec);
+    assert_eq!(app_facts.sample_rate_hz, raw_facts.sample_rate_hz);
+    assert_eq!(app_facts.channel_count, raw_facts.channel_count);
+    assert_eq!(app_facts.bits_per_sample, raw_facts.bits_per_sample);
+    assert_eq!(app_facts.duration_ms, raw_facts.duration_ms);
+    assert_eq!(app_facts.recorder_model, None);
+    assert_eq!(
+        app_facts.captured_at.as_deref(),
+        Some("2026-03-22T18:22:23Z")
+    );
+}
+
+#[test]
+fn e2e_external_fixture_flow_extracts_repaired_facts_from_wireless_pro_receiver_wav() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping Wireless PRO receiver audio facts test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample_Wireless_PRO_receiver.WAV")
+        .expect("missing Wireless PRO receiver wav fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "Wireless PRO receiver wav fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("wav"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("pcm_f32le"));
+    assert_eq!(facts.sample_rate_hz, Some(48_000));
+    assert_eq!(facts.channel_count, Some(1));
+    assert_eq!(facts.bits_per_sample, Some(32));
+    assert_eq!(facts.duration_ms, Some(5_388));
+    assert_eq!(facts.recorder_model.as_deref(), Some("RODE Wireless PRO"));
+    assert_eq!(facts.captured_at.as_deref(), Some("2026-03-22T19:25:31Z"));
+}
+
+#[test]
+fn e2e_external_fixture_flow_wireless_pro_receiver_app_export_matches_repaired_facts() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping Wireless PRO receiver app audio facts test");
+        return;
+    }
+
+    let entries = load_manifest_entries();
+    let raw_entry = entries
+        .iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample_Wireless_PRO_receiver.WAV")
+        .expect("missing Wireless PRO receiver wav fixture");
+    let app_entry = entries
+        .iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample_Wireless_PRO_receiver_app.wav")
+        .expect("missing Wireless PRO receiver app export fixture");
+
+    let generator = FfmpegProxyGenerator::default();
+    let raw_facts = generator
+        .extract_media_facts(&raw_entry.absolute_path().display().to_string())
+        .expect("raw Wireless PRO receiver facts");
+    let app_facts = generator
+        .extract_media_facts(&app_entry.absolute_path().display().to_string())
+        .expect("app export Wireless PRO receiver facts");
+
+    assert_eq!(app_facts.audio_codec, raw_facts.audio_codec);
+    assert_eq!(app_facts.sample_rate_hz, raw_facts.sample_rate_hz);
+    assert_eq!(app_facts.channel_count, raw_facts.channel_count);
+    assert_eq!(app_facts.bits_per_sample, raw_facts.bits_per_sample);
+    assert_eq!(app_facts.duration_ms, raw_facts.duration_ms);
+    assert_eq!(
+        app_facts.recorder_model.as_deref(),
+        Some("RODE Wireless PRO")
+    );
+    assert_eq!(
+        app_facts.captured_at.as_deref(),
+        Some("2026-03-22T19:25:31Z")
+    );
+}
+
+#[test]
 fn e2e_external_fixture_flow_extracts_video_facts_with_ffprobe_when_available() {
     if !ffmpeg_available() {
         eprintln!("ffmpeg not available, skipping external AV fixture video facts test");

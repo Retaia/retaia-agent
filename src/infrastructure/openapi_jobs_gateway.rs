@@ -15,6 +15,8 @@ use crate::application::core_api_gateway::{
 };
 #[cfg(feature = "core-api-client")]
 use crate::detect_language;
+#[cfg(feature = "core-api-client")]
+use crate::infrastructure::time::{Clock, StdClock};
 
 #[cfg(all(test, feature = "core-api-client"))]
 use retaia_core_client::apis::Error as OpenApiError;
@@ -133,13 +135,18 @@ impl OpenApiJobsGateway {
 
 #[cfg(feature = "core-api-client")]
 fn parse_retry_after_ms(headers: &HeaderMap) -> Option<u64> {
+    parse_retry_after_ms_with_clock(headers, &StdClock)
+}
+
+#[cfg(feature = "core-api-client")]
+fn parse_retry_after_ms_with_clock(headers: &HeaderMap, clock: &dyn Clock) -> Option<u64> {
     let raw = headers.get(RETRY_AFTER)?.to_str().ok()?.trim();
     if let Ok(seconds) = raw.parse::<u64>() {
         return Some(seconds.saturating_mul(1_000));
     }
 
     let retry_at = DateTime::parse_from_rfc2822(raw).ok()?.with_timezone(&Utc);
-    let now = Utc::now();
+    let now = clock.now_utc();
     let millis = retry_at
         .signed_duration_since(now)
         .num_milliseconds()
@@ -199,15 +206,30 @@ fn map_openapi_policy_error(error: OpenApiError<AppPolicyGetError>) -> CoreApiGa
 
 #[cfg(all(test, feature = "core-api-client"))]
 mod tests {
-    use super::{map_openapi_jobs_error, map_openapi_policy_error, parse_retry_after_ms};
+    use super::{
+        map_openapi_jobs_error, map_openapi_policy_error, parse_retry_after_ms,
+        parse_retry_after_ms_with_clock,
+    };
     use crate::application::core_api_gateway::CoreApiGatewayError;
-    use chrono::{Duration, Utc};
+    use crate::infrastructure::time::Clock;
+    use chrono::{Duration, TimeZone, Utc};
     use reqwest::StatusCode;
     use reqwest::header::{HeaderMap, HeaderValue, RETRY_AFTER};
     use retaia_core_client::apis::Error as OpenApiError;
     use retaia_core_client::apis::ResponseContent;
     use retaia_core_client::apis::auth_api::AppPolicyGetError;
     use retaia_core_client::apis::jobs_api::JobsGetError;
+
+    #[derive(Debug, Clone, Copy)]
+    struct MockClock {
+        now: chrono::DateTime<Utc>,
+    }
+
+    impl Clock for MockClock {
+        fn now_utc(&self) -> chrono::DateTime<Utc> {
+            self.now
+        }
+    }
 
     fn response_error(status: u16) -> OpenApiError<JobsGetError> {
         OpenApiError::ResponseError(ResponseContent {
@@ -285,13 +307,19 @@ mod tests {
     #[test]
     fn tdd_openapi_jobs_gateway_parses_retry_after_http_date_header() {
         let mut headers = HeaderMap::new();
-        let retry_at = (Utc::now() + Duration::seconds(5)).to_rfc2822();
+        let clock = MockClock {
+            now: Utc
+                .with_ymd_and_hms(2026, 3, 22, 12, 0, 0)
+                .single()
+                .expect("datetime"),
+        };
+        let retry_at = (clock.now + Duration::seconds(5)).to_rfc2822();
         headers.insert(
             RETRY_AFTER,
             HeaderValue::from_str(&retry_at).expect("header"),
         );
 
-        let parsed = parse_retry_after_ms(&headers).expect("retry-after parsed");
-        assert!(parsed <= 5_000);
+        let parsed = parse_retry_after_ms_with_clock(&headers, &clock).expect("retry-after parsed");
+        assert_eq!(parsed, 5_000);
     }
 }
