@@ -6,7 +6,7 @@ Date: 2026-03-22
 
 Ce document prépare une évolution du contrat `FactsPatch` côté Core/API.
 
-Le runtime agent sait déjà:
+L'agent sait déjà:
 
 - stager la source locale
 - copier les sidecars déclarés par le job
@@ -17,16 +17,11 @@ En revanche, le contrat exécutable actuel ne permet pas encore de soumettre des
 - EXIF photo
 - XMP photo/vidéo
 - sidecars `SRT` de captation drone
-
-Le cadrage retenu pour cette proposition est volontairement limité:
-
-- pas de télémétrie time-series dans `FactsPatch`
-- seulement des facts agrégés au niveau asset
-- pour le GPS drone, conserver uniquement le premier fix GPS fiable
+- métadonnées utiles déjà présentes dans certains conteneurs audio/vidéo
 
 L'objectif ici n'est pas d'implémenter ces extractions dans l'agent immédiatement, mais de proposer à l'équipe API une liste de champs à modéliser avant implémentation.
 
-## État actuel du contrat exécutable
+## Contrat actuel
 
 Le `FactsPatch` actuellement généré pour l'agent transporte uniquement:
 
@@ -40,56 +35,97 @@ Le `FactsPatch` actuellement généré pour l'agent transporte uniquement:
 
 Ces champs couvrent le minimum technique v1, mais pas les métadonnées enrichies mentionnées par les specs prose.
 
-## Principes de modélisation proposés
+## Décisions de cadrage proposées
 
-- Garder les champs techniques minimaux actuels inchangés.
-- Ajouter les nouveaux champs de manière typée, avec unité explicite.
-- Distinguer clairement la provenance des données:
+- garder les champs techniques minimaux actuels inchangés
+- ajouter les nouveaux champs de manière typée, avec unité explicite
+- distinguer la provenance des données:
   - média principal
   - EXIF
   - XMP
   - sidecar `SRT`
-- Marquer les champs sensibles, surtout GPS/localisation.
-- Éviter les noms ambigus ou dépendants d'un constructeur.
-- Préférer des champs déjà normalisés par l'écosystème photo/vidéo quand c'est possible.
+- marquer les champs sensibles, surtout GPS/localisation
+- éviter les noms ambigus ou dépendants d'un constructeur
+- rester sur des facts agrégés au niveau asset
+- ne pas exposer de télémétrie time-series dans `FactsPatch`
 
-## Champs candidats
+## Règles d'agrégation proposées
 
-## Photo: EXIF/XMP
+Règle générale:
 
-Champs demandés en priorité:
+- `FactsPatch` doit rester un patch asset-level
+- pas de série temporelle détaillée
 
+Pour les sidecars `SRT` DJI:
+
+- `gps_latitude`, `gps_longitude`, `gps_altitude_relative_m`, `gps_altitude_absolute_m`
+  - conserver le premier fix GPS fiable
+- `captured_at_original`
+  - conserver le premier timestamp fiable
+- `iso`, `exposure_time_s`, `aperture_f_number`, `focal_length_mm`, `exposure_compensation_ev`, `color_mode`, `color_temperature_k`
+  - conserver la valeur constante si stable sur tout le clip
+  - sinon exposer `first_*` / `last_*` uniquement si l'API décide explicitement de supporter cette dérive intra-clip
+
+Pour les sources DJI en général:
+
+- préférer le sidecar `SRT` quand il est disponible pour les facts enrichis
+- ne pas dépendre à ce stade du parsing des pistes data propriétaires embarquées
+- éventuellement exposer la présence de pistes metadata DJI comme simple signal technique, sans interprétation métier
+
+## Proposition de champs
+
+## Lot minimal recommandé
+
+Si l'équipe API veut ouvrir le chantier avec un lot restreint et immédiatement utile, le plus rentable semble être:
+
+- `captured_at_original`
+- `exposure_time_s`
+- `aperture_f_number`
+- `iso`
+- `focal_length_mm`
+- `gps_latitude`
+- `gps_longitude`
+- `gps_altitude_relative_m`
+- `gps_altitude_absolute_m`
+
+Ce lot couvre:
+
+- le besoin photo demandé immédiatement
+- une base de géolocalisation commune photo/vidéo drone
+- des champs réellement observés sur des fichiers photo et vidéo réels
+
+## Champs photo
+
+Champs photo prioritaires:
+
+- `captured_at_original`
+  - type suggéré: `string` date-time
+  - source typique: EXIF `DateTimeOriginal`, XMP équivalent
 - `exposure_time_s`
   - type suggéré: `number`
   - unité: secondes
-  - exemple: `0.005`
   - source typique: EXIF `ExposureTime`
 - `aperture_f_number`
   - type suggéré: `number`
   - unité: f-number
-  - exemple: `2.8`
   - source typique: EXIF `FNumber`
 - `iso`
   - type suggéré: `integer`
-  - exemple: `400`
   - source typique: EXIF `PhotographicSensitivity` / `ISOSpeedRatings`
-
-Autres champs photo probablement utiles à prévoir dans le même lot:
-
-- `captured_at_original`
-  - type suggéré: `string` date-time
-  - source: EXIF `DateTimeOriginal`, XMP équivalent
+- `focal_length_mm`
+  - type suggéré: `number`
+  - unité: millimètres
 - `camera_make`
   - type suggéré: `string`
 - `camera_model`
   - type suggéré: `string`
 - `lens_model`
   - type suggéré: `string`
-- `focal_length_mm`
-  - type suggéré: `number`
-  - unité: millimètres
 - `orientation`
   - type suggéré: `integer` ou enum normalisée
+
+Champs photo optionnels si présents:
+
 - `gps_latitude`
   - type suggéré: `number`
   - unité: degrés décimaux
@@ -103,7 +139,94 @@ Autres champs photo probablement utiles à prévoir dans le même lot:
   - unité: mètres
   - sensible: oui
 
-Exemple réel observé sur un `CR2` Canon EOS 5D Mark IV:
+## Champs vidéo
+
+Champs vidéo utiles au-delà du minimum déjà présent:
+
+- `captured_at_original`
+  - type suggéré: `string` date-time
+- `camera_make`
+  - type suggéré: `string`
+- `camera_model`
+  - type suggéré: `string`
+- `bitrate_kbps`
+  - type suggéré: `integer`
+  - unité: kbps
+- `rotation_deg`
+  - type suggéré: `integer`
+  - unité: degrés
+- `sample_rate_hz`
+  - type suggéré: `integer`
+  - unité: Hz
+- `channel_count`
+  - type suggéré: `integer`
+- `timecode_start`
+  - type suggéré: `string`
+- `pixel_format`
+  - type suggéré: `string`
+- `color_range`
+  - type suggéré: `string`
+- `color_space`
+  - type suggéré: `string`
+- `color_transfer`
+  - type suggéré: `string`
+- `color_primaries`
+  - type suggéré: `string`
+
+## Champs audio
+
+Champs audio utiles:
+
+- `bitrate_kbps`
+  - type suggéré: `integer`
+  - unité: kbps
+- `sample_rate_hz`
+  - type suggéré: `integer`
+  - unité: Hz
+- `channel_count`
+  - type suggéré: `integer`
+- `bits_per_sample`
+  - type suggéré: `integer`
+- `recorder_model`
+  - type suggéré: `string`
+
+Note:
+
+- `captured_at_original` n'est pas systématiquement fiable sur les exports audio device
+- il ne faut donc l'ajouter que si la source et le format sont suffisamment robustes
+
+## Champs enrichis via sidecar `SRT` DJI
+
+Champs observables et utiles:
+
+- `captured_at_original`
+- `gps_latitude`
+- `gps_longitude`
+- `gps_altitude_relative_m`
+- `gps_altitude_absolute_m`
+- `iso`
+- `exposure_time_s`
+- `aperture_f_number`
+- `focal_length_mm`
+- `exposure_compensation_ev`
+- `color_mode`
+- `color_temperature_k`
+
+## Signaux techniques de conteneur
+
+Ces champs ne sont pas des facts métier forts, mais peuvent être utiles si l'API veut les exposer:
+
+- `has_dji_metadata_track`
+  - type suggéré: `boolean`
+- `dji_metadata_track_types`
+  - type suggéré: `string[]`
+  - exemple: `["djmd", "dbgi"]`
+
+## Exemples observés
+
+## Photo: `CR2` Canon EOS 5D Mark IV
+
+Champs observés:
 
 - `camera_make = Canon`
 - `camera_model = Canon EOS 5D Mark IV`
@@ -118,39 +241,13 @@ Exemple réel observé sur un `CR2` Canon EOS 5D Mark IV:
 - `height = 4480`
 - pas de GPS détecté dans cet exemple précis
 
-Ce fichier confirme donc qu'un lot photo utile et réaliste peut être extrait localement sans heuristique exotique.
+Conclusion:
 
-## Vidéo: média principal + XMP éventuel
+- le lot photo proposé est réaliste et extractible localement sans heuristique exotique
 
-Champs utiles au-delà du minimum déjà présent:
+## Vidéo: `MOV` Canon EOS 5D Mark IV
 
-- `bitrate_kbps`
-  - type suggéré: `integer`
-  - unité: kbps
-- `rotation_deg`
-  - type suggéré: `integer`
-  - unité: degrés
-- `captured_at_original`
-  - type suggéré: `string` date-time
-- `camera_make`
-  - type suggéré: `string`
-- `camera_model`
-  - type suggéré: `string`
-- `sample_rate_hz`
-  - type suggéré: `integer`
-  - unité: Hz
-- `channel_count`
-  - type suggéré: `integer`
-- `timecode_start`
-  - type suggéré: `string`
-
-Pour les sources DJI, la recommandation côté agent est:
-
-- préférer le sidecar `SRT` quand il est disponible pour les facts enrichis
-- ne pas dépendre à ce stade du parsing des pistes data propriétaires embarquées
-- éventuellement exposer la présence de pistes metadata DJI comme signal technique, sans interprétation métier
-
-Exemple réel observé sur un `MOV` Canon EOS 5D Mark IV:
+Champs observés:
 
 - `captured_at_original = 2026-03-16T15:11:29Z`
 - `camera_make = Canon`
@@ -169,9 +266,13 @@ Exemple réel observé sur un `MOV` Canon EOS 5D Mark IV:
 - `timecode_start = 01:53:08:03`
 - pas de GPS détecté, ce qui est normal pour ce type de `MOV` boîtier seul
 
-Ce fichier confirme qu'un lot vidéo utile peut être extrait depuis le conteneur QuickTime sans dépendre d'un sidecar.
+Conclusion:
 
-Exemple réel observé sur un `MP4` DJI Air 3:
+- un lot vidéo utile peut être extrait depuis le conteneur QuickTime sans dépendre d'un sidecar
+
+## Vidéo: `MP4` DJI Air 3
+
+Champs observés:
 
 - `captured_at_original = 2024-04-12T14:00:17Z`
 - `media_format = mp4`
@@ -188,16 +289,19 @@ Exemple réel observé sur un `MP4` DJI Air 3:
 - `color_primaries = bt709`
 - `encoder = DJI Air3`
 - `has_dji_metadata_track = true`
-  - pistes observées: `djmd`, `dbgi`
+- `dji_metadata_track_types = ["djmd", "dbgi"]`
 - pas de GPS standard lisible directement via `ffprobe`, ce qui est normal ici
 
-Ce fichier confirme qu'un `MP4` DJI peut signaler la présence de metadata propriétaire embarquée, mais que le `SRT` reste la source la plus simple et la plus lisible pour les facts enrichis.
+Conclusion:
 
-## Drone / sidecar `SRT`
+- le `MP4` DJI signale la présence de metadata propriétaire embarquée
+- le `SRT` reste la source la plus simple et la plus lisible pour les facts enrichis
 
-Un `SRT` réel DJI Air 3 montre déjà des champs parseables de manière fiable:
+## Sidecar `SRT` DJI Air 3
 
-- timestamp original de capture
+Champs observés:
+
+- `captured_at_original`
 - `iso`
 - `shutter`
 - `fnum`
@@ -210,67 +314,14 @@ Un `SRT` réel DJI Air 3 montre déjà des champs parseables de manière fiable:
 - `ct`
 - `color_md`
 
-Pour `FactsPatch`, la recommandation n'est pas d'exposer la télémétrie complète frame par frame. La bonne granularité ici est asset-level:
+Conclusion:
 
-- premier fix GPS fiable
-- première valeur fiable
-- dernière valeur fiable
-- ou valeur constante si stable sur tout le clip
+- le `SRT` DJI suffit déjà à produire des facts enrichis asset-level utiles
+- pas besoin de télémétrie détaillée dans `FactsPatch`
 
-Ces champs restent utiles à cadrer au niveau API avant extraction.
+## Audio: `WAV` RODE Wireless PRO
 
-- `gps_latitude`
-  - type suggéré: `number`
-  - unité: degrés décimaux
-  - sensible: oui
-- `gps_longitude`
-  - type suggéré: `number`
-  - unité: degrés décimaux
-  - sensible: oui
-- `gps_altitude_relative_m`
-  - type suggéré: `number`
-  - unité: mètres
-  - sensible: oui
-- `gps_altitude_absolute_m`
-  - type suggéré: `number`
-  - unité: mètres
-  - sensible: oui
-- `exposure_compensation_ev`
-  - type suggéré: `number`
-- `color_mode`
-  - type suggéré: `string`
-- `color_temperature_k`
-  - type suggéré: `integer`
-  - unité: kelvin
-
-Règles d'agrégation suggérées pour les champs issus du `SRT`:
-
-- `gps_latitude`, `gps_longitude`, `gps_altitude_relative_m`, `gps_altitude_absolute_m`
-  - conserver le premier fix GPS fiable
-- `captured_at_original`
-  - conserver le premier timestamp fiable
-- `iso`, `exposure_time_s`, `aperture_f_number`, `focal_length_mm`, `exposure_compensation_ev`, `color_mode`, `color_temperature_k`
-  - conserver la valeur constante si stable sur tout le clip
-  - sinon exposer `first_*` et `last_*` uniquement si l'API veut vraiment représenter la dérive intra-clip
-
-## Audio
-
-L'audio a moins de métadonnées réellement utiles dans le flux agent actuel, mais quelques champs peuvent valoir la peine si l'API veut les exposer:
-
-- `bitrate_kbps`
-  - type suggéré: `integer`
-  - unité: kbps
-- `sample_rate_hz`
-  - type suggéré: `integer`
-  - unité: Hz
-- `channel_count`
-  - type suggéré: `integer`
-- `bits_per_sample`
-  - type suggéré: `integer`
-- `recorder_model`
-  - type suggéré: `string`
-
-Exemple réel observé sur un `WAV` exporté de RODE Wireless PRO:
+Champs observés:
 
 - `media_format = wav`
 - `duration_ms = 240326`
@@ -285,7 +336,10 @@ Exemple réel observé sur un `WAV` exporté de RODE Wireless PRO:
   - `rSPEED = 024.000-ND`
 - `date = 0026-03-22` observée dans cet exemple, donc non fiable en l'état pour un `captured_at_original`
 
-Ce fichier confirme qu'un lot audio utile existe, mais aussi que les timestamps d'origine ne sont pas toujours assez fiables pour être promus en facts sans règle spécifique par device.
+Conclusion:
+
+- un lot audio utile existe
+- les timestamps device ne sont pas toujours assez fiables pour être promus en facts sans règle spécifique par format/device
 
 ## Questions à trancher côté API
 
@@ -304,33 +358,7 @@ Ce fichier confirme qu'un lot audio utile existe, mais aussi que les timestamps 
    - `media_format`
    - `color_mode`
 8. Le contrat doit-il prévoir des champs temporels "originaux" séparés des dates d'ingestion côté Core?
-9. Si une valeur varie dans un `SRT`, veut-on:
-   - ne conserver que la première valeur fiable
-   - ne conserver que la dernière valeur fiable
-   - ou accepter un couple `first_*` / `last_*` pour certains champs
-
-## Recommandation minimale pour un premier lot API
-
-Si l'équipe API veut ouvrir le chantier avec un lot restreint et immédiatement utile, le plus rentable semble être:
-
-- `exposure_time_s`
-- `aperture_f_number`
-- `iso`
-- `captured_at_original`
-- `gps_latitude`
-- `gps_longitude`
-- `gps_altitude_relative_m`
-- `gps_altitude_absolute_m`
-
-Ce lot couvre:
-
-- le besoin photo demandé immédiatement
-- une base de géolocalisation commune photo/vidéo drone
-- des champs photo réellement observés dans un `CR2` Canon
-- des champs vidéo réellement observés dans un `MOV` Canon
-- les champs réellement observés dans un `SRT` DJI Air 3
-- des champs audio réellement observés dans un `WAV` RODE
-- un minimum de valeur métier sans élargir trop vite le contrat
+9. Veut-on exposer les signaux de conteneur comme `has_dji_metadata_track`, ou les garder purement internes?
 
 ## Recommandation d'implémentation après validation API
 
@@ -340,6 +368,6 @@ Une fois le contrat API figé:
 2. Régénérer le client Rust `retaia-core-client`.
 3. Implémenter l'extraction dans l'agent:
    - EXIF photo
-   - XMP si disponible
+   - métadonnées conteneur audio/vidéo
    - sidecars `SRT` si déclarés
 4. Ajouter des fixtures et tests dédiés pour chaque famille de champs.
