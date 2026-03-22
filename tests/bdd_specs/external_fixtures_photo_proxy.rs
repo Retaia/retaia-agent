@@ -205,3 +205,31 @@ fn bdd_given_real_sony_arw_fixture_when_extracting_facts_then_vendor_metadata_is
     assert_eq!(facts.gps_latitude, None);
     assert_eq!(facts.gps_longitude, None);
 }
+
+#[test]
+fn bdd_given_second_real_sony_arw_fixture_when_extracting_facts_then_vendor_metadata_is_exposed() {
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "raw/sony/sample2.arw")
+        .expect("expected second sony arw fixture");
+    let generator = RustPhotoProxyGenerator::default();
+
+    let facts = generator
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .expect("raw fixture should expose facts");
+
+    assert_eq!(facts.media_format.as_deref(), Some("arw"));
+    assert_eq!(facts.width, Some(6048));
+    assert_eq!(facts.height, Some(4024));
+    assert_eq!(facts.camera_make.as_deref(), Some("SONY"));
+    assert_eq!(facts.camera_model.as_deref(), Some("ILCE-7M3"));
+    assert_eq!(facts.lens_model.as_deref(), Some("FE 28-70mm F3.5-5.6 OSS"));
+    assert_eq!(facts.orientation, Some(1));
+    assert_eq!(facts.iso, Some(1000));
+    assert_eq!(facts.focal_length_mm, Some(41.0));
+    assert_eq!(facts.aperture_f_number, Some(4.5));
+    assert_eq!(facts.exposure_time_s, Some(0.02));
+    assert_eq!(facts.captured_at.as_deref(), Some("2018-10-29T22:17:43Z"));
+    assert_eq!(facts.gps_latitude, None);
+    assert_eq!(facts.gps_longitude, None);
+}

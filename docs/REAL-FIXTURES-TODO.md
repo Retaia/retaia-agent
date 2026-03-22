@@ -20,15 +20,6 @@ Liste des fichiers reels utiles a ajouter pour durcir les tests d'extraction de 
     - `color_temperature_k`
   - note: on prefere explicitement le `SRT` a `djmd/dbgi` pour le moment
 
-- `WAV` RODE Wireless Pro reel
-  - objectif: valider la lecture `bext/iXML` et la reparation de `captured_at`
-  - champs attendus:
-    - `recorder_model`
-    - `sample_rate_hz`
-    - `channel_count`
-    - `bits_per_sample`
-    - `captured_at` apres regle de reparation si applicable
-
 ## Priorite 2
 
 - photo avec `GPS EXIF` reel
