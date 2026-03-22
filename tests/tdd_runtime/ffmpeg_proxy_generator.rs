@@ -305,7 +305,7 @@ fn tdd_ffmpeg_extract_media_facts_repairs_rode_bext_timestamp_from_file_year() {
 }
 
 #[test]
-fn tdd_ffmpeg_extract_media_facts_does_not_repair_bext_timestamp_when_month_day_mismatch() {
+fn tdd_ffmpeg_extract_media_facts_falls_back_to_file_timestamp_when_bext_date_cannot_be_repaired() {
     let runner = FakeRunner::with_output(CommandOutput {
         status_code: Some(0),
         stdout: r#"{
@@ -337,8 +337,38 @@ fn tdd_ffmpeg_extract_media_facts_does_not_repair_bext_timestamp_when_month_day_
         .extract_media_facts(&path.display().to_string())
         .expect("facts extraction should succeed");
 
-    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.captured_at.as_deref(), Some("2026-03-21T10:40:00Z"));
     assert_eq!(facts.recorder_model.as_deref(), Some("RODE Wireless PRO"));
+}
+
+#[test]
+fn tdd_ffmpeg_extract_media_facts_falls_back_to_file_creation_time_for_plain_wav() {
+    let runner = FakeRunner::with_output(CommandOutput {
+        status_code: Some(0),
+        stdout: r#"{
+            "format":{"duration":"1.000","format_name":"wav"},
+            "streams":[
+                {"codec_type":"audio","codec_name":"pcm_s16le","sample_rate":"48000","channels":1,"bits_per_sample":16}
+            ]
+        }"#
+        .to_string(),
+        stderr: String::new(),
+    });
+    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("plain.wav");
+    write_test_wav_with_chunks(&path, None, None);
+    let modified_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_774_175_848);
+    filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(modified_at))
+        .expect("set mtime");
+
+    let facts = generator
+        .extract_media_facts(&path.display().to_string())
+        .expect("facts extraction should succeed");
+
+    assert_eq!(facts.media_format.as_deref(), Some("wav"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("pcm_s16le"));
+    assert_eq!(facts.captured_at.as_deref(), Some("2026-03-22T10:37:28Z"));
 }
 
 struct TestBextChunk<'a> {

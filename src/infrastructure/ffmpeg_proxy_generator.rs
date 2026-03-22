@@ -747,7 +747,8 @@ fn parse_wav_container_facts(path: &Path) -> Result<Option<ParsedWavFacts>, Prox
         .and_then(|bext| bext.originator.clone())
         .filter(|value| !value.is_empty());
     let captured_at = repaired_bext_captured_at(bext.as_ref(), ixml.as_ref(), modified_at.as_ref())
-        .or_else(|| created_at.as_ref().map(system_time_to_rfc3339));
+        .or_else(|| created_at.as_ref().map(system_time_to_rfc3339))
+        .or_else(|| modified_at.as_ref().map(system_time_to_rfc3339));
 
     if recorder_model.is_none() && captured_at.is_none() {
         return Ok(None);
