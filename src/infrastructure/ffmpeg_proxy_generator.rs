@@ -9,6 +9,7 @@ use crate::application::proxy_generator::{
     ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
     VideoThumbnailRequest,
 };
+use crate::infrastructure::time::{FileTimestampProvider, StdFileTimestampProvider};
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use serde::Serialize;
 
@@ -53,30 +54,6 @@ pub struct FfmpegProxyGenerator<
 impl Default for FfmpegProxyGenerator<StdCommandRunner, StdFileTimestampProvider> {
     fn default() -> Self {
         Self::new("ffmpeg".to_string(), StdCommandRunner)
-    }
-}
-
-pub trait FileTimestampProvider {
-    fn created_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>>;
-    fn modified_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>>;
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-pub struct StdFileTimestampProvider;
-
-impl FileTimestampProvider for StdFileTimestampProvider {
-    fn created_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>> {
-        fs::metadata(path)
-            .ok()
-            .and_then(|metadata| metadata.created().ok())
-            .map(chrono::DateTime::<Utc>::from)
-    }
-
-    fn modified_at_utc(&self, path: &Path) -> Option<chrono::DateTime<Utc>> {
-        fs::metadata(path)
-            .ok()
-            .and_then(|metadata| metadata.modified().ok())
-            .map(chrono::DateTime::<Utc>::from)
     }
 }
 

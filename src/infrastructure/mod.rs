@@ -22,3 +22,4 @@ pub mod tauri_notification_sink;
 #[cfg(feature = "core-api-client")]
 pub mod technical_auth;
 pub mod technical_secret_store;
+pub mod time;

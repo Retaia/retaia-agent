@@ -108,8 +108,8 @@ pub use infrastructure::daemon_diagnostics::{
     render_daemon_inspect_json,
 };
 pub use infrastructure::ffmpeg_proxy_generator::{
-    CommandOutput, CommandRunner, FfmpegProxyGenerator, FileTimestampProvider, StdCommandRunner,
-    StdFileTimestampProvider, build_audio_proxy_args, build_video_proxy_args,
+    CommandOutput, CommandRunner, FfmpegProxyGenerator, StdCommandRunner, build_audio_proxy_args,
+    build_video_proxy_args,
 };
 pub use infrastructure::i18n::{Language, detect_language, parse_language, t};
 pub use infrastructure::notification_sink::{
@@ -131,7 +131,8 @@ pub use infrastructure::runtime_history_store::{
 };
 pub use infrastructure::runtime_stats_store::{
     DAEMON_STATS_FILE_NAME, DaemonCurrentJobStats, DaemonLastJobStats, DaemonRuntimeStats,
-    RuntimeStatsStoreError, load_runtime_stats, now_unix_ms, run_state_label, save_runtime_stats,
+    RuntimeStatsStoreError, load_runtime_stats, now_unix_ms, now_unix_ms_with_clock,
+    run_state_label, save_runtime_stats,
 };
 pub use infrastructure::rust_photo_proxy_generator::{
     RawPhotoDecoder, RawloaderPhotoDecoder, RustPhotoProxyGenerator,
@@ -145,3 +146,4 @@ pub use infrastructure::technical_auth::{
     RotateSecretResult, TechnicalAuthError, cancel_device_bootstrap, mint_technical_bearer,
     poll_device_bootstrap, rotate_client_secret, start_device_bootstrap,
 };
+pub use infrastructure::time::{Clock, FileTimestampProvider, StdClock, StdFileTimestampProvider};
