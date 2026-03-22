@@ -1,6 +1,10 @@
 use std::sync::Mutex;
 
+use exif::{DateTime as ExifDateTime, Rational, Value};
 use image::{DynamicImage, GenericImageView, ImageFormat};
+use retaia_agent::infrastructure::rust_photo_proxy_generator::{
+    exif_datetime_to_utc_rfc3339, gps_coordinate_to_decimal, gps_timestamp_to_utc_rfc3339,
+};
 use retaia_agent::{
     PhotoProxyFormat, PhotoProxyRequest, ProxyGenerationError, ProxyGenerator, RawPhotoDecoder,
     RustPhotoProxyGenerator,
@@ -263,4 +267,68 @@ fn tdd_rust_photo_proxy_generator_high_volume_local_batch_all_succeed() {
     }
 
     assert_eq!(success, 30);
+}
+
+#[test]
+fn tdd_rust_photo_exif_datetime_with_offset_is_normalized_to_utc() {
+    let mut datetime =
+        ExifDateTime::from_ascii(b"2026:03:22 10:03:39").expect("parse exif datetime");
+    datetime.parse_offset(b"+01:00").expect("parse exif offset");
+
+    let captured_at =
+        exif_datetime_to_utc_rfc3339(&datetime).expect("captured_at should normalize to UTC");
+
+    assert_eq!(captured_at, "2026-03-22T09:03:39Z");
+}
+
+#[test]
+fn tdd_rust_photo_exif_datetime_without_offset_is_not_promoted_to_captured_at() {
+    let datetime = ExifDateTime::from_ascii(b"2026:03:22 10:03:39").expect("parse exif datetime");
+
+    assert_eq!(exif_datetime_to_utc_rfc3339(&datetime), None);
+}
+
+#[test]
+fn tdd_rust_photo_gps_coordinate_is_converted_to_decimal() {
+    let coordinate = gps_coordinate_to_decimal(
+        &Value::Rational(vec![
+            Rational { num: 50, denom: 1 },
+            Rational { num: 30, denom: 1 },
+            Rational { num: 0, denom: 1 },
+        ]),
+        "N",
+    )
+    .expect("gps coordinate should parse");
+
+    assert!((coordinate - 50.5).abs() < 0.000_001);
+}
+
+#[test]
+fn tdd_rust_photo_gps_west_coordinate_is_negative() {
+    let coordinate = gps_coordinate_to_decimal(
+        &Value::Rational(vec![
+            Rational { num: 4, denom: 1 },
+            Rational { num: 30, denom: 1 },
+            Rational { num: 0, denom: 1 },
+        ]),
+        "W",
+    )
+    .expect("gps coordinate should parse");
+
+    assert!((coordinate + 4.5).abs() < 0.000_001);
+}
+
+#[test]
+fn tdd_rust_photo_gps_timestamp_is_normalized_to_utc() {
+    let captured_at = gps_timestamp_to_utc_rfc3339(
+        "2026:03:22",
+        &Value::Rational(vec![
+            Rational { num: 10, denom: 1 },
+            Rational { num: 3, denom: 1 },
+            Rational { num: 39, denom: 1 },
+        ]),
+    )
+    .expect("gps timestamp should parse");
+
+    assert_eq!(captured_at, "2026-03-22T10:03:39Z");
 }
