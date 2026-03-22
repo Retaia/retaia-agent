@@ -136,6 +136,34 @@ Champs utiles au-delà du minimum déjà présent:
   - type suggéré: `string`
 - `camera_model`
   - type suggéré: `string`
+- `sample_rate_hz`
+  - type suggéré: `integer`
+  - unité: Hz
+- `channel_count`
+  - type suggéré: `integer`
+- `timecode_start`
+  - type suggéré: `string`
+
+Exemple réel observé sur un `MOV` Canon EOS 5D Mark IV:
+
+- `captured_at_original = 2026-03-16T15:11:29Z`
+- `camera_make = Canon`
+- `camera_model = Canon EOS 5D Mark IV`
+- `media_format = mov`
+- `duration_ms = 17680`
+- `video_codec = mjpeg`
+- `audio_codec = pcm_s16le`
+- `width = 4096`
+- `height = 2160`
+- `fps = 25`
+- `video_bitrate_kbps = 522866`
+- `audio_bitrate_kbps = 1536`
+- `sample_rate_hz = 48000`
+- `channel_count = 2`
+- `timecode_start = 01:53:08:03`
+- pas de GPS détecté, ce qui est normal pour ce type de `MOV` boîtier seul
+
+Ce fichier confirme qu'un lot vidéo utile peut être extrait depuis le conteneur QuickTime sans dépendre d'un sidecar.
 
 ## Drone / sidecar `SRT`
 
@@ -250,6 +278,7 @@ Ce lot couvre:
 - le besoin photo demandé immédiatement
 - une base de géolocalisation commune photo/vidéo drone
 - des champs photo réellement observés dans un `CR2` Canon
+- des champs vidéo réellement observés dans un `MOV` Canon
 - les champs réellement observés dans un `SRT` DJI Air 3
 - un minimum de valeur métier sans élargir trop vite le contrat
 
