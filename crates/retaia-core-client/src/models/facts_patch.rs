@@ -27,6 +27,86 @@ pub struct FactsPatch {
     pub height: Option<i32>,
     #[serde(rename = "fps", skip_serializing_if = "Option::is_none")]
     pub fps: Option<f64>,
+    #[serde(rename = "captured_at", skip_serializing_if = "Option::is_none")]
+    pub captured_at: Option<String>,
+    #[serde(rename = "exposure_time_s", skip_serializing_if = "Option::is_none")]
+    pub exposure_time_s: Option<f64>,
+    #[serde(rename = "aperture_f_number", skip_serializing_if = "Option::is_none")]
+    pub aperture_f_number: Option<f64>,
+    #[serde(rename = "iso", skip_serializing_if = "Option::is_none")]
+    pub iso: Option<i32>,
+    #[serde(rename = "focal_length_mm", skip_serializing_if = "Option::is_none")]
+    pub focal_length_mm: Option<f64>,
+    #[serde(rename = "camera_make", skip_serializing_if = "Option::is_none")]
+    pub camera_make: Option<String>,
+    #[serde(rename = "camera_model", skip_serializing_if = "Option::is_none")]
+    pub camera_model: Option<String>,
+    #[serde(rename = "lens_model", skip_serializing_if = "Option::is_none")]
+    pub lens_model: Option<String>,
+    #[serde(rename = "orientation", skip_serializing_if = "Option::is_none")]
+    pub orientation: Option<i32>,
+    #[serde(rename = "bitrate_kbps", skip_serializing_if = "Option::is_none")]
+    pub bitrate_kbps: Option<i32>,
+    #[serde(rename = "sample_rate_hz", skip_serializing_if = "Option::is_none")]
+    pub sample_rate_hz: Option<i32>,
+    #[serde(rename = "channel_count", skip_serializing_if = "Option::is_none")]
+    pub channel_count: Option<i32>,
+    #[serde(rename = "bits_per_sample", skip_serializing_if = "Option::is_none")]
+    pub bits_per_sample: Option<i32>,
+    #[serde(rename = "rotation_deg", skip_serializing_if = "Option::is_none")]
+    pub rotation_deg: Option<i32>,
+    #[serde(rename = "timecode_start", skip_serializing_if = "Option::is_none")]
+    pub timecode_start: Option<String>,
+    #[serde(rename = "pixel_format", skip_serializing_if = "Option::is_none")]
+    pub pixel_format: Option<String>,
+    #[serde(rename = "color_range", skip_serializing_if = "Option::is_none")]
+    pub color_range: Option<String>,
+    #[serde(rename = "color_space", skip_serializing_if = "Option::is_none")]
+    pub color_space: Option<String>,
+    #[serde(rename = "color_transfer", skip_serializing_if = "Option::is_none")]
+    pub color_transfer: Option<String>,
+    #[serde(rename = "color_primaries", skip_serializing_if = "Option::is_none")]
+    pub color_primaries: Option<String>,
+    #[serde(rename = "recorder_model", skip_serializing_if = "Option::is_none")]
+    pub recorder_model: Option<String>,
+    #[serde(rename = "gps_latitude", skip_serializing_if = "Option::is_none")]
+    pub gps_latitude: Option<f64>,
+    #[serde(rename = "gps_longitude", skip_serializing_if = "Option::is_none")]
+    pub gps_longitude: Option<f64>,
+    #[serde(rename = "gps_altitude_m", skip_serializing_if = "Option::is_none")]
+    pub gps_altitude_m: Option<f64>,
+    #[serde(
+        rename = "gps_altitude_relative_m",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub gps_altitude_relative_m: Option<f64>,
+    #[serde(
+        rename = "gps_altitude_absolute_m",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub gps_altitude_absolute_m: Option<f64>,
+    #[serde(
+        rename = "exposure_compensation_ev",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub exposure_compensation_ev: Option<f64>,
+    #[serde(rename = "color_mode", skip_serializing_if = "Option::is_none")]
+    pub color_mode: Option<String>,
+    #[serde(
+        rename = "color_temperature_k",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub color_temperature_k: Option<i32>,
+    #[serde(
+        rename = "has_dji_metadata_track",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub has_dji_metadata_track: Option<bool>,
+    #[serde(
+        rename = "dji_metadata_track_types",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub dji_metadata_track_types: Option<Vec<String>>,
 }
 
 impl FactsPatch {
@@ -39,6 +119,37 @@ impl FactsPatch {
             width: None,
             height: None,
             fps: None,
+            captured_at: None,
+            exposure_time_s: None,
+            aperture_f_number: None,
+            iso: None,
+            focal_length_mm: None,
+            camera_make: None,
+            camera_model: None,
+            lens_model: None,
+            orientation: None,
+            bitrate_kbps: None,
+            sample_rate_hz: None,
+            channel_count: None,
+            bits_per_sample: None,
+            rotation_deg: None,
+            timecode_start: None,
+            pixel_format: None,
+            color_range: None,
+            color_space: None,
+            color_transfer: None,
+            color_primaries: None,
+            recorder_model: None,
+            gps_latitude: None,
+            gps_longitude: None,
+            gps_altitude_m: None,
+            gps_altitude_relative_m: None,
+            gps_altitude_absolute_m: None,
+            exposure_compensation_ev: None,
+            color_mode: None,
+            color_temperature_k: None,
+            has_dji_metadata_track: None,
+            dji_metadata_track_types: None,
         }
     }
 }

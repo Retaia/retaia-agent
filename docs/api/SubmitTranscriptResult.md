@@ -1,12 +1,10 @@
-# ProcessingResultPatch
+# SubmitTranscriptResult
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**facts_patch** | Option<[**models::FactsPatch**](FactsPatch.md)> |  | [optional]
-**derived_patch** | Option<[**models::DerivedPatch**](DerivedPatch.md)> |  | [optional]
-**transcript_patch** | Option<[**models::TranscriptPatch**](TranscriptPatch.md)> |  | [optional]
+**transcript_patch** | [**models::TranscriptPatch**](TranscriptPatch.md) |  | 
 **warnings** | Option<**Vec<String>**> |  | [optional]
 **metrics** | Option<**std::collections::HashMap<String, serde_json::Value>**> |  | [optional]
 

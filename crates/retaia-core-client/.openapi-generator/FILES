@@ -110,7 +110,10 @@ docs/SubmitDerived.md
 docs/SubmitDerivedResult.md
 docs/SubmitExtractFacts.md
 docs/SubmitExtractFactsResult.md
+docs/SubmitTranscript.md
+docs/SubmitTranscriptResult.md
 docs/TechnicalClientKind.md
+docs/TranscriptPatch.md
 docs/UserFeaturesResponse.md
 docs/UserFeaturesUpdateRequest.md
 git_push.sh
@@ -225,6 +228,9 @@ src/models/submit_derived.rs
 src/models/submit_derived_result.rs
 src/models/submit_extract_facts.rs
 src/models/submit_extract_facts_result.rs
+src/models/submit_transcript.rs
+src/models/submit_transcript_result.rs
 src/models/technical_client_kind.rs
+src/models/transcript_patch.rs
 src/models/user_features_response.rs
 src/models/user_features_update_request.rs

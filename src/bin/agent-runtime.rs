@@ -884,9 +884,8 @@ mod tests {
         policy_poll_wait_ms_from_plan, policy_refresh_interval_ms, poll_server_policy_once,
     };
     use retaia_agent::{
-        AgentRuntimeConfig, AuthMode, CORE_JOBS_RUNTIME_FEATURE, ClientRuntimeTarget,
-        CoreApiGateway, CoreApiGatewayError, CoreServerPolicy, LogLevel, PollEndpoint,
-        RuntimeSession, RuntimeSyncPlan,
+        AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, CoreApiGateway, CoreApiGatewayError,
+        CoreServerPolicy, LogLevel, PollEndpoint, RuntimeSession, RuntimeSyncPlan,
     };
     use std::collections::BTreeMap;
 
@@ -969,7 +968,7 @@ mod tests {
         let gateway = PolicyGateway {
             result: Ok(CoreServerPolicy {
                 min_poll_interval_seconds: Some(9),
-                feature_flags: BTreeMap::from([(CORE_JOBS_RUNTIME_FEATURE.to_string(), true)]),
+                feature_flags: BTreeMap::new(),
             }),
         };
 
@@ -977,7 +976,6 @@ mod tests {
 
         assert_eq!(wait_ms, 30_000);
         assert_eq!(session.server_policy().min_poll_interval_seconds, Some(9));
-        assert!(session.effective_feature_enabled(CORE_JOBS_RUNTIME_FEATURE));
         assert!(session.can_process_jobs());
     }
 

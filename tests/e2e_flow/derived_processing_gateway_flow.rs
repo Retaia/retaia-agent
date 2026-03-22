@@ -166,6 +166,7 @@ fn e2e_derived_processing_gateway_flow_claim_upload_submit_sequence_is_supported
                     sha256: None,
                 }],
                 facts_patch: None,
+                transcript_patch: None,
                 warnings: None,
                 metrics: None,
             },

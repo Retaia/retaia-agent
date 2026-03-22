@@ -1,8 +1,8 @@
 use retaia_agent::{
-    AgentRunState, AgentRuntimeConfig, AuthMode, CORE_JOBS_RUNTIME_FEATURE, ClientRuntimeTarget,
-    CoreServerPolicy, LogLevel, MenuAction, NotificationBridgeError, NotificationMessage,
-    NotificationSink, PollDecisionReason, PollEndpoint, PollSignal, PushChannel, PushHint,
-    RuntimeSession, RuntimeSnapshot, RuntimeSyncPlan, SystemNotification, TechnicalAuthConfig,
+    AgentRunState, AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, CoreServerPolicy, LogLevel,
+    MenuAction, NotificationBridgeError, NotificationMessage, NotificationSink, PollDecisionReason,
+    PollEndpoint, PollSignal, PushChannel, PushHint, RuntimeSession, RuntimeSnapshot,
+    RuntimeSyncPlan, SystemNotification, TechnicalAuthConfig,
 };
 use std::cell::RefCell;
 
@@ -73,16 +73,13 @@ fn tdd_runtime_session_mutation_gate_depends_on_poll_compatibility() {
 }
 
 #[test]
-fn tdd_runtime_session_blocks_job_processing_until_policy_enables_runtime_jobs() {
+fn tdd_runtime_session_allows_job_processing_for_agent_without_runtime_feature_gate() {
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
-    assert!(!session.can_process_jobs());
+    assert!(session.can_process_jobs());
 
     session.apply_server_policy(CoreServerPolicy {
         min_poll_interval_seconds: Some(9),
-        feature_flags: std::collections::BTreeMap::from([(
-            CORE_JOBS_RUNTIME_FEATURE.to_string(),
-            true,
-        )]),
+        feature_flags: std::collections::BTreeMap::new(),
     });
 
     assert!(session.can_process_jobs());
@@ -94,10 +91,7 @@ fn tdd_runtime_session_enforces_jobs_poll_floor_of_five_seconds() {
     let mut session = RuntimeSession::new(ClientRuntimeTarget::Agent, settings()).expect("session");
     session.apply_server_policy(CoreServerPolicy {
         min_poll_interval_seconds: Some(1),
-        feature_flags: std::collections::BTreeMap::from([(
-            CORE_JOBS_RUNTIME_FEATURE.to_string(),
-            true,
-        )]),
+        feature_flags: std::collections::BTreeMap::new(),
     });
 
     assert_eq!(session.jobs_poll_interval_ms(), 5_000);

@@ -20,6 +20,28 @@ pub struct AssetDetail {
     /// Shared complementary metadata map. Values stay JSON-simple; domains requiring dedicated semantics, storage or security rules must not be hidden implicitly here.
     #[serde(rename = "fields", skip_serializing_if = "Option::is_none")]
     pub fields: Option<std::collections::HashMap<String, models::AssetFieldValue>>,
+    #[serde(rename = "gps_latitude", skip_serializing_if = "Option::is_none")]
+    pub gps_latitude: Option<f64>,
+    #[serde(rename = "gps_longitude", skip_serializing_if = "Option::is_none")]
+    pub gps_longitude: Option<f64>,
+    #[serde(rename = "gps_altitude_m", skip_serializing_if = "Option::is_none")]
+    pub gps_altitude_m: Option<f64>,
+    #[serde(
+        rename = "gps_altitude_relative_m",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub gps_altitude_relative_m: Option<f64>,
+    #[serde(
+        rename = "gps_altitude_absolute_m",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub gps_altitude_absolute_m: Option<f64>,
+    #[serde(rename = "location_country", skip_serializing_if = "Option::is_none")]
+    pub location_country: Option<String>,
+    #[serde(rename = "location_city", skip_serializing_if = "Option::is_none")]
+    pub location_city: Option<String>,
+    #[serde(rename = "location_label", skip_serializing_if = "Option::is_none")]
+    pub location_label: Option<String>,
     #[serde(rename = "paths")]
     pub paths: Box<models::AssetPaths>,
     #[serde(rename = "processing")]
@@ -48,6 +70,14 @@ impl AssetDetail {
             summary: Box::new(summary),
             notes: None,
             fields: None,
+            gps_latitude: None,
+            gps_longitude: None,
+            gps_altitude_m: None,
+            gps_altitude_relative_m: None,
+            gps_altitude_absolute_m: None,
+            location_country: None,
+            location_city: None,
+            location_label: None,
             paths: Box::new(paths),
             processing: Box::new(processing),
             derived: Box::new(derived),

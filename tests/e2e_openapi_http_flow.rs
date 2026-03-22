@@ -787,6 +787,7 @@ fn e2e_openapi_derived_gateway_submit_maps_401_from_http_response() {
             sha256: None,
         }],
         facts_patch: None,
+        transcript_patch: None,
         warnings: None,
         metrics: None,
     };
@@ -819,6 +820,7 @@ fn e2e_openapi_derived_gateway_submit_maps_lock_invalid_error() {
             sha256: None,
         }],
         facts_patch: None,
+        transcript_patch: None,
         warnings: None,
         metrics: None,
     };

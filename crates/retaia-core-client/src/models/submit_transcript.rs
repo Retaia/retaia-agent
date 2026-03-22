@@ -11,17 +11,31 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum JobSubmitRequest {
-    SubmitExtractFacts(Box<models::SubmitExtractFacts>),
-    SubmitDerived(Box<models::SubmitDerived>),
-    SubmitTranscript(Box<models::SubmitTranscript>),
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SubmitTranscript {
+    #[serde(rename = "lock_token")]
+    pub lock_token: String,
+    #[serde(rename = "fencing_token")]
+    pub fencing_token: i32,
+    #[serde(rename = "job_type")]
+    pub job_type: JobType,
+    #[serde(rename = "result")]
+    pub result: Box<models::SubmitTranscriptResult>,
 }
 
-impl Default for JobSubmitRequest {
-    fn default() -> Self {
-        Self::SubmitExtractFacts(Default::default())
+impl SubmitTranscript {
+    pub fn new(
+        lock_token: String,
+        fencing_token: i32,
+        job_type: JobType,
+        result: models::SubmitTranscriptResult,
+    ) -> SubmitTranscript {
+        SubmitTranscript {
+            lock_token,
+            fencing_token,
+            job_type,
+            result: Box::new(result),
+        }
     }
 }
 ///

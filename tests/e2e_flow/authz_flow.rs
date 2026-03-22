@@ -1,15 +1,14 @@
 use std::collections::BTreeMap;
 
 use retaia_agent::{
-    CORE_CLIENTS_BOOTSTRAP_FEATURE, CORE_JOBS_RUNTIME_FEATURE, ClientKind, can_issue_client_token,
-    can_process_jobs, resolve_effective_features,
+    ClientKind, can_issue_client_token, can_process_jobs, resolve_effective_features,
 };
 
 #[test]
 fn e2e_agent_service_mode_keeps_processing_authorized() {
     let flags = BTreeMap::from([
         (String::from("features.ai"), true),
-        (CORE_JOBS_RUNTIME_FEATURE.to_string(), true),
+        (String::from("features.core.jobs.runtime"), true),
     ]);
     let app = BTreeMap::from([(String::from("features.ai"), true)]);
     let user = BTreeMap::new();
@@ -32,22 +31,17 @@ fn e2e_interactive_clients_cannot_issue_technical_client_tokens_or_process_jobs(
 }
 
 #[test]
-fn e2e_core_v1_global_features_stay_enabled_even_if_runtime_payload_sets_them_false() {
-    let flags = BTreeMap::from([
-        (CORE_JOBS_RUNTIME_FEATURE.to_string(), false),
-        (CORE_CLIENTS_BOOTSTRAP_FEATURE.to_string(), false),
-    ]);
-
+fn e2e_deprecated_core_runtime_keys_follow_payload_when_still_received() {
+    let feature = "features.core.jobs.runtime".to_string();
     let effective = resolve_effective_features(
-        &flags,
+        &BTreeMap::from([(feature.clone(), false)]),
         &BTreeMap::new(),
         &BTreeMap::new(),
         &BTreeMap::new(),
         &BTreeMap::new(),
     );
 
-    assert_eq!(effective.get(CORE_JOBS_RUNTIME_FEATURE), Some(&true));
-    assert_eq!(effective.get(CORE_CLIENTS_BOOTSTRAP_FEATURE), Some(&true));
+    assert_eq!(effective.get(&feature), Some(&false));
 }
 
 #[test]

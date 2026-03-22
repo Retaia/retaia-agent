@@ -191,7 +191,10 @@ Class | Method | HTTP request | Description
  - [SubmitDerivedResult](docs/SubmitDerivedResult.md)
  - [SubmitExtractFacts](docs/SubmitExtractFacts.md)
  - [SubmitExtractFactsResult](docs/SubmitExtractFactsResult.md)
+ - [SubmitTranscript](docs/SubmitTranscript.md)
+ - [SubmitTranscriptResult](docs/SubmitTranscriptResult.md)
  - [TechnicalClientKind](docs/TechnicalClientKind.md)
+ - [TranscriptPatch](docs/TranscriptPatch.md)
  - [UserFeaturesResponse](docs/UserFeaturesResponse.md)
  - [UserFeaturesUpdateRequest](docs/UserFeaturesUpdateRequest.md)
 

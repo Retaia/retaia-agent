@@ -181,6 +181,21 @@ impl DerivedProcessingGateway for OpenApiDerivedProcessingGateway {
                 models::submit_extract_facts::JobType::ExtractFacts,
                 result,
             )))
+        } else if payload.job_type == DerivedJobType::TranscribeAudio {
+            let transcript_patch = payload
+                .transcript_patch
+                .as_ref()
+                .map(map_transcript_patch)
+                .unwrap_or_else(models::TranscriptPatch::new);
+            let mut result = models::SubmitTranscriptResult::new(transcript_patch);
+            result.warnings = payload.warnings.clone();
+            result.metrics = payload.metrics.clone();
+            models::JobSubmitRequest::SubmitTranscript(Box::new(models::SubmitTranscript::new(
+                lock_token.to_string(),
+                fencing_token,
+                models::submit_transcript::JobType::TranscribeAudio,
+                result,
+            )))
         } else {
             let derived_patch = build_derived_patch(&payload.manifest)?;
             let mut result = models::SubmitDerivedResult::new(derived_patch);
@@ -334,6 +349,7 @@ fn map_job_type(job_type: models::job::JobType) -> Result<DerivedJobType, Derive
         models::job::JobType::GeneratePreview => Ok(DerivedJobType::GeneratePreview),
         models::job::JobType::GenerateThumbnails => Ok(DerivedJobType::GenerateThumbnails),
         models::job::JobType::GenerateAudioWaveform => Ok(DerivedJobType::GenerateAudioWaveform),
+        models::job::JobType::TranscribeAudio => Ok(DerivedJobType::TranscribeAudio),
     }
 }
 
@@ -345,6 +361,9 @@ fn map_submit_job_type(job_type: DerivedJobType) -> models::submit_derived::JobT
         DerivedJobType::GenerateThumbnails => models::submit_derived::JobType::GenerateThumbnails,
         DerivedJobType::GenerateAudioWaveform => {
             models::submit_derived::JobType::GenerateAudioWaveform
+        }
+        DerivedJobType::TranscribeAudio => {
+            unreachable!("transcribe_audio must use SubmitTranscript")
         }
     }
 }
@@ -421,6 +440,57 @@ fn map_facts_patch(
         width: facts.width,
         height: facts.height,
         fps: facts.fps,
+        captured_at: facts.captured_at.clone(),
+        exposure_time_s: facts.exposure_time_s,
+        aperture_f_number: facts.aperture_f_number,
+        iso: facts.iso,
+        focal_length_mm: facts.focal_length_mm,
+        camera_make: facts.camera_make.clone(),
+        camera_model: facts.camera_model.clone(),
+        lens_model: facts.lens_model.clone(),
+        orientation: facts.orientation,
+        bitrate_kbps: facts.bitrate_kbps,
+        sample_rate_hz: facts.sample_rate_hz,
+        channel_count: facts.channel_count,
+        bits_per_sample: facts.bits_per_sample,
+        rotation_deg: facts.rotation_deg,
+        timecode_start: facts.timecode_start.clone(),
+        pixel_format: facts.pixel_format.clone(),
+        color_range: facts.color_range.clone(),
+        color_space: facts.color_space.clone(),
+        color_transfer: facts.color_transfer.clone(),
+        color_primaries: facts.color_primaries.clone(),
+        recorder_model: facts.recorder_model.clone(),
+        gps_latitude: facts.gps_latitude,
+        gps_longitude: facts.gps_longitude,
+        gps_altitude_m: facts.gps_altitude_m,
+        gps_altitude_relative_m: facts.gps_altitude_relative_m,
+        gps_altitude_absolute_m: facts.gps_altitude_absolute_m,
+        exposure_compensation_ev: facts.exposure_compensation_ev,
+        color_mode: facts.color_mode.clone(),
+        color_temperature_k: facts.color_temperature_k,
+        has_dji_metadata_track: facts.has_dji_metadata_track,
+        dji_metadata_track_types: facts.dji_metadata_track_types.clone(),
+    }
+}
+
+#[cfg(feature = "core-api-client")]
+fn map_transcript_patch(
+    transcript: &crate::application::derived_processing_gateway::TranscriptPatchPayload,
+) -> models::TranscriptPatch {
+    let status = transcript.status.as_deref().map(|value| match value {
+        "RUNNING" => models::transcript_patch::Status::Running,
+        "DONE" => models::transcript_patch::Status::Done,
+        "FAILED" => models::transcript_patch::Status::Failed,
+        _ => models::transcript_patch::Status::None,
+    });
+
+    models::TranscriptPatch {
+        status,
+        text: transcript.text.clone(),
+        text_preview: transcript.text_preview.clone(),
+        language: transcript.language.clone(),
+        updated_at: transcript.updated_at.clone(),
     }
 }
 

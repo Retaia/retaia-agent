@@ -157,6 +157,7 @@ impl ProxyGenerator for WritingPreviewGenerator {
             width: Some(1280),
             height: Some(720),
             fps: Some(25.0),
+            ..FactsPatchPayload::default()
         })
     }
 }
@@ -295,6 +296,7 @@ impl DerivedExecutionPlanner for ThumbnailPlanner {
                     sha256: None,
                 }],
                 facts_patch: None,
+                transcript_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -417,6 +419,7 @@ impl DerivedExecutionPlanner for IncompatibleThumbnailManifestPlanner {
                     sha256: None,
                 }],
                 facts_patch: None,
+                transcript_patch: None,
                 warnings: None,
                 metrics: None,
             },
@@ -537,6 +540,7 @@ impl DerivedExecutionPlanner for WaveformOptionalPlanner {
                 job_type: claimed.job_type,
                 manifest: vec![],
                 facts_patch: None,
+                transcript_patch: None,
                 warnings: None,
                 metrics: None,
             },
