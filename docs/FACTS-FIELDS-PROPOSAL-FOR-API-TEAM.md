@@ -215,13 +215,19 @@ Champs observables et utiles:
 
 ## Signaux techniques de conteneur
 
-Ces champs ne sont pas des facts métier forts, mais peuvent être utiles si l'API veut les exposer:
+Ces champs ne sont pas des facts métier forts, mais il est proposé de les exposer quand même:
 
 - `has_dji_metadata_track`
   - type suggéré: `boolean`
 - `dji_metadata_track_types`
   - type suggéré: `string[]`
   - exemple: `["djmd", "dbgi"]`
+
+Justification:
+
+- si Core stocke déjà ces signaux dès l'ingestion initiale
+- alors un futur parsing de `djmd` / `dbgi` pourra être relancé sur les assets déjà présents en base
+- sans devoir redécouvrir a posteriori quels fichiers contenaient ces pistes
 
 ## Exemples observés
 
@@ -369,7 +375,7 @@ Conclusion:
    - `media_format`
    - `color_mode`
 8. Le contrat doit-il prévoir des champs temporels "originaux" séparés des dates d'ingestion côté Core?
-9. Veut-on exposer les signaux de conteneur comme `has_dji_metadata_track`, ou les garder purement internes?
+9. Les signaux de conteneur comme `has_dji_metadata_track` et `dji_metadata_track_types` sont proposés pour stockage côté Core afin de permettre une relance future de jobs de parsing sur les assets déjà ingérés.
 10. Les corrections device-spécifiques de date, comme le cas RODE `bext/iXML`, sont-elles acceptées pour alimenter directement `captured_at_original`?
 
 ## Recommandation d'implémentation après validation API
