@@ -18,6 +18,12 @@ En revanche, le contrat exécutable actuel ne permet pas encore de soumettre des
 - XMP photo/vidéo
 - sidecars `SRT` de captation drone
 
+Le cadrage retenu pour cette proposition est volontairement limité:
+
+- pas de télémétrie time-series dans `FactsPatch`
+- seulement des facts agrégés au niveau asset
+- pour le GPS drone, conserver uniquement le premier fix GPS fiable
+
 L'objectif ici n'est pas d'implémenter ces extractions dans l'agent immédiatement, mais de proposer à l'équipe API une liste de champs à modéliser avant implémentation.
 
 ## État actuel du contrat exécutable
@@ -116,7 +122,29 @@ Champs utiles au-delà du minimum déjà présent:
 
 ## Drone / sidecar `SRT`
 
-Ces champs dépendent fortement du format exact du sidecar et du constructeur. Ils restent utiles à cadrer au niveau API avant extraction.
+Un `SRT` réel DJI Air 3 montre déjà des champs parseables de manière fiable:
+
+- timestamp original de capture
+- `iso`
+- `shutter`
+- `fnum`
+- `ev`
+- `focal_len`
+- `latitude`
+- `longitude`
+- `rel_alt`
+- `abs_alt`
+- `ct`
+- `color_md`
+
+Pour `FactsPatch`, la recommandation n'est pas d'exposer la télémétrie complète frame par frame. La bonne granularité ici est asset-level:
+
+- premier fix GPS fiable
+- première valeur fiable
+- dernière valeur fiable
+- ou valeur constante si stable sur tout le clip
+
+Ces champs restent utiles à cadrer au niveau API avant extraction.
 
 - `gps_latitude`
   - type suggéré: `number`
@@ -126,28 +154,31 @@ Ces champs dépendent fortement du format exact du sidecar et du constructeur. I
   - type suggéré: `number`
   - unité: degrés décimaux
   - sensible: oui
-- `gps_altitude_m`
+- `gps_altitude_relative_m`
   - type suggéré: `number`
   - unité: mètres
   - sensible: oui
-- `gps_speed_mps`
+- `gps_altitude_absolute_m`
   - type suggéré: `number`
-  - unité: mètres/seconde
-- `camera_heading_deg`
+  - unité: mètres
+  - sensible: oui
+- `exposure_compensation_ev`
   - type suggéré: `number`
-  - unité: degrés
-- `gimbal_pitch_deg`
-  - type suggéré: `number`
-  - unité: degrés
-- `gimbal_yaw_deg`
-  - type suggéré: `number`
-  - unité: degrés
-- `drone_make`
+- `color_mode`
   - type suggéré: `string`
-- `drone_model`
-  - type suggéré: `string`
-- `telemetry_sample_count`
+- `color_temperature_k`
   - type suggéré: `integer`
+  - unité: kelvin
+
+Règles d'agrégation suggérées pour les champs issus du `SRT`:
+
+- `gps_latitude`, `gps_longitude`, `gps_altitude_relative_m`, `gps_altitude_absolute_m`
+  - conserver le premier fix GPS fiable
+- `captured_at_original`
+  - conserver le premier timestamp fiable
+- `iso`, `exposure_time_s`, `aperture_f_number`, `focal_length_mm`, `exposure_compensation_ev`, `color_mode`, `color_temperature_k`
+  - conserver la valeur constante si stable sur tout le clip
+  - sinon exposer `first_*` et `last_*` uniquement si l'API veut vraiment représenter la dérive intra-clip
 
 ## Audio
 
@@ -166,17 +197,23 @@ L'audio a moins de métadonnées réellement utiles dans le flux agent actuel, m
 
 1. Veut-on étendre `FactsPatch` directement, ou introduire une sous-structure dédiée aux facts enrichis?
 2. Les champs GPS doivent-ils vivre dans le même objet que les facts techniques, ou dans une zone explicitement sensible?
-3. Veut-on modéliser la provenance du champ:
+3. Pour les sidecars `SRT`, veut-on autoriser seulement un agrégat asset-level et exclure explicitement toute télémétrie détaillée du contrat?
+4. Veut-on modéliser la provenance du champ:
    - `source = media | exif | xmp | srt`
-4. Veut-on accepter les champs partiels sans garantir leur présence sur tous les médias?
-5. Quel format exact retenir pour les champs numériques photo:
+5. Veut-on accepter les champs partiels sans garantir leur présence sur tous les médias?
+6. Quel format exact retenir pour les champs numériques photo:
    - `exposure_time_s` en décimal
    - `aperture_f_number` en décimal
    - `iso` en entier
-6. Faut-il normaliser certains champs en enums:
+7. Faut-il normaliser certains champs en enums:
    - `orientation`
-   - éventuellement `media_format`
-7. Le contrat doit-il prévoir des champs temporels "originaux" séparés des dates d'ingestion côté Core?
+   - `media_format`
+   - `color_mode`
+8. Le contrat doit-il prévoir des champs temporels "originaux" séparés des dates d'ingestion côté Core?
+9. Si une valeur varie dans un `SRT`, veut-on:
+   - ne conserver que la première valeur fiable
+   - ne conserver que la dernière valeur fiable
+   - ou accepter un couple `first_*` / `last_*` pour certains champs
 
 ## Recommandation minimale pour un premier lot API
 
@@ -188,12 +225,14 @@ Si l'équipe API veut ouvrir le chantier avec un lot restreint et immédiatement
 - `captured_at_original`
 - `gps_latitude`
 - `gps_longitude`
-- `gps_altitude_m`
+- `gps_altitude_relative_m`
+- `gps_altitude_absolute_m`
 
 Ce lot couvre:
 
 - le besoin photo demandé immédiatement
 - une base de géolocalisation commune photo/vidéo drone
+- les champs réellement observés dans un `SRT` DJI Air 3
 - un minimum de valeur métier sans élargir trop vite le contrat
 
 ## Recommandation d'implémentation après validation API
