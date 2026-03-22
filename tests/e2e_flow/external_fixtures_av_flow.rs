@@ -204,6 +204,38 @@ fn e2e_external_fixture_flow_extracts_audio_facts_with_ffprobe_when_available() 
 }
 
 #[test]
+fn e2e_external_fixture_flow_extracts_expected_facts_from_wireless_pro_wav() {
+    if !ffmpeg_available() {
+        eprintln!("ffmpeg not available, skipping Wireless PRO audio facts test");
+        return;
+    }
+
+    let entry = load_manifest_entries()
+        .into_iter()
+        .find(|entry| entry.relative_path == "audio/wav/sample_Wireless_PRO.WAV")
+        .expect("missing Wireless PRO wav fixture");
+
+    let facts = FfmpegProxyGenerator::default()
+        .extract_media_facts(&entry.absolute_path().display().to_string())
+        .unwrap_or_else(|error| {
+            panic!(
+                "Wireless PRO wav fixture should expose facts: {} ({error:?})",
+                entry.relative_path
+            )
+        });
+
+    assert_eq!(facts.media_format.as_deref(), Some("wav"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("pcm_f32le"));
+    assert_eq!(facts.sample_rate_hz, Some(48_000));
+    assert_eq!(facts.channel_count, Some(1));
+    assert_eq!(facts.bits_per_sample, Some(32));
+    assert_eq!(facts.bitrate_kbps, Some(1536));
+    assert_eq!(facts.duration_ms, Some(10_401));
+    assert_eq!(facts.recorder_model, None);
+    assert_eq!(facts.captured_at, None);
+}
+
+#[test]
 fn e2e_external_fixture_flow_extracts_video_facts_with_ffprobe_when_available() {
     if !ffmpeg_available() {
         eprintln!("ffmpeg not available, skipping external AV fixture video facts test");
