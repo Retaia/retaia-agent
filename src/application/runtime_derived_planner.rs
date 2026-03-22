@@ -86,7 +86,8 @@ impl DerivedExecutionPlanner for RuntimeDerivedPlanner {
             return Ok(plan);
         };
         if claimed.job_type == DerivedJobType::ExtractFacts {
-            plan.submit.facts_patch = Some(self.extract_facts(source_path, claimed)?);
+            plan.submit.facts_patch =
+                Some(self.extract_facts(source_path, staged_sidecar_paths, claimed)?);
             return Ok(plan);
         }
         if claimed.job_type == DerivedJobType::GenerateThumbnails {
@@ -296,6 +297,7 @@ impl RuntimeDerivedPlanner {
     fn extract_facts(
         &self,
         source_path: &Path,
+        staged_sidecar_paths: &[PathBuf],
         claimed: &ClaimedDerivedJob,
     ) -> Result<FactsPatchPayload, DerivedJobExecutorError> {
         let generator: &Arc<dyn ProxyGenerator> =
@@ -304,9 +306,11 @@ impl RuntimeDerivedPlanner {
             } else {
                 &self.av_generator
             };
-        generator
+        let mut facts = generator
             .extract_media_facts(&source_path.to_string_lossy())
-            .map_err(map_preview_generation_error)
+            .map_err(map_preview_generation_error)?;
+        merge_sidecar_facts(&mut facts, staged_sidecar_paths);
+        Ok(facts)
     }
 }
 
@@ -335,6 +339,161 @@ fn generated_thumb_output_path(source_path: &Path, index: usize) -> PathBuf {
         .filter(|value| !value.is_empty())
         .unwrap_or("derived");
     parent.join(format!("{stem}.thumb.{}.webp", index + 1))
+}
+
+fn merge_sidecar_facts(target: &mut FactsPatchPayload, staged_sidecar_paths: &[PathBuf]) {
+    let Some(sidecar_facts) = staged_sidecar_paths
+        .iter()
+        .find(|path| {
+            path.extension()
+                .and_then(|value| value.to_str())
+                .map(|value| value.eq_ignore_ascii_case("srt"))
+                .unwrap_or(false)
+        })
+        .and_then(|path| parse_dji_srt_facts(path).ok().flatten())
+    else {
+        return;
+    };
+
+    target.iso = target.iso.or(sidecar_facts.iso);
+    target.exposure_time_s = target.exposure_time_s.or(sidecar_facts.exposure_time_s);
+    target.aperture_f_number = target.aperture_f_number.or(sidecar_facts.aperture_f_number);
+    target.focal_length_mm = target.focal_length_mm.or(sidecar_facts.focal_length_mm);
+    target.gps_latitude = target.gps_latitude.or(sidecar_facts.gps_latitude);
+    target.gps_longitude = target.gps_longitude.or(sidecar_facts.gps_longitude);
+    target.gps_altitude_relative_m = target
+        .gps_altitude_relative_m
+        .or(sidecar_facts.gps_altitude_relative_m);
+    target.gps_altitude_absolute_m = target
+        .gps_altitude_absolute_m
+        .or(sidecar_facts.gps_altitude_absolute_m);
+    target.exposure_compensation_ev = target
+        .exposure_compensation_ev
+        .or(sidecar_facts.exposure_compensation_ev);
+    target.color_temperature_k = target
+        .color_temperature_k
+        .or(sidecar_facts.color_temperature_k);
+    if target.color_mode.is_none() {
+        target.color_mode = sidecar_facts.color_mode;
+    }
+}
+
+fn parse_dji_srt_facts(path: &Path) -> Result<Option<FactsPatchPayload>, DerivedJobExecutorError> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|error| DerivedJobExecutorError::Planner(error.to_string()))?;
+    let mut facts = FactsPatchPayload::default();
+
+    for line in content.lines() {
+        for (key, value) in parse_bracketed_fields(line) {
+            match key.as_str() {
+                "iso" if facts.iso.is_none() => {
+                    facts.iso = parse_i32(&value);
+                }
+                "shutter" if facts.exposure_time_s.is_none() => {
+                    facts.exposure_time_s = parse_shutter_seconds(&value);
+                }
+                "fnum" if facts.aperture_f_number.is_none() => {
+                    facts.aperture_f_number = parse_f64(&value);
+                }
+                "focal_len" if facts.focal_length_mm.is_none() => {
+                    facts.focal_length_mm = parse_f64(&value);
+                }
+                "ev" if facts.exposure_compensation_ev.is_none() => {
+                    facts.exposure_compensation_ev = parse_f64(&value);
+                }
+                "ct" if facts.color_temperature_k.is_none() => {
+                    facts.color_temperature_k = parse_i32(&value);
+                }
+                "color_md" | "color_mode" if facts.color_mode.is_none() => {
+                    facts.color_mode = normalized_non_empty(&value);
+                }
+                "latitude" if facts.gps_latitude.is_none() => {
+                    facts.gps_latitude = parse_f64(&value);
+                }
+                "longitude" if facts.gps_longitude.is_none() => {
+                    facts.gps_longitude = parse_f64(&value);
+                }
+                "rel_alt" | "relative_alt" if facts.gps_altitude_relative_m.is_none() => {
+                    facts.gps_altitude_relative_m = parse_f64(&value);
+                }
+                "abs_alt" | "absolute_alt" if facts.gps_altitude_absolute_m.is_none() => {
+                    facts.gps_altitude_absolute_m = parse_f64(&value);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let has_any = facts.iso.is_some()
+        || facts.exposure_time_s.is_some()
+        || facts.aperture_f_number.is_some()
+        || facts.focal_length_mm.is_some()
+        || facts.gps_latitude.is_some()
+        || facts.gps_longitude.is_some()
+        || facts.gps_altitude_relative_m.is_some()
+        || facts.gps_altitude_absolute_m.is_some()
+        || facts.exposure_compensation_ev.is_some()
+        || facts.color_mode.is_some()
+        || facts.color_temperature_k.is_some();
+
+    Ok(has_any.then_some(facts))
+}
+
+fn parse_bracketed_fields(line: &str) -> Vec<(String, String)> {
+    let mut fields = Vec::new();
+    let mut rest = line;
+    while let Some(start) = rest.find('[') {
+        let after_start = &rest[start + 1..];
+        let Some(end) = after_start.find(']') else {
+            break;
+        };
+        let candidate = after_start[..end].trim();
+        if let Some((key, value)) = split_key_value(candidate) {
+            fields.push((key, value));
+        }
+        rest = &after_start[end + 1..];
+    }
+    fields
+}
+
+fn split_key_value(candidate: &str) -> Option<(String, String)> {
+    let (key, value) = candidate
+        .split_once(':')
+        .or_else(|| candidate.split_once('='))?;
+    let key = key.trim().to_ascii_lowercase();
+    let value = value.trim().to_string();
+    (!key.is_empty() && !value.is_empty()).then_some((key, value))
+}
+
+fn parse_shutter_seconds(value: &str) -> Option<f64> {
+    let value = normalized_non_empty(value)?;
+    if let Some((num, den)) = value.split_once('/') {
+        let numerator = num.trim().parse::<f64>().ok()?;
+        let denominator = den.trim().parse::<f64>().ok()?;
+        return (denominator != 0.0).then_some(numerator / denominator);
+    }
+    parse_f64(&value)
+}
+
+fn parse_f64(value: &str) -> Option<f64> {
+    let sanitized = value
+        .trim()
+        .trim_end_matches(|char: char| char.is_ascii_alphabetic())
+        .trim();
+    sanitized.parse::<f64>().ok()
+}
+
+fn parse_i32(value: &str) -> Option<i32> {
+    let sanitized = value
+        .trim()
+        .trim_end_matches(|char: char| char.is_ascii_alphabetic())
+        .trim();
+    sanitized.parse::<i32>().ok()
+}
+
+fn normalized_non_empty(value: &str) -> Option<String> {
+    let normalized = value.trim().trim_matches('"').to_string();
+    (!normalized.is_empty()).then_some(normalized)
 }
 
 fn canonical_video_preview_request(input_path: String, output_path: String) -> VideoProxyRequest {
