@@ -527,9 +527,7 @@ fn parse_ffprobe_facts(stdout: &str) -> Result<FactsPatchPayload, ProxyGeneratio
     let fps = video_stream.and_then(parse_stream_fps);
     let captured_at = format
         .and_then(|value| value.get("tags"))
-        .and_then(|value| value.get("creation_time"))
-        .and_then(|value| value.as_str())
-        .map(ToString::to_string);
+        .and_then(parse_format_tags_captured_at);
     let camera_make = format
         .and_then(|value| value.get("tags"))
         .and_then(|value| value.get("com.apple.quicktime.make"))
@@ -681,7 +679,7 @@ fn merge_wav_container_facts(
         return Ok(());
     };
     facts.recorder_model = facts.recorder_model.take().or(parsed.recorder_model);
-    facts.captured_at = facts.captured_at.take().or(parsed.captured_at);
+    facts.captured_at = parsed.captured_at.or_else(|| facts.captured_at.take());
     Ok(())
 }
 
@@ -768,12 +766,51 @@ fn parse_bext_chunk(chunk: &[u8]) -> BextChunkData {
 
 fn parse_ixml_chunk(chunk: &[u8]) -> IxmlChunkData {
     let xml = String::from_utf8_lossy(chunk);
+    let timestamp_hi = xml_tag_value(&xml, "TIMESTAMP_SAMPLES_SINCE_MIDNIGHT_HI")
+        .and_then(|value| value.parse::<u64>().ok());
+    let timestamp_lo = xml_tag_value(&xml, "TIMESTAMP_SAMPLES_SINCE_MIDNIGHT_LO")
+        .and_then(|value| value.parse::<u64>().ok());
     IxmlChunkData {
         timestamp_samples_since_midnight: xml_tag_value(&xml, "TIMESTAMP_SAMPLES_SINCE_MIDNIGHT")
-            .and_then(|value| value.parse::<u64>().ok()),
+            .and_then(|value| value.parse::<u64>().ok())
+            .or_else(|| match (timestamp_hi, timestamp_lo) {
+                (Some(hi), Some(lo)) => Some((hi << 32) | lo),
+                _ => None,
+            }),
         timestamp_sample_rate: xml_tag_value(&xml, "TIMESTAMP_SAMPLE_RATE")
             .and_then(|value| value.parse::<u32>().ok()),
     }
+}
+
+fn parse_format_tags_captured_at(tags: &serde_json::Value) -> Option<String> {
+    let creation_time = tags.get("creation_time").and_then(|value| value.as_str());
+    let date = tags.get("date").and_then(|value| value.as_str());
+    if let Some(value) = creation_time {
+        if looks_like_iso_datetime(value) {
+            return Some(value.to_string());
+        }
+    }
+    match (date, creation_time) {
+        (Some(date), Some(time)) => repaired_ffprobe_date_time(date, time),
+        _ => None,
+    }
+}
+
+fn looks_like_iso_datetime(value: &str) -> bool {
+    value.contains('T') && (value.ends_with('Z') || value.contains('+'))
+}
+
+fn repaired_ffprobe_date_time(date: &str, time: &str) -> Option<String> {
+    let (year, month, day) = parse_bext_date(date)?;
+    if year < 1000 {
+        return None;
+    }
+    let time = parse_bext_time(time)?;
+    let datetime = NaiveDateTime::new(NaiveDate::from_ymd_opt(year, month, day)?, time);
+    Some(
+        Utc.from_utc_datetime(&datetime)
+            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    )
 }
 
 fn read_bext_string(bytes: &[u8]) -> Option<String> {
