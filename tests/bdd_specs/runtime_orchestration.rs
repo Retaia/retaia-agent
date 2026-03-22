@@ -24,10 +24,10 @@ fn bdd_given_429_too_many_attempts_when_polling_policy_then_backoff_jitter_is_ap
 }
 
 #[test]
-fn bdd_given_mobile_push_on_mobile_ui_when_hint_is_fresh_then_poll_is_triggered() {
+fn bdd_given_websocket_push_on_agent_when_hint_is_fresh_then_poll_is_triggered() {
     let decision = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiMobile,
-        PushChannel::MobileApns,
+        ClientRuntimeTarget::Agent,
+        PushChannel::WebSocket,
         PushHint {
             issued_at_ms: 1_000,
             ttl_ms: 5_000,

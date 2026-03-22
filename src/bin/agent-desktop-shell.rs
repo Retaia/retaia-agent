@@ -17,13 +17,13 @@ mod desktop_shell {
     use retaia_agent::{
         AgentRuntimeConfig, AuthMode, ConfigRepository, DAEMON_STATS_FILE_NAME, DaemonLabelRequest,
         DaemonLevel, DaemonManager, DaemonManagerError, DaemonRuntimeStats, DaemonStatus,
-        DiagnosticsLimits, FileConfigRepository, Language, LogLevel, RuntimeStatsStoreError,
-        SystemConfigRepository, SystemNotification, build_bug_report_markdown,
-        collect_daemon_diagnostics, compact_validation_reason, copy_to_clipboard, detect_language,
-        dispatch_notifications, load_runtime_stats, normalize_core_api_url,
-        normalize_storage_mount_path, notification_sink_profile_for_target,
-        redacted_runtime_config_from, render_daemon_inspect, render_daemon_inspect_json,
-        runtime_history_db_path, select_notification_sink, t, validate_config,
+        DiagnosticsLimits, FileConfigRepository, Language, LogLevel, NotificationSinkProfile,
+        RuntimeStatsStoreError, SystemConfigRepository, SystemNotification,
+        build_bug_report_markdown, collect_daemon_diagnostics, compact_validation_reason,
+        copy_to_clipboard, detect_language, dispatch_notifications, load_runtime_stats,
+        normalize_core_api_url, normalize_storage_mount_path, redacted_runtime_config_from,
+        render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path,
+        select_notification_sink, t, validate_config,
     };
     use service_manager::{
         ServiceLabel, ServiceLevel, ServiceStartCtx, ServiceStatusCtx, ServiceStopCtx,
@@ -242,9 +242,7 @@ mod desktop_shell {
                 info_modal: None,
                 last_error: None,
                 quit_requested: false,
-                notification_sink: select_notification_sink(notification_sink_profile_for_target(
-                    retaia_agent::ClientRuntimeTarget::UiWeb,
-                )),
+                notification_sink: select_notification_sink(NotificationSinkProfile::DesktopSystem),
             };
             app.refresh_daemon_status();
             app.refresh_stats();

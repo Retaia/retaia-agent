@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand};
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, CompletedJobEntry, ConfigRepository,
     CoreApiGateway, DaemonCurrentJobStats, DaemonCycleEntry, DaemonLastJobStats,
@@ -29,8 +29,6 @@ use retaia_agent::{DerivedProcessingError, UploadedDerivedPart};
 struct Cli {
     #[arg(long = "config")]
     config: Option<PathBuf>,
-    #[arg(long = "target", value_enum, default_value_t = TargetArg::Agent)]
-    target: TargetArg,
     #[command(subcommand)]
     mode: Option<ModeCommand>,
 }
@@ -44,23 +42,6 @@ enum ModeCommand {
 struct DaemonArgs {
     #[arg(long = "tick-ms", default_value_t = 5000)]
     tick_ms: u64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-enum TargetArg {
-    Agent,
-    UiWeb,
-    UiMobile,
-}
-
-impl From<TargetArg> for ClientRuntimeTarget {
-    fn from(value: TargetArg) -> Self {
-        match value {
-            TargetArg::Agent => ClientRuntimeTarget::Agent,
-            TargetArg::UiWeb => ClientRuntimeTarget::UiWeb,
-            TargetArg::UiMobile => ClientRuntimeTarget::UiMobile,
-        }
-    }
 }
 
 fn run() -> Result<(), String> {
@@ -82,13 +63,14 @@ fn run_with_repository<R: ConfigRepository>(
         .load()
         .map_err(|error| format!("{}: {error}", t(lang, "runtime.load_config_failed")))?;
     init_logging(settings.log_level);
-    let mut session = RuntimeSession::new(cli.target.into(), settings).map_err(|errors| {
-        format!(
-            "{}: {}",
-            t(lang, "runtime.invalid_config"),
-            compact_validation_reason(&errors)
-        )
-    })?;
+    let mut session =
+        RuntimeSession::new(ClientRuntimeTarget::Agent, settings).map_err(|errors| {
+            format!(
+                "{}: {}",
+                t(lang, "runtime.invalid_config"),
+                compact_validation_reason(&errors)
+            )
+        })?;
 
     match cli.mode {
         Some(ModeCommand::Daemon(args)) => run_daemon_loop(&mut session, repository, args.tick_ms),

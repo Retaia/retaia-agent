@@ -246,23 +246,6 @@ struct ConfigRotateSecretArgs {
     client_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
-enum DaemonTargetArg {
-    Agent,
-    UiWeb,
-    UiMobile,
-}
-
-impl DaemonTargetArg {
-    fn as_cli_value(self) -> &'static str {
-        match self {
-            Self::Agent => "agent",
-            Self::UiWeb => "ui-web",
-            Self::UiMobile => "ui-mobile",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Args)]
 struct DaemonInstallArgs {
     #[arg(long = "label", default_value = "io.retaia.agent")]
@@ -271,8 +254,6 @@ struct DaemonInstallArgs {
     program: Option<PathBuf>,
     #[arg(long = "config")]
     config: Option<PathBuf>,
-    #[arg(long = "target", value_enum, default_value_t = DaemonTargetArg::Agent)]
-    target: DaemonTargetArg,
     #[arg(long = "no-autostart", default_value_t = false)]
     no_autostart: bool,
     #[arg(long = "system", default_value_t = false)]
@@ -307,6 +288,7 @@ enum AgentCtlError {
     EndpointUnreachable { url: String, reason: String },
     #[error("config endpoint incompatible ({url}): {reason}")]
     EndpointIncompatible { url: String, reason: String },
+    #[cfg(feature = "core-api-client")]
     #[error("device bootstrap failed: {0}")]
     DeviceBootstrap(String),
     #[error("rotate secret failed: {0}")]
@@ -314,6 +296,7 @@ enum AgentCtlError {
     #[cfg(not(feature = "core-api-client"))]
     #[error("device bootstrap requires core-api-client feature")]
     DeviceBootstrapUnavailable,
+    #[cfg(feature = "core-api-client")]
     #[error("browser open failed: {0}")]
     BrowserOpen(String),
     #[error("unable to resolve daemon program path: {0}")]
@@ -772,10 +755,7 @@ fn daemon_label_request(args: &DaemonLabelArgs) -> DaemonLabelRequest {
 }
 
 fn daemon_install_request(args: &DaemonInstallArgs) -> Result<DaemonInstallRequest, AgentCtlError> {
-    let mut command_args = vec![
-        "--target".to_string(),
-        args.target.as_cli_value().to_string(),
-    ];
+    let mut command_args = Vec::new();
 
     if let Some(config) = args.config.as_ref() {
         command_args.push("--config".to_string());
@@ -1079,6 +1059,7 @@ fn wait_until_daemon_not_running<M: DaemonManager>(
     }
 }
 
+#[cfg(feature = "core-api-client")]
 fn open_url_in_browser(url: &str) -> Result<(), AgentCtlError> {
     let status = if let Some(command) = std::env::var_os("RETAIA_AGENT_BROWSER_OPEN_COMMAND") {
         std::process::Command::new(command).arg(url).status()
@@ -1490,8 +1471,6 @@ mod tests {
             "install",
             "--label",
             "io.retaia.agent",
-            "--target",
-            "ui-mobile",
             "--system",
             "--no-autostart",
         ])
@@ -1502,7 +1481,6 @@ mod tests {
                 command: DaemonCommand::Install(args),
             } => {
                 assert_eq!(args.label, "io.retaia.agent");
-                assert_eq!(args.target.as_cli_value(), "ui-mobile");
                 assert!(args.system);
                 assert!(args.no_autostart);
             }
@@ -1511,15 +1489,13 @@ mod tests {
     }
 
     #[test]
-    fn tdd_daemon_install_request_contains_daemon_mode_and_target_args() {
+    fn tdd_daemon_install_request_contains_daemon_mode_args() {
         let cli = Cli::try_parse_from([
             "agentctl",
             "daemon",
             "install",
             "--program",
             "/tmp/agent-runtime",
-            "--target",
-            "ui-web",
             "--config",
             "/tmp/config.toml",
         ])
@@ -1540,8 +1516,6 @@ mod tests {
         assert_eq!(
             request.args,
             vec![
-                "--target".to_string(),
-                "ui-web".to_string(),
                 "--config".to_string(),
                 "/tmp/config.toml".to_string(),
                 "daemon".to_string(),

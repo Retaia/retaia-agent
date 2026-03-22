@@ -12,18 +12,6 @@ fn tdd_notification_sink_profile_for_agent_target_is_headless() {
 }
 
 #[test]
-fn tdd_notification_sink_profile_for_ui_targets_is_desktop_system() {
-    assert_eq!(
-        notification_sink_profile_for_target(ClientRuntimeTarget::UiWeb),
-        NotificationSinkProfile::DesktopSystem
-    );
-    assert_eq!(
-        notification_sink_profile_for_target(ClientRuntimeTarget::UiMobile),
-        NotificationSinkProfile::DesktopSystem
-    );
-}
-
-#[test]
 fn tdd_select_notification_sink_returns_expected_runtime_variant() {
     let headless = select_notification_sink(NotificationSinkProfile::HeadlessCli);
     assert!(format!("{:?}", headless).contains("Stdout"));

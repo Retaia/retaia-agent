@@ -30,14 +30,14 @@ Historique notable sur `2026-03-20`:
 ## 1. Ecarts README/docs locales vs repo réel
 
 - `README.md` indique `cargo test --features core-api-client` comme commande de validation des helpers OpenAPI; cette commande recompile désormais, mais ce point a dérivé suffisamment récemment pour montrer que la voie OpenAPI n'était pas protégée par la gate de base avant le correctif CI ajouté le `2026-03-20`.
-- `docs/RUNTIME-CONSTRAINTS.md` annonce un "Respect strict de effective_feature_enabled" (`docs/RUNTIME-CONSTRAINTS.md:13`) qui n'est pas observé dans l'implémentation.
+- Les docs locales sont désormais globalement réalignées sur l'état réel de l'agent; le résiduel documentaire concerne surtout les étapes finales dépendantes de Core et de `UI_WEB`.
 
 ## 2. Ecarts code vs specs normatives
 
 ### 2.1 Capabilities et noms contractuels
 
 - Le nommage contractuel est maintenant aligné sur `media.previews.*@1` et `generate_preview`.
-- Le point restant n'est plus un drift de nommage, mais un drift d'implémentation: le pipeline runtime de preview ne produit pas encore les outputs structurants conformes aux profils canoniques attendus.
+- Le pipeline runtime de preview, thumbnails, waveform et facts est désormais branché sur des générateurs réels; le résiduel se situe surtout côté publication finale Core, pas dans le nommage agent.
 
 ### 2.2 Runtime feature flags / policy
 
@@ -46,7 +46,7 @@ Historique notable sur `2026-03-20`:
 - Le daemon applique désormais un plancher `15s` sur les refresh policy anticipés et ce comportement est couvert par des tests dédiés.
 - Le runtime bloque désormais `can_process_jobs()` tant que `features.core.jobs.runtime` n'est pas activé dans la policy Core.
 - `resolve_effective_features` prend désormais en compte `feature_flags` et `core_v1_global_features`, et traite correctement `feature_flags` absent comme `false`.
-- `resolve_effective_features` ne modélise toujours pas `feature_governance`, `reason_code`, `tier` ni `user_can_disable`.
+- Le repo agent ne consomme pas encore la métadonnée descriptive complète (`feature_governance`, `reason_code`, `tier`, `user_can_disable`); ce résiduel est surtout informatif et cross-app.
 
 ### 2.3 Auth technique, device flow et approval UI
 
@@ -58,7 +58,7 @@ Historique notable sur `2026-03-20`:
 ### 2.4 MCP et acteurs autorisés
 
 - Le code applicatif agent ne contient plus de surface MCP hors client généré.
-- Le point restant côté conformité n'est donc plus "présence de MCP dans l'agent", mais l'absence des flows agent attendus par les specs sur les surfaces conservées.
+- Il ne reste pas d'écart agent-local notable sur ce bloc.
 
 ### 2.5 Polling et backoff
 
@@ -84,7 +84,7 @@ Historique notable sur `2026-03-20`:
 
 - `technical_auth.secret_key` n'est plus persistée dans `config.toml`; `src/infrastructure/config_store.rs` sérialise seulement `client_id` et relit le secret depuis le secret store local.
 - Le loader migre automatiquement les anciens fichiers TOML contenant encore `secret_key` inline vers le secret store, puis réécrit une version assainie du fichier.
-- Le point restant côté conformité n'est plus le stockage en clair local, mais l'absence des flows normatifs de bootstrap/rotation décrits par la spec.
+- Les flows agent de bootstrap et rotation sont désormais implémentés; le résiduel est le parcours humain complet côté `UI_WEB`.
 
 ### 2.8 GUI/CLI parity et packaging
 
@@ -103,10 +103,10 @@ Historique notable sur `2026-03-20`:
 
 ## 3. Ecarts tests vs specs
 
-### 3.1 Les tests restent centrés sur un pipeline preview encore transport-only
+### 3.1 Les tests ne couvrent pas encore toute la publication finale côté Core
 
 - Le nommage de contrat a été aligné dans les tests (`media.previews.*`, `GeneratePreview`, `Preview*`).
-- En revanche, plusieurs tests continuent de protéger un pipeline qui accepte surtout des manifests/artefacts transportés, sans exiger la génération effective des previews normatives.
+- Le pipeline agent génère désormais réellement previews, thumbnails, waveform et facts; ce qui reste hors couverture locale est surtout la publication finale observée depuis Core.
 
 ### 3.2 Les tests n'autorisent plus une waveform vide, mais ne couvrent pas encore toute la conformité finale
 
@@ -139,24 +139,22 @@ Historique notable sur `2026-03-20`:
 
 - Les suites concernées ont été recadrées sous des noms plus précis orientés "runtime contract/config contract".
 - Le fond reste inchangé: elles vérifient surtout des contrats locaux de session/menu/config/notifications.
-- Elles ne valident toujours pas les exigences normatives les plus structurantes: policy runtime, auth bootstrap, device flow bout-en-bout, flags, authz matrice, URLs Core stables des dérivés.
+- Elles ne valident pas, à elles seules, la publication finale Core ni le parcours humain complet côté `UI_WEB`.
 
 ## 4. Ecarts docs/test/code sur le runtime réel
 
-- Le README annonce "Derived-processing v1 runtime support"; la génération effective des previews, thumbnails, waveform, facts et références Core stables est désormais bien plus proche du contrat, mais le flow d'approbation humain complet reste hors de portée de ce repo.
-- Le README annonce "Strict contract alignment with specs/", mais le policy polling, la waveform obligatoire et la génération effective des previews/facts divergent encore au niveau du code et des tests.
-- Le README annonce le même contrat de configuration GUI/CLI; en pratique le build par défaut ne livre pas la GUI.
-- Le runtime reste partiellement générique via `ui-web` et `ui-mobile`, mais le device flow normatif est désormais branché aussi dans la boucle daemon.
-- Les tests passent en mode par défaut, mais ce succès reflète surtout le contrat local actuel, pas la conformité aux specs normatives lues.
+- Le principal résiduel n'est plus dans le code agent local mais dans la publication finale observée côté Core après `submit_derived`.
+- Le parcours humain complet côté `UI_WEB` n'est toujours pas vérifiable depuis ce repo seul.
+- Les tests qui passent ici sont désormais un bon signal de conformité agent locale, mais pas une preuve de conformité cross-app complète.
 
 ## 5. Synthèse courte
 
-Le repo est partiellement structuré pour la spec v1, mais il n'est pas aligné sur plusieurs axes contractuels centraux:
+Le repo agent est désormais largement aligné sur la spec v1 pour son périmètre propre.
 
-- couverture incomplète sur certains invariants policy/device flow
-- flow d'approbation humain complet côté `UI_WEB` non vérifiable dans ce repo
-- tests qui valident plusieurs comportements contraires à la spec
-- couverture de tests absente sur plusieurs invariants normatifs
-- voie OpenAPI recompilable, mais encore avec hypothèses de concurrence et de sémantique locales discutables
+Les sujets restants sont surtout externes au repo:
 
-En l'état, `cargo test` qui passe n'est pas un signal suffisant de conformité aux specs/docs.
+- publication finale et projection des dérivés côté Core
+- parcours humain complet côté `UI_WEB`
+- validation cross-app bout-en-bout
+
+En l'état, `cargo test` qui passe est un bon signal de conformité agent locale, mais pas une preuve de conformité système complète.
