@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use std::time::{Duration, SystemTime};
 
 use retaia_agent::{
     AudioProxyFormat, AudioProxyRequest, AudioWaveformRequest, CommandOutput, CommandRunner,
@@ -260,6 +261,147 @@ fn tdd_ffmpeg_extract_media_facts_maps_ffprobe_json_to_patch() {
     assert_eq!(facts.width, Some(1920));
     assert_eq!(facts.height, Some(1080));
     assert_eq!(facts.fps, Some(30000.0 / 1001.0));
+}
+
+#[test]
+fn tdd_ffmpeg_extract_media_facts_repairs_rode_bext_timestamp_from_file_year() {
+    let runner = FakeRunner::with_output(CommandOutput {
+        status_code: Some(0),
+        stdout: r#"{
+            "format":{"duration":"240.326","format_name":"wav","tags":{"encoded_by":"RODE Wireless PRO"}},
+            "streams":[
+                {"codec_type":"audio","codec_name":"pcm_f32le","sample_rate":"48000","channels":1,"bits_per_sample":32}
+            ]
+        }"#
+        .to_string(),
+        stderr: String::new(),
+    });
+    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("rode.wav");
+    write_test_wav_with_chunks(
+        &path,
+        Some(TestBextChunk {
+            originator: "RODE Wireless PRO",
+            origination_date: "0026-03-22",
+            origination_time: "10:03:39",
+        }),
+        Some(
+            r#"<BWFXML><TIMESTAMP_SAMPLES_SINCE_MIDNIGHT>1738563538</TIMESTAMP_SAMPLES_SINCE_MIDNIGHT><TIMESTAMP_SAMPLE_RATE>48000</TIMESTAMP_SAMPLE_RATE></BWFXML>"#,
+        ),
+    );
+    let modified_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_774_176_219);
+    filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(modified_at))
+        .expect("set mtime");
+
+    let facts = generator
+        .extract_media_facts(&path.display().to_string())
+        .expect("facts extraction should succeed");
+
+    assert_eq!(facts.media_format.as_deref(), Some("wav"));
+    assert_eq!(facts.audio_codec.as_deref(), Some("pcm_f32le"));
+    assert_eq!(facts.recorder_model.as_deref(), Some("RODE Wireless PRO"));
+    assert_eq!(facts.captured_at.as_deref(), Some("2026-03-22T10:03:39Z"));
+}
+
+#[test]
+fn tdd_ffmpeg_extract_media_facts_does_not_repair_bext_timestamp_when_month_day_mismatch() {
+    let runner = FakeRunner::with_output(CommandOutput {
+        status_code: Some(0),
+        stdout: r#"{
+            "format":{"duration":"240.326","format_name":"wav","tags":{"encoded_by":"RODE Wireless PRO"}},
+            "streams":[
+                {"codec_type":"audio","codec_name":"pcm_f32le","sample_rate":"48000","channels":1,"bits_per_sample":32}
+            ]
+        }"#
+        .to_string(),
+        stderr: String::new(),
+    });
+    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("rode.wav");
+    write_test_wav_with_chunks(
+        &path,
+        Some(TestBextChunk {
+            originator: "RODE Wireless PRO",
+            origination_date: "0026-03-22",
+            origination_time: "10:03:39",
+        }),
+        None,
+    );
+    let modified_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_774_089_600);
+    filetime::set_file_mtime(&path, filetime::FileTime::from_system_time(modified_at))
+        .expect("set mtime");
+
+    let facts = generator
+        .extract_media_facts(&path.display().to_string())
+        .expect("facts extraction should succeed");
+
+    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.recorder_model.as_deref(), Some("RODE Wireless PRO"));
+}
+
+struct TestBextChunk<'a> {
+    originator: &'a str,
+    origination_date: &'a str,
+    origination_time: &'a str,
+}
+
+fn write_test_wav_with_chunks(
+    path: &std::path::Path,
+    bext: Option<TestBextChunk<'_>>,
+    ixml: Option<&str>,
+) {
+    let mut payload = Vec::new();
+    payload.extend_from_slice(b"WAVE");
+    push_chunk(&mut payload, b"fmt ", &build_pcm_fmt_chunk());
+    if let Some(bext) = bext {
+        push_chunk(&mut payload, b"bext", &build_bext_chunk(&bext));
+    }
+    if let Some(ixml) = ixml {
+        push_chunk(&mut payload, b"iXML", ixml.as_bytes());
+    }
+    push_chunk(&mut payload, b"data", &[0, 0, 0, 0]);
+
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"RIFF");
+    bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+    bytes.extend_from_slice(&payload);
+    std::fs::write(path, bytes).expect("write wav bytes");
+}
+
+fn build_pcm_fmt_chunk() -> Vec<u8> {
+    let mut chunk = Vec::new();
+    chunk.extend_from_slice(&1u16.to_le_bytes());
+    chunk.extend_from_slice(&1u16.to_le_bytes());
+    chunk.extend_from_slice(&48_000u32.to_le_bytes());
+    chunk.extend_from_slice(&192_000u32.to_le_bytes());
+    chunk.extend_from_slice(&4u16.to_le_bytes());
+    chunk.extend_from_slice(&32u16.to_le_bytes());
+    chunk
+}
+
+fn build_bext_chunk(data: &TestBextChunk<'_>) -> Vec<u8> {
+    let mut chunk = vec![0_u8; 602];
+    write_ascii_field(&mut chunk[256..288], data.originator);
+    write_ascii_field(&mut chunk[320..330], data.origination_date);
+    write_ascii_field(&mut chunk[330..338], data.origination_time);
+    chunk
+}
+
+fn write_ascii_field(slice: &mut [u8], value: &str) {
+    let bytes = value.as_bytes();
+    let len = bytes.len().min(slice.len());
+    slice[..len].copy_from_slice(&bytes[..len]);
+}
+
+fn push_chunk(target: &mut Vec<u8>, id: &[u8; 4], data: &[u8]) {
+    target.extend_from_slice(id);
+    target.extend_from_slice(&(data.len() as u32).to_le_bytes());
+    target.extend_from_slice(data);
+    if data.len() % 2 == 1 {
+        target.push(0);
+    }
 }
 
 fn generator_runner_call(generator: &FfmpegProxyGenerator<FakeRunner>) -> RecordedCall {

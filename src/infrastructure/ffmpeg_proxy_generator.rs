@@ -9,6 +9,7 @@ use crate::application::proxy_generator::{
     ProxyGenerationError, ProxyGenerator, ThumbnailFormat, VideoProxyRequest,
     VideoThumbnailRequest,
 };
+use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,7 +166,9 @@ impl<R: CommandRunner> ProxyGenerator for FfmpegProxyGenerator<R> {
                 stderr: output.stderr,
             });
         }
-        parse_ffprobe_facts(&output.stdout)
+        let mut facts = parse_ffprobe_facts(&output.stdout)?;
+        merge_wav_container_facts(input_path, &mut facts)?;
+        Ok(facts)
     }
 }
 
@@ -659,4 +662,190 @@ fn parse_stream_fps(stream: &serde_json::Value) -> Option<f64> {
         return None;
     }
     Some(numerator / denominator)
+}
+
+fn merge_wav_container_facts(
+    input_path: &str,
+    facts: &mut FactsPatchPayload,
+) -> Result<(), ProxyGenerationError> {
+    let is_wav = facts
+        .media_format
+        .as_deref()
+        .map(|value| value.eq_ignore_ascii_case("wav"))
+        .unwrap_or(false);
+    if !is_wav {
+        return Ok(());
+    }
+
+    let Some(parsed) = parse_wav_container_facts(Path::new(input_path))? else {
+        return Ok(());
+    };
+    facts.recorder_model = facts.recorder_model.take().or(parsed.recorder_model);
+    facts.captured_at = facts.captured_at.take().or(parsed.captured_at);
+    Ok(())
+}
+
+#[derive(Debug, Default)]
+struct ParsedWavFacts {
+    recorder_model: Option<String>,
+    captured_at: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct BextChunkData {
+    originator: Option<String>,
+    origination_date: Option<String>,
+    origination_time: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct IxmlChunkData {
+    timestamp_samples_since_midnight: Option<u64>,
+    timestamp_sample_rate: Option<u32>,
+}
+
+fn parse_wav_container_facts(path: &Path) -> Result<Option<ParsedWavFacts>, ProxyGenerationError> {
+    let bytes = fs::read(path).map_err(|error| ProxyGenerationError::Process(error.to_string()))?;
+    if bytes.len() < 12 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WAVE" {
+        return Ok(None);
+    }
+
+    let mut offset = 12usize;
+    let mut bext = None;
+    let mut ixml = None;
+    while offset + 8 <= bytes.len() {
+        let chunk_id = &bytes[offset..offset + 4];
+        let chunk_size = u32::from_le_bytes(
+            bytes[offset + 4..offset + 8]
+                .try_into()
+                .expect("slice size"),
+        ) as usize;
+        let data_start = offset + 8;
+        let data_end = data_start.saturating_add(chunk_size).min(bytes.len());
+        if data_end > bytes.len() || data_start > bytes.len() {
+            break;
+        }
+        let chunk = &bytes[data_start..data_end];
+        match chunk_id {
+            b"bext" => bext = Some(parse_bext_chunk(chunk)),
+            b"iXML" => ixml = Some(parse_ixml_chunk(chunk)),
+            _ => {}
+        }
+        offset = data_end + (chunk_size % 2);
+    }
+
+    let modified_at = fs::metadata(path)
+        .ok()
+        .and_then(|metadata| metadata.modified().ok())
+        .map(chrono::DateTime::<Utc>::from);
+
+    let recorder_model = bext
+        .as_ref()
+        .and_then(|bext| bext.originator.clone())
+        .filter(|value| !value.is_empty());
+    let captured_at = repaired_bext_captured_at(bext.as_ref(), ixml.as_ref(), modified_at.as_ref());
+
+    if recorder_model.is_none() && captured_at.is_none() {
+        return Ok(None);
+    }
+
+    Ok(Some(ParsedWavFacts {
+        recorder_model,
+        captured_at,
+    }))
+}
+
+fn parse_bext_chunk(chunk: &[u8]) -> BextChunkData {
+    if chunk.len() < 338 {
+        return BextChunkData::default();
+    }
+    BextChunkData {
+        originator: read_bext_string(&chunk[256..288]),
+        origination_date: read_bext_string(&chunk[320..330]),
+        origination_time: read_bext_string(&chunk[330..338]),
+    }
+}
+
+fn parse_ixml_chunk(chunk: &[u8]) -> IxmlChunkData {
+    let xml = String::from_utf8_lossy(chunk);
+    IxmlChunkData {
+        timestamp_samples_since_midnight: xml_tag_value(&xml, "TIMESTAMP_SAMPLES_SINCE_MIDNIGHT")
+            .and_then(|value| value.parse::<u64>().ok()),
+        timestamp_sample_rate: xml_tag_value(&xml, "TIMESTAMP_SAMPLE_RATE")
+            .and_then(|value| value.parse::<u32>().ok()),
+    }
+}
+
+fn read_bext_string(bytes: &[u8]) -> Option<String> {
+    let end = bytes
+        .iter()
+        .position(|byte| *byte == 0)
+        .unwrap_or(bytes.len());
+    let value = String::from_utf8_lossy(&bytes[..end]).trim().to_string();
+    (!value.is_empty()).then_some(value)
+}
+
+fn xml_tag_value<'a>(xml: &'a str, tag: &str) -> Option<&'a str> {
+    let start_tag = format!("<{tag}>");
+    let end_tag = format!("</{tag}>");
+    let start = xml.find(&start_tag)? + start_tag.len();
+    let end = xml[start..].find(&end_tag)? + start;
+    Some(xml[start..end].trim())
+}
+
+fn repaired_bext_captured_at(
+    bext: Option<&BextChunkData>,
+    ixml: Option<&IxmlChunkData>,
+    modified_at: Option<&chrono::DateTime<Utc>>,
+) -> Option<String> {
+    let bext = bext?;
+    let date = bext.origination_date.as_deref()?;
+    let time = bext.origination_time.as_deref()?;
+    let (mut year, month, day) = parse_bext_date(date)?;
+
+    if year < 1000 {
+        let modified_at = modified_at?;
+        if modified_at.month() != month || modified_at.day() != day {
+            return None;
+        }
+        year = modified_at.year();
+    }
+
+    let base_time = parse_bext_time(time)?;
+    if let (Some(samples), Some(rate)) = (
+        ixml.and_then(|value| value.timestamp_samples_since_midnight),
+        ixml.and_then(|value| value.timestamp_sample_rate),
+    ) {
+        if rate != 0 {
+            let total_seconds = samples as f64 / rate as f64;
+            let ixml_seconds = total_seconds % 86_400.0;
+            let bext_seconds = base_time.num_seconds_from_midnight() as f64;
+            if (ixml_seconds - bext_seconds).abs() > 2.0 {
+                return None;
+            }
+        }
+    }
+
+    let date = NaiveDate::from_ymd_opt(year, month, day)?;
+    let datetime = NaiveDateTime::new(date, base_time);
+    Some(
+        Utc.from_utc_datetime(&datetime)
+            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    )
+}
+
+fn parse_bext_date(value: &str) -> Option<(i32, u32, u32)> {
+    let mut parts = value.split('-');
+    let year = parts.next()?.trim().parse::<i32>().ok()?;
+    let month = parts.next()?.trim().parse::<u32>().ok()?;
+    let day = parts.next()?.trim().parse::<u32>().ok()?;
+    Some((year, month, day))
+}
+
+fn parse_bext_time(value: &str) -> Option<NaiveTime> {
+    let mut parts = value.split(':');
+    let hour = parts.next()?.trim().parse::<u32>().ok()?;
+    let minute = parts.next()?.trim().parse::<u32>().ok()?;
+    let second = parts.next()?.trim().parse::<u32>().ok()?;
+    NaiveTime::from_hms_opt(hour, minute, second)
 }
