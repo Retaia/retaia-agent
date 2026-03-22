@@ -13,7 +13,7 @@ Hub documentaire local, organisé par sujet.
 - Persistance configuration système (lib + chemins OS): `CONFIG-STORAGE.md`
 - Contrat des fixtures externes (RAW/AV + checksums): `FIXTURE-CONTRACT.md`
 - Qualité/CI/Hooks: `CI-QUALITY-GATES.md`
-- Audit du bump `specs` du `2026-03-22`: `SPECS-BUMP-AUDIT-2026-03-22.md`
+- Audit du bump `specs` du `2026-03-22` (`ed86b95`): `SPECS-BUMP-AUDIT-2026-03-22.md`
 
 ## Cadrage fonctionnel migre vers `retaia-docs`
 
