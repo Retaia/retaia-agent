@@ -118,7 +118,8 @@ Historique notable sur `2026-03-20`:
 
 - `tests/tdd_runtime/runtime_derived_planner.rs` vérifie désormais qu'un `extract_facts` runtime remplit un `facts_patch` utile sans upload.
 - `tests/tdd_runtime/derived_job_executor.rs` vérifie désormais qu'un flow runtime `extract_facts` soumet bien ce patch.
-- Les trous restants sont surtout la validation fine des champs minimaux par type média sur de vrais fixtures audio/vidéo/photo et la projection finale côté Core.
+- Les suites fixtures externes couvrent désormais aussi l'extraction réelle des facts minimaux sur de vrais médias audio/vidéo/photo.
+- Le trou restant est surtout la projection finale côté Core.
 
 ### 3.4 Les tests ne couvrent pas des pans normatifs majeurs
 

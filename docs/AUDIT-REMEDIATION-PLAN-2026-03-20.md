@@ -33,7 +33,7 @@ Source: `docs/AUDIT-SPECS-CODE-TESTS-2026-03-20.md`
 
 - Requalifier la suite de tests:
   - renommage/recadrage des anciennes suites `spec_compatible_*`: couvert
-- compléter ce qui peut l'être côté agent sur les flows d'approbation humain complet restants
+- compléter ce qui peut l'être côté agent sur les flows d'approbation humain complet restants et la projection finale côté Core
 
 ## Ordre d'exécution recommandé
 
