@@ -265,6 +265,27 @@ L'audio a moins de métadonnées réellement utiles dans le flux agent actuel, m
   - unité: Hz
 - `channel_count`
   - type suggéré: `integer`
+- `bits_per_sample`
+  - type suggéré: `integer`
+- `recorder_model`
+  - type suggéré: `string`
+
+Exemple réel observé sur un `WAV` exporté de RODE Wireless PRO:
+
+- `media_format = wav`
+- `duration_ms = 240326`
+- `audio_codec = pcm_f32le`
+- `sample_rate_hz = 48000`
+- `channel_count = 1`
+- `bits_per_sample = 32`
+- `audio_bitrate_kbps = 1536`
+- `recorder_model = RODE Wireless PRO`
+- métadonnées device additionnelles présentes:
+  - `rFWVER = 2.0.8`
+  - `rSPEED = 024.000-ND`
+- `date = 0026-03-22` observée dans cet exemple, donc non fiable en l'état pour un `captured_at_original`
+
+Ce fichier confirme qu'un lot audio utile existe, mais aussi que les timestamps d'origine ne sont pas toujours assez fiables pour être promus en facts sans règle spécifique par device.
 
 ## Questions à trancher côté API
 
@@ -308,6 +329,7 @@ Ce lot couvre:
 - des champs photo réellement observés dans un `CR2` Canon
 - des champs vidéo réellement observés dans un `MOV` Canon
 - les champs réellement observés dans un `SRT` DJI Air 3
+- des champs audio réellement observés dans un `WAV` RODE
 - un minimum de valeur métier sans élargir trop vite le contrat
 
 ## Recommandation d'implémentation après validation API
