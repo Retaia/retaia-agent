@@ -4,7 +4,7 @@ use retaia_agent::{
 
 #[test]
 fn bdd_given_realtime_push_hint_when_fresh_then_runtime_sync_triggers_poll() {
-    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::UiWeb);
+    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::Agent);
     let hint = PushHint {
         issued_at_ms: 10_000,
         ttl_ms: 2_000,
@@ -16,15 +16,15 @@ fn bdd_given_realtime_push_hint_when_fresh_then_runtime_sync_triggers_poll() {
 
 #[test]
 fn bdd_given_same_hint_twice_when_processed_then_second_event_is_ignored() {
-    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::UiMobile);
+    let mut sync = RuntimeSyncState::new(ClientRuntimeTarget::Agent);
     let hint = PushHint {
         issued_at_ms: 10_000,
         ttl_ms: 2_000,
     };
 
-    let first = sync.process_push_hint(PushChannel::MobileFcm, "dup", hint, 10_500);
+    let first = sync.process_push_hint(PushChannel::WebSocket, "dup", hint, 10_500);
     assert_eq!(first, PushProcessResult::PollTriggered);
-    let second = sync.process_push_hint(PushChannel::MobileFcm, "dup", hint, 10_700);
+    let second = sync.process_push_hint(PushChannel::WebSocket, "dup", hint, 10_700);
     assert_eq!(second, PushProcessResult::Ignored);
 }
 

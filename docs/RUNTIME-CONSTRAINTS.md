@@ -18,7 +18,7 @@
 ## Auth
 
 - Implémenté aujourd'hui: mode technique `client_id + secret_key` via `POST /auth/clients/token`.
-- Les flows interactifs/browser/device-flow attendus par les specs ne sont pas encore implémentés dans ce repo.
+- Implémenté aujourd'hui aussi: bootstrap browser-assisted via device flow (`start` / `poll` / `cancel`) et rotation de secret.
 - Invariant: 1 token actif par `client_id`.
 
 ## Security

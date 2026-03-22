@@ -60,12 +60,8 @@ pub fn select_notification_sink(profile: NotificationSinkProfile) -> RuntimeNoti
 pub fn notification_sink_profile_for_target(
     target: ClientRuntimeTarget,
 ) -> NotificationSinkProfile {
-    match target {
-        ClientRuntimeTarget::Agent => NotificationSinkProfile::HeadlessCli,
-        ClientRuntimeTarget::UiWeb | ClientRuntimeTarget::UiMobile => {
-            NotificationSinkProfile::DesktopSystem
-        }
-    }
+    let _ = target;
+    NotificationSinkProfile::HeadlessCli
 }
 
 #[derive(Debug, Clone, Copy)]

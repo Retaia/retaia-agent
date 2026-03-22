@@ -52,21 +52,12 @@ fn tdd_mutations_require_compatible_state_read_from_polling() {
 }
 
 #[test]
-fn tdd_mobile_push_only_targets_mobile_ui() {
+fn tdd_mobile_push_is_ignored_for_agent_runtime() {
     let hint = PushHint {
         issued_at_ms: 1_000,
         ttl_ms: 2_000,
     };
     let now_ms = 2_000;
-
-    let mobile = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiMobile,
-        PushChannel::MobileFcm,
-        hint,
-        now_ms,
-        false,
-    );
-    assert_eq!(mobile, PushHintDecision::TriggerPoll);
 
     let agent = should_trigger_poll_from_push(
         ClientRuntimeTarget::Agent,
@@ -81,7 +72,7 @@ fn tdd_mobile_push_only_targets_mobile_ui() {
 #[test]
 fn tdd_push_hint_dedup_or_expired_is_ignored() {
     let expired = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiWeb,
+        ClientRuntimeTarget::Agent,
         PushChannel::WebSocket,
         PushHint {
             issued_at_ms: 1_000,
@@ -93,7 +84,7 @@ fn tdd_push_hint_dedup_or_expired_is_ignored() {
     assert_eq!(expired, PushHintDecision::Ignore);
 
     let deduped = should_trigger_poll_from_push(
-        ClientRuntimeTarget::UiWeb,
+        ClientRuntimeTarget::Agent,
         PushChannel::Sse,
         PushHint {
             issued_at_ms: 1_000,

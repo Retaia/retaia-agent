@@ -23,9 +23,7 @@ fn e2e_runtime_notification_sink_selection_follows_runtime_target_policy() {
     let headless_sink = select_notification_sink(headless_profile);
     assert!(format!("{:?}", headless_sink).contains("Stdout"));
 
-    let desktop_session =
-        RuntimeSession::new(ClientRuntimeTarget::UiWeb, config()).expect("session");
-    let desktop_profile = notification_sink_profile_for_target(desktop_session.target());
-    let desktop_sink = select_notification_sink(desktop_profile);
+    let desktop_sink =
+        select_notification_sink(retaia_agent::NotificationSinkProfile::DesktopSystem);
     assert!(format!("{:?}", desktop_sink).contains("System"));
 }

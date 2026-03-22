@@ -10,8 +10,6 @@ pub enum RuntimeOrchestrationMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClientRuntimeTarget {
     Agent,
-    UiWeb,
-    UiMobile,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,18 +79,18 @@ pub fn push_is_authoritative() -> bool {
 }
 
 pub fn mobile_push_allowed_for_target(target: ClientRuntimeTarget) -> bool {
-    matches!(target, ClientRuntimeTarget::UiMobile)
+    let _ = target;
+    false
 }
 
 pub fn is_push_channel_supported_for_target(
     target: ClientRuntimeTarget,
     channel: PushChannel,
 ) -> bool {
+    let _ = target;
     match channel {
         PushChannel::WebSocket | PushChannel::Sse | PushChannel::Webhook => true,
-        PushChannel::MobileFcm | PushChannel::MobileApns | PushChannel::MobileEpns => {
-            mobile_push_allowed_for_target(target)
-        }
+        PushChannel::MobileFcm | PushChannel::MobileApns | PushChannel::MobileEpns => false,
     }
 }
 
