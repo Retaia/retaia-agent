@@ -232,7 +232,7 @@ fn e2e_external_fixture_flow_extracts_expected_facts_from_wireless_pro_wav() {
     assert_eq!(facts.bitrate_kbps, Some(1536));
     assert_eq!(facts.duration_ms, Some(10_401));
     assert_eq!(facts.recorder_model, None);
-    assert_eq!(facts.captured_at, None);
+    assert_eq!(facts.captured_at.as_deref(), Some("2026-03-22T18:17:28Z"));
 }
 
 #[test]
@@ -267,7 +267,10 @@ fn e2e_external_fixture_flow_wireless_pro_app_export_matches_standard_audio_fact
     assert_eq!(app_facts.bits_per_sample, raw_facts.bits_per_sample);
     assert_eq!(app_facts.duration_ms, raw_facts.duration_ms);
     assert_eq!(app_facts.recorder_model, None);
-    assert_eq!(app_facts.captured_at, None);
+    assert_eq!(
+        app_facts.captured_at.as_deref(),
+        Some("2026-03-22T18:22:23Z")
+    );
 }
 
 #[test]

@@ -732,8 +732,13 @@ fn parse_wav_container_facts(path: &Path) -> Result<Option<ParsedWavFacts>, Prox
         offset = data_end + (chunk_size % 2);
     }
 
-    let modified_at = fs::metadata(path)
-        .ok()
+    let metadata = fs::metadata(path).ok();
+    let created_at = metadata
+        .as_ref()
+        .and_then(|metadata| metadata.created().ok())
+        .map(chrono::DateTime::<Utc>::from);
+    let modified_at = metadata
+        .as_ref()
         .and_then(|metadata| metadata.modified().ok())
         .map(chrono::DateTime::<Utc>::from);
 
@@ -741,7 +746,8 @@ fn parse_wav_container_facts(path: &Path) -> Result<Option<ParsedWavFacts>, Prox
         .as_ref()
         .and_then(|bext| bext.originator.clone())
         .filter(|value| !value.is_empty());
-    let captured_at = repaired_bext_captured_at(bext.as_ref(), ixml.as_ref(), modified_at.as_ref());
+    let captured_at = repaired_bext_captured_at(bext.as_ref(), ixml.as_ref(), modified_at.as_ref())
+        .or_else(|| created_at.as_ref().map(system_time_to_rfc3339));
 
     if recorder_model.is_none() && captured_at.is_none() {
         return Ok(None);
@@ -811,6 +817,10 @@ fn repaired_ffprobe_date_time(date: &str, time: &str) -> Option<String> {
         Utc.from_utc_datetime(&datetime)
             .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
     )
+}
+
+fn system_time_to_rfc3339(value: &chrono::DateTime<Utc>) -> String {
+    value.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
 fn read_bext_string(bytes: &[u8]) -> Option<String> {
