@@ -12,6 +12,7 @@ Hub documentaire local, organisé par sujet.
 - Desktop shell local: details tray/control center dans `UX-SYSTEM-TRAY.md`
 - Persistance configuration système (lib + chemins OS): `CONFIG-STORAGE.md`
 - Contrat des fixtures externes (RAW/AV + checksums): `FIXTURE-CONTRACT.md`
+- TODO fixtures reelles pour facts enrichis: `REAL-FIXTURES-TODO.md`
 - Qualité/CI/Hooks: `CI-QUALITY-GATES.md`
 - Audit du bump `specs` du `2026-03-22` (`ed86b95`): `SPECS-BUMP-AUDIT-2026-03-22.md`
 
