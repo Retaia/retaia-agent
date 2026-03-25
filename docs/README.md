@@ -15,6 +15,7 @@ Hub documentaire local, organisé par sujet.
 - TODO fixtures reelles pour facts enrichis: `REAL-FIXTURES-TODO.md`
 - Qualité/CI/Hooks: `CI-QUALITY-GATES.md`
 - Audit du bump `specs` du `2026-03-22` (`ed86b95`): `SPECS-BUMP-AUDIT-2026-03-22.md`
+- Audit du bump `specs` du `2026-03-25` (`b6eb044`): `SPECS-BUMP-AUDIT-2026-03-25.md`
 
 ## Cadrage fonctionnel migre vers `retaia-docs`
 
