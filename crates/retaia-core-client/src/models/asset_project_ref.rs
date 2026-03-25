@@ -12,15 +12,24 @@ use crate::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Auth2faRecoveryCodesResponse {
-    #[serde(rename = "recovery_codes")]
-    pub recovery_codes: Vec<String>,
+pub struct AssetProjectRef {
+    #[serde(rename = "project_id")]
+    pub project_id: String,
+    #[serde(rename = "project_name")]
+    pub project_name: String,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
+    #[serde(rename = "description", skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
-impl Auth2faRecoveryCodesResponse {
-    pub fn new(recovery_codes: Vec<String>) -> Auth2faRecoveryCodesResponse {
-        Auth2faRecoveryCodesResponse {
-            recovery_codes,
+impl AssetProjectRef {
+    pub fn new(project_id: String, project_name: String, created_at: String) -> AssetProjectRef {
+        AssetProjectRef {
+            project_id,
+            project_name,
+            created_at,
+            description: None,
         }
     }
 }

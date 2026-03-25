@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **location_country** | Option<**String**> |  | [optional]
 **location_city** | Option<**String**> |  | [optional]
 **location_label** | Option<**String**> |  | [optional]
+**projects** | Option<[**Vec<models::AssetProjectRef>**](AssetProjectRef.md)> |  | [optional]
 **paths** | [**models::AssetPaths**](AssetPaths.md) |  | 
 **processing** | [**models::AssetProcessing**](AssetProcessing.md) |  | 
 **derived** | [**models::AssetDerived**](AssetDerived.md) |  | 

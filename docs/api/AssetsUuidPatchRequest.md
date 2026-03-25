@@ -16,6 +16,7 @@ Name | Type | Description | Notes
 **location_country** | Option<**String**> |  | [optional]
 **location_city** | Option<**String**> |  | [optional]
 **location_label** | Option<**String**> |  | [optional]
+**projects** | Option<[**Vec<models::AssetProjectRef>**](AssetProjectRef.md)> |  | [optional]
 **processing_profile** | Option<**ProcessingProfile**> |  (enum: video_standard, audio_undefined, audio_music, audio_voice, photo_standard) | [optional]
 **state** | Option<**State**> |  (enum: DECISION_PENDING, DECIDED_KEEP, DECIDED_REJECT, ARCHIVED, REJECTED) | [optional]
 
