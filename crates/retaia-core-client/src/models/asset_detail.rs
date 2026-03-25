@@ -42,6 +42,8 @@ pub struct AssetDetail {
     pub location_city: Option<String>,
     #[serde(rename = "location_label", skip_serializing_if = "Option::is_none")]
     pub location_label: Option<String>,
+    #[serde(rename = "projects", skip_serializing_if = "Option::is_none")]
+    pub projects: Option<Vec<models::AssetProjectRef>>,
     #[serde(rename = "paths")]
     pub paths: Box<models::AssetPaths>,
     #[serde(rename = "processing")]
@@ -78,6 +80,7 @@ impl AssetDetail {
             location_country: None,
             location_city: None,
             location_label: None,
+            projects: None,
             paths: Box::new(paths),
             processing: Box::new(processing),
             derived: Box::new(derived),

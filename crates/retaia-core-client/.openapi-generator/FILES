@@ -19,6 +19,7 @@ docs/AssetDetail.md
 docs/AssetFieldValue.md
 docs/AssetPaths.md
 docs/AssetProcessing.md
+docs/AssetProjectRef.md
 docs/AssetState.md
 docs/AssetSummary.md
 docs/AssetTranscript.md
@@ -181,6 +182,7 @@ src/models/asset_detail.rs
 src/models/asset_field_value.rs
 src/models/asset_paths.rs
 src/models/asset_processing.rs
+src/models/asset_project_ref.rs
 src/models/asset_state.rs
 src/models/asset_summary.rs
 src/models/asset_transcript.rs

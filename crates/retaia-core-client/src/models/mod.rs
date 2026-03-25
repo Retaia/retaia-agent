@@ -28,6 +28,8 @@ pub mod asset_paths;
 pub use self::asset_paths::AssetPaths;
 pub mod asset_processing;
 pub use self::asset_processing::AssetProcessing;
+pub mod asset_project_ref;
+pub use self::asset_project_ref::AssetProjectRef;
 pub mod asset_state;
 pub use self::asset_state::AssetState;
 pub mod asset_summary;

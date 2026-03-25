@@ -44,6 +44,8 @@ pub struct AssetsUuidPatchRequest {
     pub location_city: Option<String>,
     #[serde(rename = "location_label", skip_serializing_if = "Option::is_none")]
     pub location_label: Option<String>,
+    #[serde(rename = "projects", skip_serializing_if = "Option::is_none")]
+    pub projects: Option<Vec<models::AssetProjectRef>>,
     #[serde(rename = "processing_profile", skip_serializing_if = "Option::is_none")]
     pub processing_profile: Option<ProcessingProfile>,
     #[serde(rename = "state", skip_serializing_if = "Option::is_none")]
@@ -65,6 +67,7 @@ impl AssetsUuidPatchRequest {
             location_country: None,
             location_city: None,
             location_label: None,
+            projects: None,
             processing_profile: None,
             state: None,
         }
