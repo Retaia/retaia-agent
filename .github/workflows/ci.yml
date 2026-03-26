@@ -63,6 +63,9 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -163,6 +166,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -186,6 +192,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -213,6 +222,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -238,6 +250,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -266,6 +281,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -289,6 +307,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
