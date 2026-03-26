@@ -238,16 +238,18 @@ mod tests {
 
     #[test]
     fn tdd_signature_payload_uses_exact_contract_shape() {
+        let nonce = uuid::Uuid::new_v4().to_string();
         let payload = signature_payload(
             Method::POST,
             "/api/v1/jobs/job-1/claim",
             "agent-1",
             "2026-03-19T12:00:00Z",
-            "nonce-1",
+            &nonce,
             br#"{"ok":true}"#,
         );
         assert_eq!(payload.lines().count(), 6);
         assert!(payload.contains("/api/v1/jobs/job-1/claim"));
+        assert!(payload.contains(&nonce));
         assert!(
             payload.ends_with("4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93")
         );

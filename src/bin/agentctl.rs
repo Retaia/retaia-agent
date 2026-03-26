@@ -17,7 +17,7 @@ use retaia_agent::{
     RuntimeHistoryStoreError, RuntimeStatsStoreError, SystemConfigRepository, TechnicalAuthConfig,
     append_redacted_config_markdown, apply_config_update, build_bug_report_markdown,
     collect_daemon_diagnostics, compact_validation_reason, copy_to_clipboard, detect_language,
-    load_runtime_stats, normalize_core_api_url, redacted_runtime_config_from,
+    load_runtime_stats, normalize_core_api_url, redact_asset_uuid, redacted_runtime_config_from,
     render_daemon_inspect, render_daemon_inspect_json, runtime_history_db_path, t, validate_config,
 };
 use service_manager::{
@@ -851,7 +851,7 @@ fn run_daemon_command<M: DaemonManager>(
             println!("tick={}", stats.tick);
             if let Some(job) = stats.current_job {
                 println!("current_job_id={}", job.job_id);
-                println!("current_asset_uuid={}", job.asset_uuid);
+                println!("current_asset_uuid={}", redact_asset_uuid(&job.asset_uuid));
                 println!("current_progress_percent={}", job.progress_percent);
                 println!("current_stage={}", job.stage);
                 println!("current_status={}", job.status);
@@ -920,7 +920,10 @@ fn run_daemon_command<M: DaemonManager>(
                     row.outcome,
                     row.run_state,
                     row.job_id.as_deref().unwrap_or("-"),
-                    row.asset_uuid.as_deref().unwrap_or("-"),
+                    row.asset_uuid
+                        .as_deref()
+                        .map(redact_asset_uuid)
+                        .unwrap_or_else(|| "-".to_string()),
                     row.progress_percent
                         .map(|value| value.to_string())
                         .unwrap_or_else(|| "-".to_string()),
