@@ -207,6 +207,10 @@ fn build_signed_request(
     }
 }
 
+fn test_nonce() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
 fn send_signed_json_request(
     base_path: &str,
     path: &str,
@@ -1138,12 +1142,13 @@ fn e2e_signed_core_http_replay_nonce_is_rejected_by_mock_core_validator() {
         .expect("identity");
     let body = br#"{"agent_name":"retaia-agent"}"#;
     let path = "/agents/register";
+    let nonce = test_nonce();
     let signed = build_signed_request(
         &identity,
         reqwest::Method::POST,
         "/api/v1/agents/register",
         &Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-        "nonce-replay-test",
+        &nonce,
         body,
     );
 
@@ -1197,12 +1202,13 @@ fn e2e_signed_core_http_stale_timestamp_is_rejected_by_mock_core_validator() {
     let identity = AgentIdentity::generate_ephemeral(Some("550e8400-e29b-41d4-a716-446655440022"))
         .expect("identity");
     let body = br#"{"agent_name":"retaia-agent"}"#;
+    let nonce = test_nonce();
     let signed = build_signed_request(
         &identity,
         reqwest::Method::POST,
         "/api/v1/agents/register",
         &(Utc::now() - Duration::seconds(61)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-        "nonce-stale-test",
+        &nonce,
         body,
     );
 
