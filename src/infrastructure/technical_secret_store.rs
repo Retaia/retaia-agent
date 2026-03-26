@@ -6,9 +6,7 @@ use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 
 #[cfg(not(test))]
-use keyring::use_named_store;
-#[cfg(not(test))]
-use keyring_core::Entry;
+use keyring::Entry;
 
 #[cfg(not(test))]
 const SECRET_STORE_BACKEND_ENV: &str = "RETAIA_AGENT_SECRET_STORE_BACKEND";
@@ -129,7 +127,7 @@ pub fn delete_technical_secret(config_path: &Path, client_id: &str) -> Result<()
         initialize_secret_store()?;
         match secret_store_entry(config_path, client_id)?.delete_credential() {
             Ok(()) => Ok(()),
-            Err(keyring_core::Error::NoEntry) => Ok(()),
+            Err(keyring::Error::NoEntry) => Ok(()),
             Err(error) => Err(error.to_string()),
         }
     }
@@ -151,32 +149,7 @@ fn stable_path_fingerprint(path: &Path) -> String {
 
 #[cfg(not(test))]
 fn initialize_secret_store() -> Result<(), String> {
-    static SECRET_STORE_INIT: OnceLock<Result<(), String>> = OnceLock::new();
-    SECRET_STORE_INIT
-        .get_or_init(|| {
-            #[cfg(target_os = "macos")]
-            {
-                use_named_store("keychain").map_err(|error| error.to_string())
-            }
-            #[cfg(target_os = "windows")]
-            {
-                use_named_store("windows").map_err(|error| error.to_string())
-            }
-            #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-            {
-                use_named_store("secret-service").map_err(|error| error.to_string())
-            }
-            #[cfg(not(any(
-                target_os = "macos",
-                target_os = "windows",
-                target_os = "linux",
-                target_os = "freebsd"
-            )))]
-            {
-                Err("no supported technical secret store backend for this platform".to_string())
-            }
-        })
-        .clone()
+    Ok(())
 }
 
 #[cfg(not(test))]

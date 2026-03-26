@@ -7,9 +7,7 @@ use std::sync::OnceLock;
 
 use directories::ProjectDirs;
 #[cfg(not(test))]
-use keyring::use_named_store;
-#[cfg(not(test))]
-use keyring_core::Entry;
+use keyring::Entry;
 use sequoia_openpgp as openpgp;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -270,33 +268,7 @@ fn load_private_key(agent_id: &str) -> Result<String, AgentIdentityError> {
 
 #[cfg(not(test))]
 fn initialize_secret_store() -> Result<(), AgentIdentityError> {
-    static SECRET_STORE_INIT: OnceLock<Result<(), String>> = OnceLock::new();
-    SECRET_STORE_INIT
-        .get_or_init(|| {
-            #[cfg(target_os = "macos")]
-            {
-                use_named_store("keychain").map_err(|error| error.to_string())
-            }
-            #[cfg(target_os = "windows")]
-            {
-                use_named_store("windows").map_err(|error| error.to_string())
-            }
-            #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-            {
-                use_named_store("secret-service").map_err(|error| error.to_string())
-            }
-            #[cfg(not(any(
-                target_os = "macos",
-                target_os = "windows",
-                target_os = "linux",
-                target_os = "freebsd"
-            )))]
-            {
-                Err("no supported secret store backend for this platform".to_string())
-            }
-        })
-        .clone()
-        .map_err(AgentIdentityError::SecretStore)
+    Ok(())
 }
 
 #[cfg(not(test))]
@@ -306,7 +278,7 @@ fn secret_store_entry(agent_id: &str) -> Result<Entry, AgentIdentityError> {
 }
 
 #[cfg(not(test))]
-fn secret_store_error(error: keyring_core::Error) -> AgentIdentityError {
+fn secret_store_error(error: keyring::Error) -> AgentIdentityError {
     AgentIdentityError::SecretStore(error.to_string())
 }
 
