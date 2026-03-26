@@ -90,7 +90,7 @@ impl AgentIdentity {
             .map(ToOwned::to_owned)
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         let userid = format!("retaia-agent-{agent_id}");
-        let (cert, _) = CertBuilder::general_purpose(None, Some(userid)).generate()?;
+        let (cert, _) = CertBuilder::general_purpose([userid]).generate()?;
 
         let mut public_key = Vec::new();
         cert.armored().serialize(&mut public_key)?;
@@ -130,7 +130,7 @@ impl AgentIdentity {
         let message = Armorer::new(message)
             .kind(openpgp::armor::Kind::Signature)
             .build()?;
-        let mut signer = Signer::new(message, keypair).detached().build()?;
+        let mut signer = Signer::new(message, keypair)?.detached().build()?;
         signer.write_all(payload)?;
         signer.finalize()?;
 
