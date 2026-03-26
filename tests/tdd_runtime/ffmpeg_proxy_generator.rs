@@ -314,7 +314,22 @@ fn tdd_ffmpeg_extract_media_facts_repairs_rode_bext_timestamp_from_file_year() {
         .to_string(),
         stderr: String::new(),
     });
-    let generator = FfmpegProxyGenerator::new("ffmpeg".to_string(), runner);
+    let generator = FfmpegProxyGenerator::new_with_timestamp_provider(
+        "ffmpeg".to_string(),
+        runner,
+        MockTimestampProvider {
+            created_at: Some(
+                Utc.with_ymd_and_hms(2026, 3, 22, 12, 0, 0)
+                    .single()
+                    .expect("datetime"),
+            ),
+            modified_at: Some(
+                Utc.with_ymd_and_hms(2026, 3, 22, 12, 0, 0)
+                    .single()
+                    .expect("datetime"),
+            ),
+        },
+    );
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("rode.wav");
     write_test_wav_with_chunks(

@@ -142,13 +142,23 @@ jobs:
       - name: Validate locale parity
         run: python3 scripts/validate_locales.py
 
+  external-fixtures-manifest:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true' || needs.changes.outputs.run_external_fixtures == 'true'
+    needs:
+      - changes
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate external fixtures manifest
+        run: bash scripts/validate_external_fixtures.sh
+
   rust-build-cache:
     runs-on: ubuntu-latest
     if: needs.changes.outputs.run_tests == 'true' || needs.changes.outputs.run_external_fixtures == 'true'
     needs:
       - changes
-      - commitlint
-      - validate-locales
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -250,6 +260,7 @@ jobs:
     if: needs.changes.outputs.run_tests == 'true' || needs.changes.outputs.run_external_fixtures == 'true'
     needs:
       - changes
+      - external-fixtures-manifest
       - rust-build-cache
     steps:
       - name: Checkout
@@ -263,9 +274,6 @@ jobs:
         with:
           shared-key: ci-rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
           save-if: false
-
-      - name: Validate external fixtures manifest
-        run: bash scripts/validate_external_fixtures.sh
 
       - name: Run external fixtures targeted tests
         run: |
@@ -322,7 +330,10 @@ jobs:
     needs:
       - changes
       - branch-up-to-date
+      - openapi-contract-drift
       - commitlint
+      - validate-locales
+      - external-fixtures-manifest
       - rust-build-cache
       - test-tdd
       - test-bdd
@@ -333,8 +344,11 @@ jobs:
       - name: Required CI gate
         run: |
           [ "${{ needs.branch-up-to-date.result }}" = "success" ] || exit 1
+          [ "${{ needs.openapi-contract-drift.result }}" = "success" ] || exit 1
           [ "${{ needs.commitlint.result }}" = "success" ] || exit 1
           if [ "${{ needs.changes.outputs.run_tests }}" = "true" ]; then
+            [ "${{ needs.validate-locales.result }}" = "success" ] || exit 1
+            [ "${{ needs.external-fixtures-manifest.result }}" = "success" ] || exit 1
             [ "${{ needs.rust-build-cache.result }}" = "success" ] || exit 1
             [ "${{ needs.test-tdd.result }}" = "success" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "success" ] || exit 1
@@ -342,6 +356,8 @@ jobs:
             [ "${{ needs.test-external-fixtures.result }}" = "success" ] || exit 1
             [ "${{ needs.coverage-gate.result }}" = "success" ] || exit 1
           elif [ "${{ needs.changes.outputs.run_external_fixtures }}" = "true" ]; then
+            [ "${{ needs.validate-locales.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.external-fixtures-manifest.result }}" = "success" ] || exit 1
             [ "${{ needs.rust-build-cache.result }}" = "success" ] || exit 1
             [ "${{ needs.test-tdd.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "skipped" ] || exit 1
@@ -349,6 +365,8 @@ jobs:
             [ "${{ needs.test-external-fixtures.result }}" = "success" ] || exit 1
             [ "${{ needs.coverage-gate.result }}" = "skipped" ] || exit 1
           else
+            [ "${{ needs.validate-locales.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.external-fixtures-manifest.result }}" = "skipped" ] || exit 1
             [ "${{ needs.rust-build-cache.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-tdd.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "skipped" ] || exit 1
