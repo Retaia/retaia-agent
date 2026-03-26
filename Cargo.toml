@@ -38,7 +38,7 @@ tempfile = "3.10"
 thiserror = "2.0"
 tokio = { version = "1.49", features = ["rt"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
-toml = "0.8"
+toml = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 fs2 = "0.4"
