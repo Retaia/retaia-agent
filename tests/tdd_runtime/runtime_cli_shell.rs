@@ -1,7 +1,7 @@
 use retaia_agent::{
     AgentRuntimeConfig, AuthMode, ClientRuntimeTarget, ConnectivityState, JobStage, JobStatus,
     LogLevel, RuntimeSession, RuntimeSnapshot, ShellCommand, execute_shell_command, format_menu,
-    format_settings, format_status, help_text, parse_shell_command, redact_asset_uuid,
+    format_settings, format_status, help_text, parse_shell_command,
 };
 
 fn settings() -> AgentRuntimeConfig {
@@ -63,8 +63,7 @@ fn tdd_runtime_cli_shell_formats_current_job_status() {
 
     let rendered = format_status(&session);
     assert!(rendered.contains("job_id=job-42"));
-    assert!(rendered.contains(&format!("asset_uuid={}", redact_asset_uuid("asset-9"))));
-    assert!(!rendered.contains("asset_uuid=asset-9"));
+    assert!(rendered.contains("asset_uuid=asset-9"));
     assert!(rendered.contains("progress_percent=73"));
     assert!(rendered.contains("stage=upload"));
     assert!(rendered.contains("status=uploading"));

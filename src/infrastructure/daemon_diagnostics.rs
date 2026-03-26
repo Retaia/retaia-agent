@@ -3,7 +3,6 @@ use std::io::Write as _;
 use std::process::{Command, Stdio};
 
 use serde::Serialize;
-use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::application::daemon_manager::{
@@ -41,15 +40,6 @@ pub struct RedactedRuntimeConfig {
     pub storage_mounts: Vec<String>,
     pub max_parallel_jobs: u16,
     pub log_level: String,
-}
-
-pub fn redact_asset_uuid(value: &str) -> String {
-    if value.is_empty() || value == "-" {
-        return value.to_string();
-    }
-
-    let digest = hex::encode(Sha256::digest(value.as_bytes()));
-    format!("redacted-asset-{}", &digest[..12])
 }
 
 pub fn redacted_runtime_config_from(settings: &AgentRuntimeConfig) -> RedactedRuntimeConfig {
@@ -172,11 +162,7 @@ pub fn build_bug_report_markdown(
         let _ = writeln!(body, "- daemon_tick: `{}`", stats.tick);
         if let Some(job) = stats.current_job.as_ref() {
             let _ = writeln!(body, "- current_job_id: `{}`", job.job_id);
-            let _ = writeln!(
-                body,
-                "- current_asset_uuid: `{}`",
-                redact_asset_uuid(&job.asset_uuid)
-            );
+            let _ = writeln!(body, "- current_asset_uuid: `{}`", job.asset_uuid);
             let _ = writeln!(body, "- current_progress: `{}`", job.progress_percent);
             let _ = writeln!(body, "- current_stage: `{}`", job.stage);
         }
@@ -249,11 +235,7 @@ pub fn render_daemon_inspect(
         let _ = writeln!(out, "tick={}", stats.tick);
         if let Some(job) = stats.current_job.as_ref() {
             let _ = writeln!(out, "current_job_id={}", job.job_id);
-            let _ = writeln!(
-                out,
-                "current_asset_uuid={}",
-                redact_asset_uuid(&job.asset_uuid)
-            );
+            let _ = writeln!(out, "current_asset_uuid={}", job.asset_uuid);
             let _ = writeln!(out, "current_progress_percent={}", job.progress_percent);
             let _ = writeln!(out, "current_stage={}", job.stage);
             let _ = writeln!(out, "current_status={}", job.status);
@@ -307,10 +289,7 @@ pub fn render_daemon_inspect(
             row.outcome,
             row.run_state,
             row.job_id.as_deref().unwrap_or("-"),
-            row.asset_uuid
-                .as_deref()
-                .map(redact_asset_uuid)
-                .unwrap_or_else(|| "-".to_string()),
+            row.asset_uuid.as_deref().unwrap_or("-"),
             row.progress_percent
                 .map(|value| value.to_string())
                 .unwrap_or_else(|| "-".to_string()),
@@ -460,8 +439,7 @@ mod tests {
 
     use super::{
         DaemonDiagnosticsSnapshot, append_redacted_config_markdown, build_bug_report_markdown,
-        redact_asset_uuid, redacted_runtime_config_from, render_daemon_inspect,
-        render_daemon_inspect_json,
+        redacted_runtime_config_from, render_daemon_inspect, render_daemon_inspect_json,
     };
     use crate::{AgentRuntimeConfig, AuthMode, LogLevel, TechnicalAuthConfig};
 
@@ -561,12 +539,5 @@ mod tests {
         append_redacted_config_markdown(&mut body, None);
         assert!(body.contains("## Redacted Runtime Config"));
         assert!(body.contains("- unavailable"));
-    }
-
-    #[test]
-    fn tdd_redact_asset_uuid_masks_cleartext_value() {
-        let redacted = redact_asset_uuid("asset-1");
-        assert_eq!(redacted, "redacted-asset-c0357a32d0ac");
-        assert!(!redacted.contains("asset-1"));
     }
 }

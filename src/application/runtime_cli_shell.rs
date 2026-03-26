@@ -1,7 +1,6 @@
 use crate::application::runtime_session::RuntimeSession;
 use crate::domain::configuration::AgentRuntimeConfig;
 use crate::domain::runtime_ui::{AgentRunState, JobStage, MenuAction};
-use crate::redact_asset_uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ShellCommand {
@@ -127,7 +126,7 @@ pub fn format_status(session: &RuntimeSession) -> String {
 
     if let Some(job) = view.current_job {
         lines.push(format!("job_id={}", job.job_id));
-        lines.push(format!("asset_uuid={}", redact_asset_uuid(&job.asset_uuid)));
+        lines.push(format!("asset_uuid={}", job.asset_uuid));
         lines.push(format!("progress_percent={}", job.progress_percent));
         lines.push(format!("stage={}", job_stage_label(job.stage)));
         lines.push(format!("status={}", job.short_status));
