@@ -28,7 +28,6 @@ jobs:
       matrix:
         include:
           - language: actions
-            query_suite: default
           - language: rust
             query_suite: security-extended
     steps:
@@ -37,12 +36,20 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Initialize CodeQL
+      - name: Initialize CodeQL (default)
+        if: matrix.language != 'rust'
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           build-mode: none
-          queries: ${{ matrix.query_suite }}
+
+      - name: Initialize CodeQL (Rust security-extended)
+        if: matrix.language == 'rust'
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
