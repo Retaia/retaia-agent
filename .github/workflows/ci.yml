@@ -39,6 +39,8 @@ jobs:
               - "Cargo.toml"
               - "Cargo.lock"
               - "locales/**"
+              - "scripts/check_duplicate_deps.py"
+              - "scripts/duplicate_deps_allowlist.txt"
               - "src/**"
               - "tests/**"
               - ".cargo-husky/hooks/**"
@@ -156,6 +158,21 @@ jobs:
 
       - name: Validate external fixtures manifest
         run: bash scripts/validate_external_fixtures.sh
+
+  duplicate-dependencies:
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.run_tests == 'true'
+    needs:
+      - changes
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check duplicate dependencies against allowlist
+        run: python3 scripts/check_duplicate_deps.py
 
   rust-build-cache:
     runs-on: ubuntu-latest
@@ -355,6 +372,7 @@ jobs:
       - commitlint
       - validate-locales
       - external-fixtures-manifest
+      - duplicate-dependencies
       - rust-build-cache
       - test-tdd
       - test-bdd
@@ -370,6 +388,7 @@ jobs:
           if [ "${{ needs.changes.outputs.run_tests }}" = "true" ]; then
             [ "${{ needs.validate-locales.result }}" = "success" ] || exit 1
             [ "${{ needs.external-fixtures-manifest.result }}" = "success" ] || exit 1
+            [ "${{ needs.duplicate-dependencies.result }}" = "success" ] || exit 1
             [ "${{ needs.rust-build-cache.result }}" = "success" ] || exit 1
             [ "${{ needs.test-tdd.result }}" = "success" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "success" ] || exit 1
@@ -379,6 +398,7 @@ jobs:
           elif [ "${{ needs.changes.outputs.run_external_fixtures }}" = "true" ]; then
             [ "${{ needs.validate-locales.result }}" = "skipped" ] || exit 1
             [ "${{ needs.external-fixtures-manifest.result }}" = "success" ] || exit 1
+            [ "${{ needs.duplicate-dependencies.result }}" = "skipped" ] || exit 1
             [ "${{ needs.rust-build-cache.result }}" = "success" ] || exit 1
             [ "${{ needs.test-tdd.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "skipped" ] || exit 1
@@ -388,6 +408,7 @@ jobs:
           else
             [ "${{ needs.validate-locales.result }}" = "skipped" ] || exit 1
             [ "${{ needs.external-fixtures-manifest.result }}" = "skipped" ] || exit 1
+            [ "${{ needs.duplicate-dependencies.result }}" = "skipped" ] || exit 1
             [ "${{ needs.rust-build-cache.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-tdd.result }}" = "skipped" ] || exit 1
             [ "${{ needs.test-bdd.result }}" = "skipped" ] || exit 1

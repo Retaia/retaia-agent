@@ -35,19 +35,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Rust
-        if: matrix.language == 'rust'
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.language == 'actions' && 'none' || 'autobuild' }}
-
-      - name: Autobuild
-        if: matrix.language == 'rust'
-        uses: github/codeql-action/autobuild@v4
+          build-mode: none
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
