@@ -12,30 +12,49 @@ permissions:
   contents: read
   security-events: write
 
+concurrency:
+  group: security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   codeql:
-    name: CodeQL
+    name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+          - language: rust
+            query_suite: security-extended
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Initialize CodeQL
+      - name: Initialize CodeQL (default)
+        if: matrix.language != 'rust'
         uses: github/codeql-action/init@v4
         with:
-          languages: rust, actions
+          languages: ${{ matrix.language }}
+          build-mode: none
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+      - name: Initialize CodeQL (Rust security-extended)
+        if: matrix.language == 'rust'
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
 
   secrets:
     name: Secret scan
@@ -48,14 +67,15 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Run Gitleaks CLI
         run: |
           docker run --rm \
             -v "$PWD:/repo" \
             zricethezav/gitleaks:latest \
-            detect \
-            --source=/repo \
+            dir \
+            /repo \
             --report-format sarif \
             --report-path /repo/gitleaks.sarif \
             --redact \
