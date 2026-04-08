@@ -26,9 +26,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language:
-          - actions
-          - rust
+        include:
+          - language: actions
+            query_suite: default
+          - language: rust
+            query_suite: security-extended
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -40,6 +42,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: none
+          queries: ${{ matrix.query_suite }}
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4
