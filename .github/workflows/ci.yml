@@ -26,7 +26,7 @@ jobs:
       run_external_fixtures: ${{ steps.filter.outputs.run_external_fixtures }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -60,7 +60,7 @@ jobs:
     needs: changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
@@ -88,7 +88,7 @@ jobs:
     needs: changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: recursive
@@ -103,7 +103,7 @@ jobs:
     needs: changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -142,7 +142,7 @@ jobs:
       - changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate locale parity
         run: python3 scripts/validate_locales.py
@@ -154,7 +154,7 @@ jobs:
       - changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate external fixtures manifest
         run: bash scripts/validate_external_fixtures.sh
@@ -166,7 +166,7 @@ jobs:
       - changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -181,7 +181,7 @@ jobs:
       - changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
@@ -208,7 +208,7 @@ jobs:
       - rust-build-cache
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
@@ -237,7 +237,7 @@ jobs:
       - rust-build-cache
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
@@ -266,7 +266,7 @@ jobs:
       - rust-build-cache
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
@@ -296,7 +296,7 @@ jobs:
       - rust-build-cache
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
@@ -323,7 +323,7 @@ jobs:
       - rust-build-cache
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
         run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
